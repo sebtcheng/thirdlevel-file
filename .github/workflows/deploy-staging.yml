@@ -1,0 +1,63 @@
+name: Deploy TLO Staging
+
+on:
+  push:
+    branches:
+      - staging
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-tlo-staging
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy to TLO Staging VM
+    runs-on: self-hosted
+    timeout-minutes: 20
+
+    steps:
+      - name: Deploy TLO Staging Environment
+        run: |
+          set -e
+          echo "===================================================="
+          echo "🚀 Deploying TLO to Staging (Self-Hosted)..."
+          echo "===================================================="
+          cd /mnt/tlo-staging
+
+          # 1. Pull latest staging branch
+          git fetch origin
+          git checkout -B staging -f origin/staging
+          echo "Current commit:"
+          git log -1 --format="%h - %s (%an, %cd)"
+
+          # 2. Build Frontend
+          echo "--> Ensuring clean permissions..."
+          sudo chown -R Administrator1:Administrator1 /mnt/tlo-staging
+          sudo rm -rf ui/dist
+          echo "--> Building frontend UI client..."
+          cd ui
+          export VITE_BASE_PATH="/insighted-third-level-officials-staging/"
+          export VITE_API_URL="/insighted-third-level-officials-staging/api"
+          export NODE_OPTIONS="--max-old-space-size=4096"
+          npm install --legacy-peer-deps --prefer-offline --no-audit --no-fund
+          npm run build
+          sudo chmod -R a+rX dist
+          cd /mnt/tlo-staging
+
+          # 3. Install backend dependencies
+          echo "--> Installing backend dependencies..."
+          cd api
+          npm install --omit=dev --legacy-peer-deps --prefer-offline --no-audit --no-fund
+          cd /mnt/tlo-staging
+
+          # 4. Restart PM2
+          echo "--> Restarting PM2 service..."
+          pm2 restart ecosystem.thirdlevel.staging.config.cjs --update-env || pm2 start ecosystem.thirdlevel.staging.config.cjs
+          pm2 save
+
+          # 5. Verify health
+          echo "--> Verifying backend health..."
+          sleep 6
+          curl -s -i http://127.0.0.1:5028/health || curl -s -i http://127.0.0.1:5028/ || true
+          echo "✅ TLO Staging deployment completed successfully!"

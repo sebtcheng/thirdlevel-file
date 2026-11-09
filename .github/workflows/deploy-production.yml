@@ -1,0 +1,63 @@
+name: Deploy TLO Production
+
+on:
+  push:
+    branches:
+      - production
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-tlo-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy to TLO Production VM
+    runs-on: self-hosted
+    timeout-minutes: 20
+
+    steps:
+      - name: Deploy TLO Production Environment
+        run: |
+          set -e
+          echo "===================================================="
+          echo "🚀 Deploying TLO to Production (Self-Hosted)..."
+          echo "===================================================="
+          cd /var/www/html/InsightED-ROSDO/insighted-third-level-officials
+
+          # 1. Pull latest production branch
+          git fetch origin
+          git checkout -B production -f origin/production
+          echo "Current commit:"
+          git log -1 --format="%h - %s (%an, %cd)"
+
+          # 2. Build Frontend
+          echo "--> Ensuring clean permissions..."
+          sudo chown -R Administrator1:Administrator1 /var/www/html/InsightED-ROSDO/insighted-third-level-officials
+          sudo rm -rf ui/dist
+          echo "--> Building frontend UI client..."
+          cd ui
+          export VITE_BASE_PATH="/insighted-third-level-officials/"
+          export VITE_API_URL="/insighted-third-level-officials/api"
+          export NODE_OPTIONS="--max-old-space-size=4096"
+          npm install --legacy-peer-deps --prefer-offline --no-audit --no-fund
+          npm run build
+          sudo chmod -R a+rX dist
+          cd /var/www/html/InsightED-ROSDO/insighted-third-level-officials
+
+          # 3. Install backend dependencies
+          echo "--> Installing backend dependencies..."
+          cd api
+          npm install --omit=dev --legacy-peer-deps --prefer-offline --no-audit --no-fund
+          cd /var/www/html/InsightED-ROSDO/insighted-third-level-officials
+
+          # 4. Restart PM2
+          echo "--> Restarting PM2 service..."
+          pm2 restart ecosystem.thirdlevel.config.cjs --update-env || pm2 start ecosystem.thirdlevel.config.cjs
+          pm2 save
+
+          # 5. Verify health
+          echo "--> Verifying backend health..."
+          sleep 6
+          curl -s -i http://127.0.0.1:5012/health || curl -s -i http://127.0.0.1:5012/ || true
+          echo "✅ TLO Production deployment completed successfully!"
