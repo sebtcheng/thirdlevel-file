@@ -54,7 +54,8 @@ jobs:
 
           # 4. Restart PM2
           echo "--> Restarting PM2 service..."
-          pm2 restart ecosystem.thirdlevel.config.cjs --update-env || pm2 start ecosystem.thirdlevel.config.cjs
+          cd /var/www/html/InsightED-ROSDO/insighted-third-level-officials
+          pm2 reload insighted-thirdlevel-backend --update-env || pm2 restart insighted-thirdlevel-backend --update-env || pm2 start ecosystem.thirdlevel.config.cjs --name insighted-thirdlevel-backend --update-env
           pm2 save
 
           # 5. Verify health

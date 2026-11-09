@@ -54,7 +54,8 @@ jobs:
 
           # 4. Restart PM2
           echo "--> Restarting PM2 service..."
-          pm2 restart ecosystem.thirdlevel.staging.config.cjs --update-env || pm2 start ecosystem.thirdlevel.staging.config.cjs
+          cd /mnt/tlo-staging
+          pm2 reload insighted-thirdlevel-staging --update-env || pm2 restart insighted-thirdlevel-staging --update-env || pm2 start ecosystem.thirdlevel.config.cjs --name insighted-thirdlevel-staging --update-env
           pm2 save
 
           # 5. Verify health
