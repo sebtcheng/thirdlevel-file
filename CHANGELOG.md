@@ -1,5 +1,23 @@
 # CHANGELOG
 
+## 2026-11-09 — NexusGate & Git Configuration: Disable Vacancies Card in Staging and Ignore Env/Migrations
+
+### Requirement & User Directive
+> "i am in the staging disable this card Vacancies OPEN POSITIONS & OPPORTUNITIES / add in the git ignore the migration and env"
+
+### Root Cause
+1. **Vacancies Card Navigating to Applications ([`NexusGate.jsx`](file:///e:/christop/staging/ui/src/pages/NexusGate.jsx))**: On the landing page, `handleLockedVacanciesClick` navigated users to `/timon-applications` (or `/login`) instead of locking the Vacancies card in staging.
+2. **Environment & Migration Files Not Ignored ([`.gitignore`](file:///e:/christop/staging/.gitignore))**: `.env_staging`, `.env_*`, `database/migrations/`, and `database/backups/` were not listed in `.gitignore`.
+
+### Architectural & UI Fixes
+1. **Disable/Lock Vacancies Card ([`NexusGate.jsx`](file:///e:/christop/staging/ui/src/pages/NexusGate.jsx))**:
+   - Updated `handleLockedVacanciesClick` to display the `"Vacancies Portal Locked"` SweetAlert modal (`Swal.fire`) instead of navigating.
+   - Displayed the `LOCKED` badge pill (`FiLock`) and restored the card labels (`RECRUITMENT`, `Vacancies`, `OPEN POSITIONS & OPPORTUNITIES`).
+2. **Git Ignore Rules ([`.gitignore`](file:///e:/christop/staging/.gitignore))**:
+   - Added `.env.*`, `.env_*`, `!.env.example`, `.env_staging`, `database/migrations/`, and `database/backups/` to `.gitignore`.
+
+---
+
 ## 2026-08-12 — Notable Achievements JSONB Column Migration
 
 ### Architectural Change & Database Migration

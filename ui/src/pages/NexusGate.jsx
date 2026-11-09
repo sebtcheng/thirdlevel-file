@@ -68,13 +68,16 @@ const NexusGate = () => {
 
     const handleLockedVacanciesClick = (e) => {
         e.stopPropagation();
-        if (!user) {
-            navigate('/login?returnUrl=%2Ftimon-applications&redirect=%2Ftimon-applications', {
-                state: { redirectTo: '/timon-applications', returnUrl: '/timon-applications', portal: 'applicant' }
-            });
-        } else {
-            navigate('/timon-applications');
-        }
+        Swal.fire({
+            title: 'Vacancies Portal Locked',
+            text: 'The Vacancies module is currently locked and unavailable for public applications. Access is restricted to active hiring cycles.',
+            icon: 'warning',
+            confirmButtonText: 'Understood',
+            confirmButtonColor: 'var(--color-brand-800)',
+            customClass: {
+                popup: 'rounded-card border-2 border-brand-800'
+            }
+        });
     };
 
     const closeCOGate = () => {
@@ -331,25 +334,18 @@ const NexusGate = () => {
                         <div className="nexus-card-badge nexus-badge-blue">
                             <FiBriefcase size={22} className="text-brand-700" />
                         </div>
-                        {poolingActive ? (
-                            <div className="nexus-locked-pill !border-emerald-400 !bg-emerald-950/40 !text-emerald-300">
-                                <FiCheckCircle size={12} className="text-emerald-400" />
-                                <span>INTAKE OPEN</span>
-                            </div>
-                        ) : (
-                            <div className="nexus-locked-pill">
-                                <FiLock size={12} className="text-gold" />
-                                <span>LOCKED</span>
-                            </div>
-                        )}
+                        <div className="nexus-locked-pill">
+                            <FiLock size={12} className="text-gold" />
+                            <span>LOCKED</span>
+                        </div>
                     </div>
 
                     <div className="nexus-card-body">
-                        <span className="nexus-role-tag text-brand-700">EXECUTIVE APPLICATIONS</span>
-                        <h2 className="nexus-card-title">TIMON Applications</h2>
-                        <span className="nexus-sub-tag text-brand-700">THIRD LEVEL VACANCIES & ROSTER</span>
+                        <span className="nexus-role-tag text-brand-700">RECRUITMENT</span>
+                        <h2 className="nexus-card-title">Vacancies</h2>
+                        <span className="nexus-sub-tag text-brand-700">OPEN POSITIONS & OPPORTUNITIES</span>
                         <p className="nexus-card-desc mt-1">
-                            Apply for third-level executive designations (RD, ARD, SDS, ASDS) in designated regions during active intake windows.
+                            Explore official Third Level executive position vacancies, qualification standards, application requirements, and recruitment announcements across the Department.
                         </p>
                     </div>
                 </motion.div>
