@@ -26,6 +26,7 @@ jobs:
           cd /mnt/tlo-staging
 
           # 1. Pull latest staging branch
+          git config remote.origin.fetch '+refs/heads/*:refs/remotes/origin/*'
           git fetch origin
           git checkout -B staging -f origin/staging
           echo "Current commit:"
@@ -61,3 +62,4 @@ jobs:
           sleep 6
           curl -s -i http://127.0.0.1:5028/health || curl -s -i http://127.0.0.1:5028/ || true
           echo "✅ TLO Staging deployment completed successfully!"
+

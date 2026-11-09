@@ -26,6 +26,7 @@ jobs:
           cd /var/www/html/InsightED-ROSDO/insighted-third-level-officials
 
           # 1. Pull latest production branch
+          git config remote.origin.fetch '+refs/heads/*:refs/remotes/origin/*'
           git fetch origin
           git checkout -B production -f origin/production
           echo "Current commit:"
@@ -61,3 +62,4 @@ jobs:
           sleep 6
           curl -s -i http://127.0.0.1:5012/health || curl -s -i http://127.0.0.1:5012/ || true
           echo "✅ TLO Production deployment completed successfully!"
+
