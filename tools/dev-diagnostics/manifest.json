@@ -1,0 +1,17 @@
+{
+  "files": {
+    "ui/src/devtools/sanitize.ts": "0793e2c8eb19ed6ad18f857f168b5d532d9809c4809b0b428ef2f274c52d394e",
+    "ui/src/devtools/dev-logger.ts": "af8a89775cc77d12cd57b153398d9ad37f6d3f0d2aecd407ceeef5ab0b475822",
+    "ui/src/devtools/vite-plugin-dev-log-sink.ts": "650a141321cd1e3fc80e5f5dccf309b7b05772531c3220afe0604f3c505ac97b",
+    "ui/src/devtools/DevErrorBoundary.tsx": "1c5404e7da5e35123f28c7759837776cebe41a991d762db774c65450d629397c",
+    "ui/src/devtools/DevProfiler.tsx": "03da5aa75bea224728fceb295c5247a394afb20a4ef6645544c5c20812214b6f",
+    "ui/src/devtools/dev-logger.test.ts": "82e5179265a6d5baa6a564eb8391704781f64dfcfd2ab8bc4d5f8aefe4c7c37b",
+    "api/src/devtools/sanitize.ts": "0793e2c8eb19ed6ad18f857f168b5d532d9809c4809b0b428ef2f274c52d394e",
+    "api/src/devtools/dev-diagnostics.ts": "6f5545a4f70732dd35ffd4fc7d25cdb6ef2db1ba21856c0a5f449474e1d71847",
+    "api/src/devtools/express-dev-error-middleware.ts": "f35febfad3d8916a65567b58e4272c29126633aec700b5e2e546b49284d1ca71",
+    "api/src/devtools/pg-pool-instrument.ts": "109a64793a6ff934b1e583594e659d4885461845c22b8e8175f9af64a59c785b",
+    "tools/dev-diagnostics/dev-runner.mjs": "cff970818473a836d49bdba2c6172a2bbf2e7d1d4cadfb5a216b4f77a85cb793",
+    "tools/dev-diagnostics/summarize-logs.mjs": "e7f70e04c7627e53aaa62ee1a2a019d49aa7a933142fcd70ecb3248f5b2bcdfb",
+    "tools/dev-diagnostics/stack.json": "5706cfc9c6e3a74fc25c31ee1e64d12f766617b0fe202d4d652522b9b1a9db8d"
+  }
+}

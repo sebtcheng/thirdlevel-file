@@ -1,5 +1,6 @@
 import React from 'react';
-import { FiSearch, FiChevronLeft, FiChevronRight } from 'react-icons/fi';
+import { MagnifyingGlass as FiSearch, CaretLeft as FiChevronLeft, CaretRight as FiChevronRight } from '@phosphor-icons/react';
+import FloatingLabelInput from '../../../components/forms/FloatingLabelInput.jsx';
 
 const MasterTable = ({
   paginatedRows,
@@ -28,13 +29,7 @@ const MasterTable = ({
             </p>
           </div>
           <div style={{ position: 'relative', width: '260px' }}>
-            <input
-              type="search"
-              className="mdb-search"
-              placeholder="Search by name, position, office..."
-              value={searchQuery}
-              onChange={(e) => onSearchChange(e.target.value)}
-            />
+            <FloatingLabelInput label="Search by name, position, office" type="search" placeholder="Search by name, position, office..." value={searchQuery} onChange={(e) => onSearchChange(e.target.value)} />
           </div>
         </div>
 

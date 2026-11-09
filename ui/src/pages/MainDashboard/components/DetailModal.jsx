@@ -1,5 +1,5 @@
 import React from 'react';
-import { FiX } from 'react-icons/fi';
+import { X as FiX } from '@phosphor-icons/react';
 
 const DetailModal = ({ row, onClose }) => {
   if (!row) return null;
@@ -41,7 +41,7 @@ const DetailModal = ({ row, onClose }) => {
           </div>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', fontSize: '12px', background: 'var(--mdb-blue-50)', padding: '18px', borderRadius: '16px', border: '1px solid var(--mdb-line)' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', fontSize: '12px', background: 'var(--mdb-blue-50)', padding: '18px', borderRadius: 'var(--radius-md)', border: '1px solid var(--mdb-line)' }}>
           <div>
             <strong style={{ color: 'var(--mdb-navy)' }}>Employment Status:</strong> {row.Employment_Status}
           </div>

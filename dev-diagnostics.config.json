@@ -1,0 +1,46 @@
+{
+  "logDir": ".logs",
+  "maxFileBytes": 5242880,
+  "keepPreviousSessions": 3,
+  "levels": "debug",
+  "thresholds": {
+    "slowFetchMs": 1000,
+    "slowRequestMs": 500,
+    "slowQueryMs": 200,
+    "longTaskMs": 100,
+    "slowCommitMs": 50,
+    "excessiveCommitsPer5s": 20,
+    "duplicateGetWindowMs": 500,
+    "requestsPerRouteLoad": 30,
+    "payloadBytes": 512000,
+    "eventLoopP99Ms": 100,
+    "nPlusOneRepeats": 10,
+    "heapGrowthMb": 50,
+    "rssGrowthMb": 100
+  },
+  "verboseBodies": false,
+  "summaryDebounceMs": 2000,
+  "staticAnalysis": {
+    "tsc": true,
+    "lint": true,
+    "lintDebounceMs": 3000
+  },
+  "stackIgnore": [
+    "devtools/",
+    "src/api/client\\.",
+    "src/api/apiClient\\.",
+    "node_modules",
+    "\\.vite/deps",
+    "react-dom",
+    "react-router",
+    "@tanstack",
+    "@mantine",
+    "chunk-"
+  ],
+  "maxErrorsFileBytes": 10485760,
+  "summaryWarnDebounceMs": 10000,
+  "perfRateLimit": {
+    "perFingerprint": 6,
+    "windowMs": 60000
+  }
+}

@@ -25,6 +25,7 @@ const clearPort = (port) => {
 };
 
 console.log('🔍 Checking for lingering processes...');
+if (process.env.PORT) clearPort(process.env.PORT);
 clearPort(3008);
 clearPort(5173);
 

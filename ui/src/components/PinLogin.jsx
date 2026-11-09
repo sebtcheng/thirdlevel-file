@@ -1,8 +1,7 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { apiUrl } from '../utils/api';
-import Swal from 'sweetalert2';
 
 const PinLogin = ({ rememberedUser, onSwitchAccount, onUsePassword }) => {
   const [pin, setPin] = useState('');
@@ -27,21 +26,6 @@ const PinLogin = ({ rememberedUser, onSwitchAccount, onUsePassword }) => {
     if (error) setError('');
     setPin(prev => prev.slice(0, -1));
   }, [error]);
-
-  useEffect(() => {
-    const handleKeyDown = (e) => {
-      if (loading) return;
-      if (/^[0-9]$/.test(e.key)) {
-        e.preventDefault();
-        handleKeyPress(e.key);
-      } else if (e.key === 'Backspace' || e.key === 'Delete') {
-        e.preventDefault();
-        handleDelete();
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [handleKeyPress, handleDelete, loading]);
   
   // Need wrapper mapping logic for dashboards
   const getDashboardPath = (role, accountCategory) => {
@@ -77,17 +61,6 @@ const PinLogin = ({ rememberedUser, onSwitchAccount, onUsePassword }) => {
         const destPath = getDashboardPath(data.user.role, data.user.account_category);
         navigate(destPath);
       } else {
-        if (data.email_changed && data.new_email) {
-          Swal.fire({
-            icon: 'info',
-            title: 'DepEd Email Changed',
-            text: 'The email address for this account has been changed.',
-            confirmButtonText: 'OK',
-            confirmButtonColor: '#0038A8'
-          }).then(() => {
-            if (onSwitchAccount) onSwitchAccount();
-          });
-        }
         setError(data.error || 'Incorrect PIN');
         setPin(''); 
       }

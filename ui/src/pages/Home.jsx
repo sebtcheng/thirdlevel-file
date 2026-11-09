@@ -1,9 +1,8 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { useNavigate, Navigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { apiUrl } from '../utils/api';
 import PageTransition from '../components/PageTransition';
-import AdminSidebar from '../components/AdminSidebar';
 import UploadDirectoryModal from '../components/UploadDirectoryModal';
 import NotableAchievementsModal from '../components/NotableAchievementsModal';
 import RetireesModal from '../components/RetireesModal';
@@ -11,8 +10,11 @@ import RegisterPersonnelModal from '../components/RegisterPersonnelModal';
 import ReassignOfficialModal from '../components/ReassignOfficialModal';
 import AnalyticsSection from './MainDashboard/components/AnalyticsSection';
 import './MainDashboard/MainDashboard.css';
-import { FiUserPlus, FiUploadCloud, FiList, FiHome, FiLogOut, FiAward, FiClock, FiSearch, FiChevronRight, FiGrid } from 'react-icons/fi';
+import { UserPlus as FiUserPlus, CloudArrowUp as FiUploadCloud, List as FiList, House as FiHome, SignOut as FiLogOut, Medal as FiAward, Clock as FiClock, CaretRight as FiChevronRight, SquaresFour as FiGrid } from '@phosphor-icons/react';
 import { getOfficialRegion, getOfficialLevel, formatPositionTitle } from '../utils/officialsUtils';
+import PageHeaderCard from '../components/PageHeaderCard.jsx';
+import AdminLayout from '../components/layout/AdminLayout.jsx';
+
 // Text cleaning engine from MainDashboard
 const repairMojibake = (text) => {
   return String(text || "")
@@ -125,25 +127,10 @@ const THIRD_LEVEL_POSITIONS = [
   'ASDS'
 ];
 
-const isThirdLevelPosition = (pos) => {
-  if (!pos) return false;
-  const formatted = formatPositionTitle(pos);
-  if (THIRD_LEVEL_POSITIONS.includes(formatted)) return true;
-  const upper = pos.trim().toUpperCase();
-  return THIRD_LEVEL_POSITIONS.some(p => p.toUpperCase() === upper);
-};
-
 
 const Home = () => {
   const navigate = useNavigate();
   const { user, token, logout } = useAuth();
-  const isCentralOffice = user?.role?.toLowerCase() === 'central office';
-
-  useEffect(() => {
-    if (user && !isCentralOffice) {
-      navigate('/official-profiling', { replace: true });
-    }
-  }, [user, isCentralOffice, navigate]);
 
   const [applications, setApplications] = useState([]);
   const [officials, setOfficials] = useState([]);
@@ -168,7 +155,6 @@ const Home = () => {
   const [drilldownViewType, setDrilldownViewType] = useState('stacked'); // stacked | heatmap
 
   useEffect(() => {
-    if (user && !isCentralOffice) return;
     const params = new URLSearchParams(location.search);
     if (params.get('action') === 'reassign') {
       const tloId = params.get('tloid');
@@ -178,18 +164,17 @@ const Home = () => {
       }
       setIsReassignModalOpen(true);
     }
-  }, [location.search, allOfficials, user, isCentralOffice]);
+  }, [location.search, allOfficials]);
 
   useEffect(() => {
-    if (user && !isCentralOffice) return;
     const fetchData = async () => {
       setLoading(true);
       try {
         const [appsRes, offRes] = await Promise.all([
-          fetch(apiUrl('/api/third-level/applications'), {
+          fetch(apiUrl('/api/third-level/officials-registry/applications'), {
             headers: { 'Authorization': `Bearer ${token}` }
           }),
-          fetch(apiUrl('/api/third-level/officials-kpi-summary?exclude_inactive=true'), {
+          fetch(apiUrl('/api/third-level/officials-registry/officials-kpi-summary'), {
             headers: { 'Authorization': `Bearer ${token}` }
           })
         ]);
@@ -199,9 +184,8 @@ const Home = () => {
 
         if (appsData.success) setApplications(appsData.data);
         if (offData.success) {
-          const validOfficials = (offData.data || []).filter(o => o.status !== 'Rejected' && o.status !== 'Inactive' && o.status !== 'Reconciled');
-          setAllOfficials(validOfficials);
-          setOfficials(validOfficials.filter(o => o.status === 'Active' || o.status === 'For Approval'));
+          setAllOfficials(offData.data);
+          setOfficials(offData.data.filter(o => o.status === 'Active'));
         }
       } catch (err) {
         console.error('Failed to fetch dashboard data:', err);
@@ -211,7 +195,7 @@ const Home = () => {
     };
 
     if (token) fetchData();
-  }, [token, refreshTrigger, user, isCentralOffice]);
+  }, [token, refreshTrigger]);
 
   const retireesThisMonth = useMemo(() => {
     const today = new Date();
@@ -231,7 +215,7 @@ const Home = () => {
 
       let isInactiveThisMonth = false;
       let effDate = null;
-      const inactiveStatuses = ['Resigning', 'Vacated'];
+      const inactiveStatuses = ['Inactive', 'Resigning', 'Vacated'];
       if (inactiveStatuses.includes(o.status) || inactiveStatuses.includes(o.employment_status)) {
         effDate = new Date(o.effectivity_date || o.updated_at);
         if (!isNaN(effDate.getTime())) {
@@ -302,11 +286,11 @@ const Home = () => {
 
   // KPIs Logic
   const thirdLevelCount = useMemo(() => {
-    return officials.filter(o => isThirdLevelPosition(o.position_title)).length;
+    return officials.filter(o => !o.is_oic && THIRD_LEVEL_POSITIONS.includes(o.position_title)).length;
   }, [officials]);
 
   const divisionChiefsCount = useMemo(() => {
-    return officials.filter(o => !isThirdLevelPosition(o.position_title)).length;
+    return officials.filter(o => !o.is_oic && !THIRD_LEVEL_POSITIONS.includes(o.position_title)).length;
   }, [officials]);
 
   const sortBreakdown = (counts) => {
@@ -336,9 +320,9 @@ const Home = () => {
 
   const thirdLevelBreakdown = useMemo(() => {
     const counts = {};
-    officials.filter(o => isThirdLevelPosition(o.position_title)).forEach(o => {
+    officials.filter(o => !o.is_oic && THIRD_LEVEL_POSITIONS.includes(o.position_title)).forEach(o => {
       if (o.first_name && o.first_name !== 'VACANT') {
-        const pos = formatPositionTitle(o.position_title) || o.position_title || 'Unassigned';
+        const pos = o.position_title || 'Unassigned';
         counts[pos] = (counts[pos] || 0) + 1;
       }
     });
@@ -347,9 +331,9 @@ const Home = () => {
 
   const divisionChiefsBreakdown = useMemo(() => {
     const counts = {};
-    officials.filter(o => !isThirdLevelPosition(o.position_title)).forEach(o => {
+    officials.filter(o => !o.is_oic && !THIRD_LEVEL_POSITIONS.includes(o.position_title)).forEach(o => {
       if (o.first_name && o.first_name !== 'VACANT') {
-        const pos = formatPositionTitle(o.position_title) || o.position_title || 'Unassigned';
+        const pos = o.position_title || 'Unassigned';
         counts[pos] = (counts[pos] || 0) + 1;
       }
     });
@@ -358,15 +342,8 @@ const Home = () => {
 
   const pendingVerifications = applications.length;
 
-  const isProfileComplete = (o) => {
-    if (o.is_profile_complete !== undefined && o.is_profile_complete !== null) {
-      return Boolean(o.is_profile_complete);
-    }
-    return Boolean(o.photo_binary_id && o.pds_binary_id && o.contact_details);
-  };
-
   const incompleteProfiles = useMemo(() => {
-    return officials.filter(o => !isProfileComplete(o)).length;
+    return officials.filter(o => !o.photo_binary_id || !o.pds_binary_id || !o.contact_details).length;
   }, [officials]);
 
   const flaggedProfiles = useMemo(() => {
@@ -379,81 +356,23 @@ const Home = () => {
 
   const anticipatedVacancies = useMemo(() => {
     const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const in5Years = new Date(today.getFullYear() + 5, today.getMonth(), today.getDate(), 23, 59, 59);
+    const in5Years = new Date(today.getFullYear() + 5, today.getMonth(), today.getDate());
 
-    const map = new Map();
-
-    // 1. Scheduled / declared future vacates from tlo_assignments.end_date, effectivity_date, or pending statuses
-    allOfficials.forEach(o => {
-      if (!o.first_name || o.first_name === 'VACANT' || o.status === 'Vacated') return;
-
-      const rawEndDate = o.assignment_end_date || o.effectivity_date;
-      let scheduledDate = null;
-      if (rawEndDate) {
-        const parsed = new Date(rawEndDate);
-        if (!isNaN(parsed.getTime())) {
-          scheduledDate = parsed;
-        }
-      }
-
-      const isScheduledStatus = ['Vacating', 'Resigning'].includes(o.status);
-      const isFutureScheduled = scheduledDate && scheduledDate >= today && scheduledDate <= in5Years;
-
-      if (isFutureScheduled || (isScheduledStatus && scheduledDate)) {
-        let reason = 'Scheduled Vacate';
-        if (o.vacate_reason) {
-          reason = o.vacate_reason === 'Resignation' ? 'Resignation' :
-                   o.vacate_reason === 'Retirement' ? 'Retirement' :
-                   o.vacate_reason.startsWith('Vacated') ? o.vacate_reason : `Vacated - ${o.vacate_reason}`;
-        } else if (o.status === 'Resigning') {
-          reason = 'Resignation';
-        } else if (o.status === 'Vacating') {
-          reason = 'Scheduled Vacate';
-        }
-
-        map.set(o.TLOid, {
-          ...o,
-          separationReason: reason,
-          separationDate: scheduledDate,
-          isTurning65: false,
-          source: 'assignment_schedule'
-        });
-      }
-    });
-
-    // 2. Anticipated mandatory retirements (age 65 within 5 years)
-    allOfficials.forEach(o => {
-      if (!o.first_name || o.first_name === 'VACANT' || o.status === 'Vacated' || o.status === 'Inactive') return;
-      if (!o.date_of_birth) return;
-
+    return officials.filter(o => {
+      if (!o.date_of_birth) return false;
       const dob = new Date(o.date_of_birth);
-      if (isNaN(dob.getTime())) return;
-
       const retirementDate = new Date(dob.getFullYear() + 65, dob.getMonth(), dob.getDate());
-      if (retirementDate >= today && retirementDate <= in5Years) {
-        if (!map.has(o.TLOid)) {
-          const isTurning65 = (dob.getFullYear() === today.getFullYear() - 65) && (dob.getMonth() === today.getMonth());
-          map.set(o.TLOid, {
-            ...o,
-            separationReason: 'Anticipated Retirement',
-            separationDate: retirementDate,
-            isTurning65,
-            source: 'mandatory_retirement'
-          });
-        }
-      }
+      return retirementDate >= today && retirementDate <= in5Years;
+    }).map(o => {
+      const dob = new Date(o.date_of_birth);
+      return {
+        ...o,
+        separationReason: 'Anticipated Retirement',
+        separationDate: new Date(dob.getFullYear() + 65, dob.getMonth(), dob.getDate()),
+        isTurning65: false
+      };
     });
-
-    const list = Array.from(map.values());
-    list.sort((a, b) => {
-      const dateA = a.separationDate ? new Date(a.separationDate).getTime() : Infinity;
-      const dateB = b.separationDate ? new Date(b.separationDate).getTime() : Infinity;
-      return dateA - dateB;
-    });
-
-    return list;
-  }, [allOfficials]);
+  }, [officials]);
 
   const anticipatedVacanciesCount = anticipatedVacancies.length;
 
@@ -485,7 +404,7 @@ const Home = () => {
 
   const incompleteRegionBreakdown = useMemo(() => {
     const counts = {};
-    const incompleteOfficials = officials.filter(o => !isProfileComplete(o));
+    const incompleteOfficials = officials.filter(o => !o.photo_binary_id || !o.pds_binary_id || !o.contact_details);
     incompleteOfficials.forEach(o => {
       const region = getOfficialRegion(o);
       counts[region] = (counts[region] || 0) + 1;
@@ -594,28 +513,13 @@ const Home = () => {
       });
     });
 
-    // Masterlist officials awaiting approval
-    officials.filter(o => o.status === 'For Approval').forEach(o => {
-      queue.push({
-        id: o.TLOid,
-        email: o.email,
-        name: `${o.first_name || ''} ${o.last_name || ''}`.trim() || 'Pending Official',
-        desc: `Masterlist Profile · ${formatPositionTitle(o.position_title) || o.position_title || 'Unassigned'} · ${o.office || 'Unassigned'}`,
-        status: 'For Approval',
-        badgeClass: 'warn',
-        type: 'pending',
-        region: getOfficialRegion(o),
-        level: getOfficialLevel(o)
-      });
-    });
-
     // Incomplete active profiles
-    officials.filter(o => !isProfileComplete(o)).forEach(o => {
+    officials.filter(o => !o.photo_binary_id || !o.pds_binary_id || !o.contact_details).forEach(o => {
       queue.push({
         id: o.TLOid,
         email: o.email,
         name: `${o.first_name || ''} ${o.last_name || ''}`.trim(),
-        desc: `Incomplete Profiling · ${o.office || 'Unassigned'}`,
+        desc: `Missing valid PDS/Photo/Contact · ${o.office || 'Unassigned'}`,
         status: 'Action Required',
         badgeClass: 'risk',
         type: 'incomplete',
@@ -654,14 +558,14 @@ const Home = () => {
       });
     });
 
-    // Anticipated Vacancies
+    // Anticipated Retirees
     anticipatedVacancies.forEach(o => {
       if (!retireesThisMonth.find(r => r.TLOid === o.TLOid)) {
         queue.push({
           id: o.TLOid,
           email: o.email,
           name: `${o.first_name || ''} ${o.last_name || ''}`.trim(),
-          desc: `${o.separationReason || 'Anticipated Vacancy'} · ${o.office || 'Unassigned'}`,
+          desc: `Anticipated Retirement (Within 5 Yrs) · ${o.office || 'Unassigned'}`,
           status: 'Anticipated',
           badgeClass: 'warn',
           type: 'retirees',
@@ -686,19 +590,31 @@ const Home = () => {
       });
     });
 
-    // Inactive Personnel (Excluded on Home page per requirement)
+    // Inactive Personnel
+    inactiveOfficials.forEach(o => {
+      queue.push({
+        id: o.TLOid,
+        email: o.email,
+        name: `${o.first_name || ''} ${o.last_name || ''}`.trim(),
+        desc: `Inactive Personnel · ${o.office || 'Unassigned'}`,
+        status: 'Inactive',
+        badgeClass: 'warn',
+        type: 'inactive',
+        region: getOfficialRegion(o),
+        level: getOfficialLevel(o)
+      });
+    });
 
     // Third Level Officials (Only show when explicitly filtered so it doesn't flood the 'All' queue)
     if (activeQueueFilter === 'thirdLevel') {
-      officials.filter(o => isThirdLevelPosition(o.position_title)).forEach(o => {
-        const isPending = o.status === 'For Approval';
+      officials.filter(o => THIRD_LEVEL_POSITIONS.includes(o.position_title)).forEach(o => {
         queue.push({
           id: o.TLOid,
           email: o.email,
           name: `${o.first_name || ''} ${o.last_name || ''}`.trim(),
-          desc: `${formatPositionTitle(o.position_title) || o.position_title || 'Unassigned'} · ${o.office || 'Unassigned'}`,
-          status: isPending ? 'For Approval' : 'Active',
-          badgeClass: isPending ? 'warn' : 'neutral',
+          desc: `${o.position_title || 'Unassigned'} · ${o.office || 'Unassigned'}`,
+          status: 'Active',
+          badgeClass: 'neutral',
           type: 'thirdLevel',
           region: getOfficialRegion(o),
           level: getOfficialLevel(o)
@@ -740,12 +656,12 @@ const Home = () => {
   }, [applications, officials, filterRegion, filterLevel, filterOffice, filterSearch, activeQueueFilter, retireesThisMonth, anticipatedVacancies]);
 
   const activityLogs = useMemo(() => {
-    let filtered = [...allOfficials].filter(o => o.status !== 'Inactive');
+    let filtered = [...allOfficials];
 
     // Category Filter
     if (activeQueueFilter !== 'all') {
       if (activeQueueFilter === 'incomplete') {
-        filtered = filtered.filter(o => o.status === 'Active' && !isProfileComplete(o));
+        filtered = filtered.filter(o => o.status === 'Active' && (!o.photo_binary_id || !o.pds_binary_id || !o.contact_details));
       } else if (activeQueueFilter === 'expiring') {
         filtered = filtered.filter(o => o.status === 'Active' && (o.pending_admin_case === 'Yes' || o.guilty_admin_details === 'Yes' || o.criminally_charged_details === 'Yes' || o.convicted_crime_details === 'Yes'));
       } else if (activeQueueFilter === 'retirees') {
@@ -757,7 +673,7 @@ const Home = () => {
       } else if (activeQueueFilter === 'inactive') {
         filtered = filtered.filter(o => o.status === 'Inactive');
       } else if (activeQueueFilter === 'thirdLevel') {
-        filtered = filtered.filter(o => o.status === 'Active' && isThirdLevelPosition(o.position_title));
+        filtered = filtered.filter(o => o.status === 'Active' && THIRD_LEVEL_POSITIONS.includes(o.position_title));
       } else if (activeQueueFilter === 'pending') {
         filtered = []; // only apps
       }
@@ -792,7 +708,7 @@ const Home = () => {
     let appsToInclude = [];
     if (activeQueueFilter === 'all' || activeQueueFilter === 'pending') {
       appsToInclude = [...applications];
-
+      
       if (filterRegion !== 'All regions') {
         appsToInclude = appsToInclude.filter(a => getOfficialRegion(a) === filterRegion);
       }
@@ -800,7 +716,7 @@ const Home = () => {
         appsToInclude = appsToInclude.filter(a => getOfficialLevel(a) === filterLevel);
       }
       if (filterOffice !== 'All') {
-        appsToInclude = appsToInclude.filter(a => a.target_office === filterOffice || a.office === filterOffice);
+        appsToInclude = appsToInclude.filter(a => a.target_office === filterOffice || a.office === filterOffice); 
       }
       if (filterSearch.trim() !== '') {
         const lowerSearch = filterSearch.toLowerCase();
@@ -833,29 +749,11 @@ const Home = () => {
           }
         }
 
-        let actionText = 'Profile Updated';
-        let actionClass = 'updated';
-        if (o.isApp) {
-          actionText = 'Application Submitted';
-          actionClass = 'created';
-        } else if (o.status === 'For Approval') {
-          actionText = 'For Approval';
-          actionClass = 'for-approval';
-        } else if (o.status === 'Vacated') {
-          actionText = 'Position Vacated';
-          actionClass = 'vacated';
-        } else if (isNew) {
-          actionText = 'Profile Created';
-          actionClass = 'created';
-        }
-
         return {
           id: o.TLOid,
           email: o.email,
           name: logName,
-          status: o.status,
-          action: actionText,
-          actionClass: actionClass,
+          action: o.isApp ? 'Application Submitted' : (o.status === 'Vacated' ? 'Position Vacated' : (isNew ? 'Profile Created' : 'Profile Updated')),
           date: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
           time: date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
         };
@@ -918,93 +816,78 @@ const Home = () => {
     return { groupKey: key, groups: groupMap, maxTotal: max };
   }, [allOfficials, drillLevel, drillPath]);
 
-  if (user && !isCentralOffice) {
-    return <Navigate to="/official-profiling" replace />;
-  }
-
   return (
     <PageTransition>
-      <div className="flex min-h-screen bg-transparent text-[#0f172a] font-['Plus_Jakarta_Sans',system-ui,sans-serif]">
-        <AdminSidebar />
-        <div className="flex-1 flex flex-col min-w-0 h-screen overflow-y-auto relative">
+      <AdminLayout>
+        
+        <div className="flex-1 flex flex-col min-w-0 relative">
           {/* TOP NAVIGATION BAR */}
-          <header className="sticky top-0 z-50 bg-[#08315F] backdrop-blur-md border-b border-blue-900 px-8 py-4 flex items-center justify-between shadow-lg shadow-blue-900/20">
-            <div className="flex items-center gap-4">
-              <div className="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center text-white shadow-inner">
-                <FiGrid size={20} />
-              </div>
-              <div>
-                <h1 className="text-lg font-['Plus_Jakarta_Sans'] font-black text-white tracking-tight leading-none italic uppercase">TIMON <span className="text-blue-300 not-italic">Dashboard</span></h1>
-                <p className="text-[9px] font-bold text-blue-200 uppercase tracking-widest mt-1">Third Level Incumbent and Management Operations Network</p>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-6">
+          <PageHeaderCard title="Executive Dashboard" subtitle="InsightED Top-Level Metrics">
+<div className="flex items-center gap-6">
               <div className="hidden md:flex flex-col items-end">
-                <span className="text-xs font-['Plus_Jakarta_Sans'] font-black text-white leading-none">{user?.first_name} {user?.last_name}</span>
-                <span className="text-[9px] font-bold text-[#FBBF24] uppercase tracking-widest mt-1">{user?.role}</span>
+                <span className="text-[15px] font-medium text-heading leading-tight">{user?.first_name} {user?.last_name}</span>
+                <span className="text-[13px] text-secondary">{user?.role}</span>
               </div>
             </div>
-          </header>
+</PageHeaderCard>
           <style>{`
-          .dashboard-wrap { padding:28px; }
-          .hero { background:#08315f; color:white; border-radius:28px; padding:28px; }
-          .hero small { color:#fbbf24; font-weight:900; letter-spacing:.16em; text-transform:uppercase; }
-          .hero h1 { margin:10px 0 8px; font-size:42px; line-height:1; font-weight:900; }
-          .kpis { display:grid; grid-template-columns:repeat(4,1fr); gap:16px; }
-          .kpi { position:relative; background:white; border:2px solid #bae6fd; border-radius:22px; padding:18px; border-left-width:8px; transition:all 0.2s; }
-          .kpi:hover { transform: translateY(-2px); box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1); }
-          .kpi.amber { border-left-color:#f59e0b; } 
-          .kpi.red { border-left-color:#dc2626; } 
-          .kpi.blue { border-left-color:#0284c7; }
-          .kpi.purple { border-left-color:#a855f7; }
-          .kpi.active-filter { background:#f8fafc; outline: 3px solid #bae6fd; outline-offset: -2px; }
-          .kpi p { margin:0; color:#64748b; font-size:12px; font-weight:900; text-transform:uppercase; }
-          .kpi h2 { margin:8px 0 0; font-size:34px; color:#08315f; }
-          .kpi .kpi-subheader { margin-top:2px; font-size:10px; color:#94a3b8; font-weight:700; text-transform:uppercase; letter-spacing:0.05em; display:block; }
-          .kpi-tooltip { position:absolute; right:0; top:100%; margin-top:8px; width:280px; background:rgba(255,255,255,0.95); backdrop-filter:blur(8px); border:1px solid #e2e8f0; border-radius:16px; box-shadow:0 10px 25px -5px rgba(0,0,0,0.1), 0 8px 10px -6px rgba(0,0,0,0.1); padding:16px; opacity:0; pointer-events:none; transition:all 0.2s; z-index:60; max-height:400px; overflow-y:auto; }
+          .dashboard-wrap { padding:16px 32px 28px; }
+          @media(max-width:767px){ .dashboard-wrap { padding:16px; } }
+          .hero { background:var(--color-brand-800); color:white; border-radius:var(--radius-md); padding:28px; }
+          .hero small { color:var(--color-gold); font-weight:600; letter-spacing:.16em; text-transform:uppercase; }
+          .hero h1 { margin:10px 0 8px; font-family:var(--font-title); font-size:32px; line-height:1.25; font-weight:700; }
+          .kpis { display:grid; grid-template-columns:repeat(5,1fr); gap:14px; }
+          .kpi { position:relative; display:flex; flex-direction:column; background:var(--card-bg); border:var(--card-border); border-radius:var(--card-radius); padding:18px; transition:border-color 0.2s; }
+          .kpi:hover { border-color:var(--color-brand-300); }
+          .kpi.active-filter { background:var(--color-brand-50); outline: 3px solid var(--color-brand-300); outline-offset: -2px; }
+          .kpi p { order:1; margin:0; color:var(--color-heading); font-family:var(--font-ui); font-size:15px; font-weight:600; }
+          .kpi h2 { order:3; margin:12px 0 0; font-family:var(--font-data); font-size:32px; line-height:1.25; font-weight:700; color:var(--color-brand-800); }
+          .kpi > div:not(.kpi-subheader):not(.kpi-tooltip) { order:3; margin-top:12px; }
+          .kpi > div:not(.kpi-subheader):not(.kpi-tooltip) h2 { margin:0; }
+          .kpi > div:not(.kpi-subheader):not(.kpi-tooltip) { display:flex; align-items:center; gap:12px; }
+          .kpi > div:not(.kpi-subheader):not(.kpi-tooltip) h2 { order:1; }
+          .kpi > div:not(.kpi-subheader):not(.kpi-tooltip) span { order:2; }
+          .kpi .kpi-subheader { order:2; margin-top:2px; font-family:var(--font-body); font-size:13px; line-height:1.45; font-weight:400; color:var(--color-secondary); display:block; }
+          .kpi-tooltip { position:absolute; right:0; top:100%; margin-top:8px; width:280px; background:rgb(var(--rgb-white)/0.95); backdrop-filter:blur(8px); border:1px solid var(--color-muted); border-radius:var(--radius-md); box-shadow:var(--shadow-lg); padding:16px; opacity:0; pointer-events:none; transition:all 0.2s; z-index:60; max-height:400px; overflow-y:auto; }
           .kpi:first-child .kpi-tooltip { right:auto; left:0; }
           .kpi-tooltip::-webkit-scrollbar { width: 4px; }
-          .kpi-tooltip::-webkit-scrollbar-thumb { background-color: #cbd5e1; border-radius: 4px; }
+          .kpi-tooltip::-webkit-scrollbar-thumb { background-color: var(--color-muted); border-radius: var(--radius-md); }
           .kpi:hover .kpi-tooltip { opacity:1; pointer-events:auto; }
-          .kpi-tooltip h4 { margin:0 0 12px; font-size:10px; font-weight:900; color:#94a3b8; text-transform:uppercase; letter-spacing:0.1em; border-bottom:1px solid #f1f5f9; padding-bottom:8px; }
-          .kpi-tooltip-row { display:flex; justify-content:space-between; align-items:center; padding:4px 0; border-bottom:1px solid #f8fafc; font-size:12px; }
+          .kpi-tooltip h4 { margin:0 0 12px; font-size:10px; font-weight:600; color:var(--color-secondary); text-transform:uppercase; letter-spacing:0.1em; border-bottom:1px solid var(--color-brand-50); padding-bottom:8px; }
+          .kpi-tooltip-row { display:flex; justify-content:space-between; align-items:center; padding:4px 0; border-bottom:1px solid var(--color-brand-50); font-size:12px; }
           .kpi-tooltip-row:last-child { border-bottom:0; }
-          .kpi-tooltip-row span.label { color:#475569; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; padding-right:8px; }
-          .kpi-tooltip-row span.count { color:#0f172a; font-weight:900; background:#e0f2fe; padding:2px 8px; border-radius:8px; }
+          .kpi-tooltip-row span.label { color:var(--color-secondary); font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; padding-right:8px; }
+          .kpi-tooltip-row span.count { color:var(--color-heading); font-weight:600; background:var(--color-brand-100); padding:2px 8px; border-radius:var(--radius-md); }
           .grid-layout { display:grid; grid-template-columns:1.2fr 1fr 280px; gap:16px; margin-top:16px; }
-          .dash-card { background:white; border:2px solid #bae6fd; border-radius:24px; overflow:hidden; display:flex; flex-direction:column; }
-          .dash-head { padding:18px 20px; border-bottom:1px solid #e2e8f0; }
-          .dash-head h3 { margin:0; color:#08315f; font-size:1.25rem; font-weight:800; }
-          .dash-head p { margin:4px 0 0; color:#64748b; font-size:0.875rem; }
-          .chips { padding:14px 20px; border-bottom:1px solid #e2e8f0; display:flex; gap:8px; flex-wrap:wrap; }
-          .chip { background:#e0f2fe; color:#075985; border-radius:999px; padding:8px 12px; font-size:12px; font-weight:900; }
-          .queue-row { display:grid; grid-template-columns:1fr auto; gap:12px; padding:16px 20px; border-bottom:1px solid #f1f5f9; align-items:center; cursor:pointer; transition:background 0.2s; }
-          .queue-row:hover { background:#f8fafc; }
-          .queue-row strong { display:block; color:#0f172a; font-size:1rem; } 
-          .queue-row span { color:#64748b; font-size:12px; }
-          .queue-badge { border-radius:999px; padding:8px 10px; font-size:11px; font-weight:900; height:max-content; white-space:nowrap; }
-          .queue-badge.warn { background:#fef3c7; color:#92400e; } 
-          .queue-badge.risk { background:#fee2e2; color:#991b1b; }
-          .queue-badge.neutral { background:#f1f5f9; color:#475569; }
+          .dash-card { background:var(--card-bg); border:var(--card-border); box-shadow:var(--card-shadow); border-radius:var(--card-radius); overflow:hidden; display:flex; flex-direction:column; }
+          .dash-head { padding:18px 20px; border-bottom:1px solid var(--color-muted); }
+          .dash-head h3 { margin:0; color:var(--color-brand-800); font-family:var(--font-ui); font-size:20px; font-weight:600; }
+          .dash-head p { margin:4px 0 0; color:var(--color-secondary); font-size:0.875rem; }
+          .chips { padding:14px 20px; border-bottom:1px solid var(--color-muted); display:flex; gap:8px; flex-wrap:wrap; }
+          .chip { background:var(--color-brand-100); color:var(--color-brand-700); border-radius:var(--radius-md); padding:8px 12px; font-size:12px; font-weight:600; }
+          .queue-row { display:grid; grid-template-columns:1fr auto; gap:12px; padding:16px 20px; border-bottom:1px solid var(--color-brand-50); align-items:center; cursor:pointer; transition:background 0.2s; }
+          .queue-row:hover { background:var(--color-brand-50); }
+          .queue-row strong { display:block; color:var(--color-heading); font-family:var(--font-title); font-size:1rem; font-weight:700; } 
+          .queue-row span { color:var(--color-secondary); font-size:12px; }
+          .queue-badge { border-radius:var(--radius-md); padding:8px 10px; font-size:11px; font-weight:600; height:max-content; white-space:nowrap; }
+          .queue-badge.warn { background:var(--color-warning-50); color:var(--color-warning-700); } 
+          .queue-badge.risk { background:var(--color-danger-50); color:var(--color-danger-700); }
+          .queue-badge.neutral { background:var(--color-brand-50); color:var(--color-secondary); }
           .side { padding:18px; display:grid; gap:10px; align-content:start; }
-          .action-btn { border:1px solid #bae6fd; background:#f8fafc; border-radius:16px; padding:14px; font-weight:900; color:#08315f; cursor:pointer; transition:all 0.2s; display:flex; align-items:center; gap:8px; justify-content:center; }
-          .action-btn:hover { background:#e0f2fe; border-color:#7dd3fc; }
-          .action-btn.primary { background:#075985; color:white; border-color:#075985; }
-          .action-btn.primary:hover { background:#0369a1; border-color:#0369a1; }
-          .log-row { padding:16px 20px; border-bottom:1px solid #f1f5f9; display:flex; flex-direction:column; gap:6px; cursor:pointer; transition:background 0.2s; }
-          .log-row:hover { background:#f8fafc; }
+          .action-btn { border:1px solid var(--color-brand-300); background:var(--color-brand-50); border-radius:var(--radius-md); padding:14px; font-weight:600; color:var(--color-brand-800); cursor:pointer; transition:all 0.2s; display:flex; align-items:center; gap:8px; justify-content:center; }
+          .action-btn:hover { background:var(--color-brand-100); border-color:var(--color-brand-300); }
+          .action-btn.primary { background:var(--color-brand-700); color:white; border-color:var(--color-brand-700); }
+          .action-btn.primary:hover { background:var(--color-brand-700); border-color:var(--color-brand-700); }
+          .log-row { padding:16px 20px; border-bottom:1px solid var(--color-brand-50); display:flex; flex-direction:column; gap:6px; cursor:pointer; transition:background 0.2s; }
+          .log-row:hover { background:var(--color-brand-50); }
           .log-row:last-child { border-bottom:none; }
-          .log-row strong { color:#0f172a; font-size:1rem; }
+          .log-row strong { color:var(--color-heading); font-family:var(--font-title); font-size:1rem; font-weight:700; }
           .log-row .meta { display:flex; justify-content:space-between; align-items:center; }
-          .log-row .time { color:#64748b; font-size:11px; font-weight:700; display:flex; align-items:center; gap:4px; }
-          .log-row .action { font-size:11px; padding:4px 8px; border-radius:6px; font-weight:800; text-transform:uppercase; letter-spacing:0.05em; }
-          .log-row .action.updated { background:#e0f2fe; color:#0284c7; }
-          .log-row .action.created { background:#dcfce7; color:#166534; }
-          .log-row .action.for-approval { background:#fef3c7; color:#92400e; }
-          .log-row .action.vacated { background:#fee2e2; color:#991b1b; }
+          .log-row .time { color:var(--color-secondary); font-size:11px; font-weight:700; display:flex; align-items:center; gap:4px; }
+          .log-row .action { font-size:11px; padding:4px 8px; border-radius:var(--radius-md); font-weight:800; text-transform:uppercase; letter-spacing:0.05em; }
+          .log-row .action.updated { background:var(--color-brand-100); color:var(--color-brand-700); }
+          .log-row .action.created { background:var(--color-success-50); color:var(--color-success-700); }
           @media(max-width:1024px){
-            .kpis { grid-template-columns:repeat(2,1fr); }
             .grid-layout { grid-template-columns:1fr 1fr; }
             .grid-layout > aside { grid-column: span 2; }
           }
@@ -1019,74 +902,9 @@ const Home = () => {
           }
         `}</style>
 
-          <div className="dashboard-wrap mt-6">
-            {/* FILTERS & SEARCH BAR */}
-            <div className="mb-6 flex flex-col xl:flex-row items-stretch xl:items-center gap-2 bg-white border-[2px] border-[#08315F] rounded-[24px] xl:rounded-full p-2 shadow-sm relative z-20 mt-[-24px] max-w-[1200px] mx-auto">
-              {/* SEARCH BAR */}
-              <div className="relative w-full xl:flex-[1.5] h-[38px] bg-[#F0F9FF] border border-[#BAE6FD] rounded-full focus-within:border-sky-400 transition-colors">
-                <FiSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-[#08315F]/50" size={14} />
-                <input
-                  type="text"
-                  value={filterSearch}
-                  onChange={(e) => setFilterSearch(e.target.value)}
-                  placeholder="Search name or email..."
-                  className="w-full h-full bg-transparent py-0 pl-10 pr-4 text-[11px] font-bold text-[#08315F] outline-none placeholder:text-[#08315F]/50 transition-colors"
-                />
-              </div>
-
-              {/* DROPDOWNS */}
-              <div className="grid grid-cols-1 md:grid-cols-3 xl:flex xl:flex-[2.5] gap-2">
-                {/* Region Dropdown */}
-                <div className="relative w-full xl:flex-1 h-[38px] bg-[#F0F9FF] border border-[#BAE6FD] rounded-full focus-within:border-sky-400 transition-colors">
-                  <select value={filterRegion} onChange={(e) => setFilterRegion(e.target.value)} title={filterRegion} className="w-full h-full bg-transparent pl-3 pr-6 text-[11px] font-bold text-[#08315F] outline-none appearance-none cursor-pointer text-ellipsis">
-                    <option value="All regions">All Regions</option>
-                    {[...new Set(officials.map(getOfficialRegion).filter(Boolean))].sort().map(r => (
-                      <option key={r} value={r}>{r}</option>
-                    ))}
-                  </select>
-                  <FiChevronRight className="absolute right-2 top-1/2 -translate-y-1/2 text-sky-500 pointer-events-none" size={12} />
-                </div>
-
-                {/* Level Dropdown */}
-                <div className="relative w-full xl:flex-1 h-[38px] bg-[#F0F9FF] border border-[#BAE6FD] rounded-full focus-within:border-sky-400 transition-colors">
-                  <select value={filterLevel} onChange={(e) => setFilterLevel(e.target.value)} title={filterLevel} className="w-full h-full bg-transparent pl-3 pr-6 text-[11px] font-bold text-[#08315F] outline-none appearance-none cursor-pointer text-ellipsis">
-                    <option value="All levels">All Levels</option>
-                    <option value="Third Level">Third Level</option>
-                    <option value="Division Chief">Division Chief</option>
-                  </select>
-                  <FiChevronRight className="absolute right-2 top-1/2 -translate-y-1/2 text-sky-500 pointer-events-none" size={12} />
-                </div>
-
-                {/* Office Dropdown */}
-                <div className="relative w-full xl:flex-1 h-[38px] bg-[#F0F9FF] border border-[#BAE6FD] rounded-full focus-within:border-sky-400 transition-colors">
-                  <select value={filterOffice} onChange={(e) => setFilterOffice(e.target.value)} title={filterOffice} className="w-full h-full bg-transparent pl-3 pr-6 text-[11px] font-bold text-[#08315F] outline-none appearance-none cursor-pointer text-ellipsis">
-                    <option value="All">All Offices</option>
-                    {[...new Set(officials.map(o => o.office).filter(Boolean))].sort().map(o => (
-                      <option key={o} value={o}>{o}</option>
-                    ))}
-                  </select>
-                  <FiChevronRight className="absolute right-2 top-1/2 -translate-y-1/2 text-sky-500 pointer-events-none" size={12} />
-                </div>
-              </div>
-
-              {/* Clear Button */}
-              <div className="flex items-center gap-2 w-full xl:w-auto mt-2 xl:mt-0">
-                <button
-                  onClick={() => {
-                    setFilterSearch('');
-                    setFilterRegion('All regions');
-                    setFilterLevel('All levels');
-                    setFilterOffice('All');
-                  }}
-                  className="h-[38px] px-8 w-full xl:w-auto bg-[#075985] text-white rounded-full font-black text-[11px] tracking-widest uppercase hover:bg-[#0369a1] transition-colors flex items-center justify-center whitespace-nowrap shrink-0"
-                >
-                  Clear
-                </button>
-              </div>
-            </div>
-
+          <div className="dashboard-wrap">
             <section className="kpis">
-              <div className={`kpi ${activeQueueFilter === 'thirdLevel' ? 'active-filter' : ''}`} onClick={() => toggleFilter('thirdLevel')} style={{ cursor: 'pointer', outlineColor: '#bae6fd' }}>
+              <div className={`kpi ${activeQueueFilter === 'thirdLevel' ? 'active-filter' : ''}`} onClick={() => toggleFilter('thirdLevel')} style={{ cursor: 'pointer', outlineColor: 'var(--color-brand-300)' }}>
                 <p>Total Third Level Officials</p>
                 <h2>{loading ? '-' : thirdLevelCount}</h2>
                 <div className="kpi-subheader">Active assigned personnel</div>
@@ -1126,26 +944,12 @@ const Home = () => {
                 </div>
               </div>
               <div className={`kpi purple ${activeQueueFilter === 'retirees' ? 'active-filter' : ''}`} onClick={() => toggleFilter('retirees')} style={{ cursor: 'pointer' }}>
-                <div className="flex justify-between items-start">
-                  <p>Anticipated Vacancies</p>
-                  {user?.role === 'Central Office' && (
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setIsRetireesModalOpen(true);
-                      }}
-                      className="text-[10px] font-black uppercase tracking-wider text-purple-600 hover:text-purple-900 bg-purple-100 hover:bg-purple-200 px-2 py-0.5 rounded transition-colors"
-                      title="Open Anticipated Vacancies Modal"
-                    >
-                      View Modal
-                    </button>
-                  )}
-                </div>
+                <p>Anticipated Vacancies</p>
                 <div className="flex items-center gap-3 mt-2">
                   <h2 className="!mt-0">{loading ? '-' : anticipatedVacanciesCount}</h2>
                   <span className="text-purple-500 text-[10px] font-black uppercase tracking-widest bg-purple-50 px-2 py-1 rounded-md border border-purple-100" title="Separating this month">{loading ? '-' : retireesThisMonth.length} Separating</span>
                 </div>
-                <div className="kpi-subheader mt-1">Upcoming within 5 years</div>
+                <div className="kpi-subheader mt-1">Retiring within 5 years</div>
                 <div className="kpi-tooltip" onClick={e => e.stopPropagation()}>
                   <h4>Region Breakdown</h4>
                   {Object.keys(anticipatedRegionBreakdown).length > 0 ? Object.entries(anticipatedRegionBreakdown).map(([region, count], idx) => (
@@ -1167,6 +971,24 @@ const Home = () => {
                 <div className="kpi-tooltip" onClick={e => e.stopPropagation()}>
                   <h4>Region Breakdown</h4>
                   {Object.keys(vacantRegionBreakdown).length > 0 ? Object.entries(vacantRegionBreakdown).map(([region, count], idx) => (
+                    <div key={region} className="kpi-tooltip-row">
+                      <span className="label" title={region}>
+                        <span className="text-slate-400 font-black mr-1">{idx + 1}.</span> {region}
+                      </span>
+                      <span className="count">{count}</span>
+                    </div>
+                  )) : (
+                    <div className="text-[10px] text-slate-400 font-bold uppercase tracking-widest text-center mt-2">No records</div>
+                  )}
+                </div>
+              </div>
+              <div className={`kpi blue ${activeQueueFilter === 'inactive' ? 'active-filter' : ''}`} onClick={() => toggleFilter('inactive')} style={{ cursor: 'pointer' }}>
+                <p>Total Inactive Personnel</p>
+                <h2>{loading ? '-' : inactiveOfficials.length}</h2>
+                <div className="kpi-subheader">Personnel off duty</div>
+                <div className="kpi-tooltip" onClick={e => e.stopPropagation()}>
+                  <h4>Region Breakdown</h4>
+                  {Object.keys(inactiveRegionBreakdown).length > 0 ? Object.entries(inactiveRegionBreakdown).map(([region, count], idx) => (
                     <div key={region} className="kpi-tooltip-row">
                       <span className="label" title={region}>
                         <span className="text-slate-400 font-black mr-1">{idx + 1}.</span> {region}
@@ -1237,8 +1059,8 @@ const Home = () => {
                   <div>
                     <h3>Activity Logs</h3>
                     <p>
-                      {activeQueueFilter === 'all' && filterRegion === 'All regions' && filterLevel === 'All levels' && filterOffice === 'All' && filterSearch === ''
-                        ? "Recent profile updates and creations."
+                      {activeQueueFilter === 'all' && filterRegion === 'All regions' && filterLevel === 'All levels' && filterOffice === 'All' && filterSearch === '' 
+                        ? "Recent profile updates and creations." 
                         : "Showing filtered recent activity."}
                     </p>
                   </div>
@@ -1267,14 +1089,9 @@ const Home = () => {
                   ) : activityLogs.length > 0 ? (
                     activityLogs.map((log, idx) => (
                       <div key={idx} className="log-row" onClick={() => navigate(log.email ? `/official-profiling?email=${encodeURIComponent(log.email)}` : '/officials-registry')}>
-                        <div className="flex items-center justify-between gap-2">
-                          <strong>{log.name}</strong>
-                          {log.status === 'For Approval' && (
-                            <span className="queue-badge warn text-[10px] py-0.5 px-2">For Approval</span>
-                          )}
-                        </div>
+                        <strong>{log.name}</strong>
                         <div className="meta">
-                          <span className={`action ${log.actionClass || 'updated'}`}>{log.action}</span>
+                          <span className={`action ${log.action === 'Profile Created' ? 'created' : 'updated'}`}>{log.action}</span>
                           <span className="time"><FiClock /> {log.date} at {log.time}</span>
                         </div>
                       </div>
@@ -1336,7 +1153,7 @@ const Home = () => {
             </div>
           </div>
         </div>
-      </div>
+      </AdminLayout>
       <UploadDirectoryModal
         isOpen={isUploadModalOpen}
         onClose={() => setIsUploadModalOpen(false)}

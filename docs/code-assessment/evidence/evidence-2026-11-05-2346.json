@@ -1,0 +1,246 @@
+{
+  "meta": {
+    "repo": "insighted-third-level-standalone",
+    "git_head": "027c554c6ec66b1ddd382bddc28dbac498218fc5",
+    "dirty": true,
+    "diff_hash": "3923b51225af4fa1",
+    "node_version": "v24.11.1",
+    "os": "win32 10.0.26300",
+    "tier": 2,
+    "skip": "",
+    "started": "2026-11-05T15:46:29.311Z",
+    "finished": "2026-11-05T15:46:57.244Z"
+  },
+  "stations": {
+    "oxlint": {
+      "status": "ok",
+      "reason": null,
+      "command": "npm.cmd run lint:fast --silent -- --format=json",
+      "exitCode": 0,
+      "durationMs": 1733,
+      "timedOut": false,
+      "metrics": {
+        "errors": 0,
+        "warnings": 219,
+        "fixable": null,
+        "top_rules": [
+          [
+            "eslint(no-unused-vars)",
+            117
+          ],
+          [
+            "react(set-state-in-effect)",
+            32
+          ],
+          [
+            "react-hooks(exhaustive-deps)",
+            29
+          ],
+          [
+            "react(purity)",
+            14
+          ],
+          [
+            "react(immutability)",
+            12
+          ]
+        ],
+        "top_files": []
+      },
+      "tail": ""
+    },
+    "eslint": {
+      "status": "ok",
+      "reason": null,
+      "command": "npm.cmd run lint --silent -- --format=json",
+      "exitCode": 0,
+      "durationMs": 3758,
+      "timedOut": false,
+      "metrics": {
+        "errors": 0,
+        "warnings": 76,
+        "fixable": 0,
+        "top_rules": [
+          [
+            "no-unused-vars",
+            66
+          ],
+          [
+            "no-undef",
+            5
+          ],
+          [
+            "no-useless-assignment",
+            3
+          ],
+          [
+            "no-empty",
+            1
+          ],
+          [
+            "preserve-caught-error",
+            1
+          ]
+        ],
+        "top_files": []
+      },
+      "tail": ""
+    },
+    "typecheck": {
+      "status": "missing",
+      "reason": "no tsconfig.json found",
+      "command": null,
+      "exitCode": null,
+      "durationMs": 0,
+      "timedOut": false,
+      "metrics": {},
+      "tail": ""
+    },
+    "unit": {
+      "status": "ok",
+      "reason": null,
+      "command": "npm.cmd run test:unit --silent -- --reporter=dot",
+      "exitCode": 0,
+      "durationMs": 2462,
+      "timedOut": false,
+      "metrics": {
+        "total": 26,
+        "passed": 26,
+        "failed": 0,
+        "skipped": 0,
+        "failed_tests": []
+      },
+      "tail": ""
+    },
+    "coverage": {
+      "status": "ok",
+      "reason": null,
+      "command": "npm.cmd run test:unit --silent -- --reporter=dot --coverage --coverage.reporter=json-summary",
+      "exitCode": 0,
+      "durationMs": 2646,
+      "timedOut": false,
+      "metrics": {
+        "lines_pct": 22.4,
+        "branches_pct": 13.3,
+        "functions_pct": 22.6,
+        "statements_pct": 22.2
+      },
+      "tail": ""
+    },
+    "build": {
+      "status": "ok",
+      "reason": null,
+      "command": "npm.cmd run build --silent",
+      "exitCode": 0,
+      "durationMs": 13893,
+      "timedOut": false,
+      "metrics": {},
+      "tail": ""
+    },
+    "e2e": {
+      "status": "failed",
+      "reason": null,
+      "command": "npm.cmd run test:e2e --silent -- --reporter=json",
+      "exitCode": 1,
+      "durationMs": 1033,
+      "timedOut": false,
+      "metrics": {
+        "expected": 0,
+        "unexpected": 0,
+        "flaky": 0,
+        "skipped": 0,
+        "duration_ms": 16
+      },
+      "tail": "          \"trace\": \"on-first-retry\",\n          \"screenshot\": \"only-on-failure\",\n          \"userAgent\": \"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/156.0.8078.4 Safari/537.36\",\n          \"viewport\": {\n            \"width\": 1280,\n            \"height\": 720\n          },\n          \"screen\": {\n            \"width\": 1920,\n            \"height\": 1080\n          },\n          \"deviceScaleFactor\": 1,\n          \"isMobile\": false,\n          \"hasTouch\": false,\n          \"defaultBrowserType\": \"chromium\"\n        },\n        \"dependencies\": [],\n        \"ignoreSnapshots\": false,\n        \"__projectId\": \"chromium\"\n      }\n    ],\n    \"quiet\": false,\n    \"reporter\": [\n      [\n        \"json\"\n      ]\n    ],\n    \"reportSlowTests\": {\n      \"max\": 5,\n      \"threshold\": 300000\n    },\n    \"shard\": null,\n    \"tags\": [],\n    \"updateSnapshots\": \"default\",\n    \"updateSourceMethod\": \"patch\",\n    \"version\": \"1.64.1\",\n    \"workers\": 2,\n    \"webServer\": {\n      \"command\": \"npm run dev\",\n      \"port\": 5173,\n      \"reuseExistingServer\": false,\n      \"timeout\": 120000\n    }\n  },\n  \"suites\": [],\n  \"errors\": [\n    {\n      \"message\": \"Error: http://localhost:5173 is already used, make sure that nothing is running on the port/url or set reuseExistingServer:true in config.webServer.\",\n      \"stack\": \"Error: http://localhost:5173 is already used, make sure that nothing is running on the port/url or set reuseExistingServer:true in config.webServer.\"\n    }\n  ],\n  \"stats\": {\n    \"startTime\": \"2026-11-05T15:46:54.855Z\",\n    \"duration\": 16.071000000000026,\n    \"expected\": 0,\n    \"skipped\": 0,\n    \"unexpected\": 0,\n    \"flaky\": 0\n  }\n}"
+    },
+    "audit": {
+      "status": "ok",
+      "reason": null,
+      "command": "npm.cmd audit --json",
+      "exitCode": 1,
+      "durationMs": 2324,
+      "timedOut": false,
+      "metrics": {
+        "info": 0,
+        "low": 0,
+        "moderate": 4,
+        "high": 0,
+        "critical": 0,
+        "high_critical_packages": []
+      },
+      "tail": ""
+    }
+  },
+  "config": {
+    "oxlint_present": true,
+    "eslint_flat_config_present": true,
+    "boundaries": {
+      "circular_dependency_rule": true,
+      "restricted_imports_rule": true,
+      "plugin_boundaries": true
+    },
+    "tsconfig": {
+      "files": [],
+      "strict": false,
+      "noUncheckedIndexedAccess": false
+    },
+    "vitest": {
+      "present": true,
+      "config_files": [
+        "vitest.config.js"
+      ],
+      "coverage_thresholds": true
+    },
+    "playwright": {
+      "present": true,
+      "config_file": "playwright.config.js",
+      "fullyParallel": true,
+      "retries": "process.env.CI ? 2 : 0",
+      "workers": "process.env.CI ? 2 : undefined",
+      "trace": "on-first-retry",
+      "projects": 1,
+      "webServer": true,
+      "parallel": true
+    },
+    "lockfile_committed": true,
+    "sonarqube_configured": false
+  },
+  "code_stats": {
+    "source_files": 0,
+    "source_loc": 0,
+    "any_escape_count": 0,
+    "suppression_count": 0,
+    "any_escapes": [],
+    "suppressions": [],
+    "tests": {
+      "test_files": 1,
+      "only_count": 0,
+      "skip_count": 0,
+      "e2e_spec_files": 1
+    },
+    "heuristic_e2e": true,
+    "features_detected": [],
+    "features_without_e2e": [],
+    "e2e_spec_ratio": null
+  },
+  "ci": {
+    "workflows_found": 1,
+    "workflow_files": [
+      "ci-cd.yml"
+    ],
+    "runs_lint": true,
+    "runs_typecheck": true,
+    "runs_unit": true,
+    "runs_e2e": true,
+    "sharded_or_matrix": true,
+    "uploads_artifacts": true,
+    "uses_concurrency": true,
+    "uses_cache": true,
+    "uses_needs": true,
+    "pinned_share_pct": 100,
+    "third_party_actions": 0,
+    "runs_static_security_gate": true,
+    "branch_protection": "unverified",
+    "branch_protection_reason": "cannot be read offline"
+  }
+}

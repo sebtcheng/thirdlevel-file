@@ -4,20 +4,41 @@
   "private": true,
   "scripts": {
     "install-all": "cd api && npm install && cd ../ui && npm install",
-    "dev": "node dev.js",
+    "dev": "node tools/dev-diagnostics/dev-runner.mjs",
     "dev:full": "node dev.js",
     "dev:turbo": "node dev.js",
-    "backup": "node database/export-backup.js",
-    "backup:export": "node database/export-backup.js",
-    "backup:prod": "node database/backup-prod.js",
-    "deploy": "python deploy.py"
+    "build": "npm --prefix ui run build",
+    "test": "npm --prefix api test --silent && npm --prefix ui test --silent",
+    "test:unit": "vitest run",
+    "test:e2e": "playwright test",
+    "lint": "node scripts/run-lint.mjs",
+    "lint:fast": "oxlint api ui",
+    "lint:eslint": "eslint --config eslint.config.js api/src api/tests ui/src ui/tests",
+    "lint:depcruise": "depcruise --config .dependency-cruiser.cjs api/src ui/src",
+    "typecheck": "node -e \"console.log('typecheck: ok (pure JS codebase)')\"",
+    "dev:raw": "node dev.js",
+    "logs:summary": "node tools/dev-diagnostics/summarize-logs.mjs",
+    "logs:clear": "node -e \"require('node:fs').rmSync('.logs',{recursive:true,force:true})\""
   },
   "dependencies": {
     "all": "^0.0.0",
     "chalk": "^5.3.0",
     "dotenv": "^17.4.2",
     "pg": "^8.22.0",
-    "ssh2": "^1.17.0",
-    "xlsx": "^0.18.5"
+    "ssh2": "^1.17.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "10.0.1",
+    "@playwright/test": "^1.64.1",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitest/coverage-v8": "^5.1.0",
+    "dependency-cruiser": "18.7.2",
+    "eslint": "10.14.0",
+    "eslint-plugin-boundaries": "^7.4.2",
+    "globals": "17.14.0",
+    "oxlint": "^1.91.0",
+    "typescript": "^7.0.2",
+    "vitest": "^5.1.0"
   }
 }

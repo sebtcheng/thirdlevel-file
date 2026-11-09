@@ -1,0 +1,171 @@
+{
+  "scannedAt": "2026-11-06T10:44:51.904Z",
+  "root": "C:\\InsightED and STRIDE\\InsightED v2\\thirdlevel-file",
+  "schemaPath": null,
+  "poolerHint": false,
+  "filesScanned": 91,
+  "includeScripts": false,
+  "excludedScriptHits": 2,
+  "excludedScriptHitsByDir": {
+    "api/scripts": 2
+  },
+  "candidates": [
+    {
+      "file": "api/src/features/auth/registerController.js",
+      "line": 94,
+      "pattern": "select-all",
+      "snippet": "const result = await pool.query(",
+      "note": "SELECT * in raw SQL",
+      "source": "raw-pg",
+      "access_layer": "raw-pg",
+      "tier": "app",
+      "oneOff": false,
+      "group": "select-all:api/src/features/auth/registerController.js"
+    },
+    {
+      "file": "api/src/features/binary/controller.js",
+      "line": 9,
+      "pattern": "select-all",
+      "snippet": "const result = await pool.query('SELECT * FROM unified_binaries WHERE id = $1', [id]);",
+      "note": "SELECT * in raw SQL",
+      "source": "raw-pg",
+      "access_layer": "raw-pg",
+      "tier": "app",
+      "oneOff": false,
+      "group": "select-all:api/src/features/binary/controller.js"
+    },
+    {
+      "file": "api/src/features/official-profiling/applications.js",
+      "line": 262,
+      "pattern": "select-all",
+      "snippet": "const appRes = await client.query('SELECT * FROM third_level_officials_profiling_application WHERE app_TLOid = $1', [app_TLOid]);",
+      "note": "SELECT * in raw SQL",
+      "source": "raw-pg",
+      "access_layer": "raw-pg",
+      "tier": "app",
+      "oneOff": false,
+      "group": "select-all:api/src/features/official-profiling/applications.js"
+    },
+    {
+      "file": "api/src/features/official-profiling/applications.js",
+      "line": 515,
+      "pattern": "select-all",
+      "snippet": "const activeAssignRes = await client.query(",
+      "note": "SELECT * in raw SQL",
+      "source": "raw-pg",
+      "access_layer": "raw-pg",
+      "tier": "app",
+      "oneOff": false,
+      "group": "select-all:api/src/features/official-profiling/applications.js"
+    },
+    {
+      "file": "api/src/features/official-profiling/applications.js",
+      "line": 615,
+      "pattern": "select-all",
+      "snippet": "const pendingReassignments = await client.query(`",
+      "note": "SELECT * in raw SQL",
+      "source": "raw-pg",
+      "access_layer": "raw-pg",
+      "tier": "app",
+      "oneOff": false,
+      "group": "select-all:api/src/features/official-profiling/applications.js"
+    },
+    {
+      "file": "api/src/features/official-profiling/applications.js",
+      "line": 625,
+      "pattern": "write-in-loop",
+      "snippet": "await client.query(`",
+      "note": "query call lexically inside a loop/callback (N+1 candidate)",
+      "source": "raw-pg",
+      "access_layer": "raw-pg",
+      "tier": "app",
+      "oneOff": false,
+      "group": "write-in-loop:api/src/features/official-profiling/applications.js"
+    },
+    {
+      "file": "api/src/features/official-profiling/applications.js",
+      "line": 771,
+      "pattern": "select-all",
+      "snippet": "const activeAssignRes = await client.query(",
+      "note": "SELECT * in raw SQL",
+      "source": "raw-pg",
+      "access_layer": "raw-pg",
+      "tier": "app",
+      "oneOff": false,
+      "group": "select-all:api/src/features/official-profiling/applications.js"
+    },
+    {
+      "file": "api/src/features/official-profiling/profile.js",
+      "line": 67,
+      "pattern": "select-all",
+      "snippet": "const masterRes = await pool.query(`",
+      "note": "SELECT * in raw SQL",
+      "source": "raw-pg",
+      "access_layer": "raw-pg",
+      "tier": "app",
+      "oneOff": false,
+      "group": "select-all:api/src/features/official-profiling/profile.js"
+    },
+    {
+      "file": "api/src/features/official-profiling/profile.js",
+      "line": 98,
+      "pattern": "select-all",
+      "snippet": "const stagingRes = await pool.query(`",
+      "note": "SELECT * in raw SQL",
+      "source": "raw-pg",
+      "access_layer": "raw-pg",
+      "tier": "app",
+      "oneOff": false,
+      "group": "select-all:api/src/features/official-profiling/profile.js"
+    },
+    {
+      "file": "api/src/features/official-profiling/profile.js",
+      "line": 254,
+      "pattern": "select-all",
+      "snippet": "result = await pool.query('SELECT * FROM third_level_official_masterlist WHERE \"TLOid\" = $1', [TLOid]);",
+      "note": "SELECT * in raw SQL",
+      "source": "raw-pg",
+      "access_layer": "raw-pg",
+      "tier": "app",
+      "oneOff": false,
+      "group": "select-all:api/src/features/official-profiling/profile.js"
+    },
+    {
+      "file": "api/src/features/official-profiling/profile.js",
+      "line": 256,
+      "pattern": "select-all",
+      "snippet": "result = await pool.query('SELECT *, app_TLOid AS \"TLOid\" FROM third_level_officials_profiling_application WHERE app_TLOid = $1', [TLOid]);",
+      "note": "SELECT * in raw SQL",
+      "source": "raw-pg",
+      "access_layer": "raw-pg",
+      "tier": "app",
+      "oneOff": false,
+      "group": "select-all:api/src/features/official-profiling/profile.js"
+    },
+    {
+      "file": "api/src/features/officials-registry/controller.js",
+      "line": 684,
+      "pattern": "select-all",
+      "snippet": "const currentRes = await client.query('SELECT * FROM third_level_official_masterlist WHERE \"TLOid\" = $1', [TLOid]);",
+      "note": "SELECT * in raw SQL",
+      "source": "raw-pg",
+      "access_layer": "raw-pg",
+      "tier": "app",
+      "oneOff": false,
+      "group": "select-all:api/src/features/officials-registry/controller.js"
+    },
+    {
+      "file": "api/src/features/officials-registry/controller.js",
+      "line": 739,
+      "pattern": "select-all",
+      "snippet": "const successorRes = await client.query('SELECT * FROM third_level_official_masterlist WHERE \"TLOid\" = $1', [successor_TLOid]);",
+      "note": "SELECT * in raw SQL",
+      "source": "raw-pg",
+      "access_layer": "raw-pg",
+      "tier": "app",
+      "oneOff": false,
+      "group": "select-all:api/src/features/officials-registry/controller.js"
+    }
+  ],
+  "columnUsage": []
+}

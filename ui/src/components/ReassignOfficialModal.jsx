@@ -1,147 +1,63 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { createPortal } from 'react-dom';
-import { motion, AnimatePresence } from 'framer-motion';
-import {
-  FiX,
-  FiSearch,
-  FiChevronDown,
-  FiChevronRight,
-  FiCheck,
-  FiCheckCircle,
-  FiRefreshCw,
-  FiLayers,
-  FiHelpCircle
-} from 'react-icons/fi';
+import { X as FiX, MagnifyingGlass as FiSearch, ArrowRight as FiArrowRight, CloudArrowUp as FiUploadCloud, WarningCircle as FiAlertCircle, Check as FiCheck, CaretDown as FiChevronDown } from '@phosphor-icons/react';
 import Swal from 'sweetalert2';
 import { apiUrl } from '../utils/api';
+import ModernDatePicker from './ModernDatePicker';
+import FloatingLabelInput from './forms/FloatingLabelInput.jsx';
+import FormErrorSummary from './forms/FormErrorSummary.jsx';
 
-// =============================================================================
-// Helper: Position Ranking & Search
-// =============================================================================
-const filterAndRankPositions = (positions, query) => {
-  if (!query || !query.trim()) return positions;
-
-  const rawQ = query.trim().toLowerCase();
-  const tokens = rawQ.split(/\s+/).filter(Boolean);
-
-  const expandedTokens = tokens.map(t => {
-    const list = [t];
-    if (t === '4' || t === 'iv') list.push('4', 'iv');
-    if (t === '3' || t === 'iii') list.push('3', 'iii');
-    if (t === '2' || t === 'ii') list.push('2', 'ii');
-    if (t === '1' || t === 'i') list.push('1', 'i');
-    if (t === 'dir') list.push('dir', 'director');
-    if (t === 'sec') list.push('sec', 'secretary');
-    if (t === 'usec') list.push('usec', 'undersecretary');
-    if (t === 'asec') list.push('asec', 'assistant secretary');
-    if (t === 'rd') list.push('rd', 'regional director');
-    if (t === 'ard') list.push('ard', 'assistant regional director');
-    if (t === 'sds') list.push('sds', 'schools division superintendent');
-    if (t === 'asds') list.push('asds', 'assistant schools division superintendent');
-    return list;
-  });
-
-  const scored = [];
-
-  for (const p of positions) {
-    const title = (p.position_title || '').toLowerCase();
-    const code = (p.position_code || '').toLowerCase();
-    const region = (p.region || '').toLowerCase();
-    const bureau = (p.bureau || '').toLowerCase();
-    const division = (p.division || '').toLowerCase();
-    const sg = (p.salary_grade || '').toLowerCase();
-
-    const fullText = `${code} ${title} ${region} ${bureau} ${division} ${sg}`;
-
-    const matchesAllTokens = expandedTokens.every(synonyms =>
-      synonyms.some(syn => fullText.includes(syn))
-    );
-
-    if (!matchesAllTokens) continue;
-
-    let score = 0;
-    if (code === rawQ || title === rawQ) score += 3000;
-    if (title.startsWith(rawQ)) score += 2000;
-    if (code.startsWith(rawQ)) score += 1800;
-    if (expandedTokens[0].some(syn => title.startsWith(syn))) score += 1500;
-    if (expandedTokens[0].some(syn => code.startsWith(syn))) score += 1200;
-
-    const words = title.split(/\s+/);
-    if (words.some(w => expandedTokens[0].some(syn => w.startsWith(syn)))) score += 600;
-
-    tokens.forEach(t => {
-      if (['4', 'iv', '3', 'iii', '2', 'ii', '1', 'i'].includes(t)) {
-        if (title.includes(t) || code.includes(t)) score += 500;
-      }
-    });
-
-    scored.push({ p, score });
-  }
-
-  scored.sort((a, b) => b.score - a.score);
-  return scored.map(s => s.p);
+// ─── Helper ──────────────────────────────────────────────────────────────────
+const isSuffixPlaceholder = (suffix) => {
+  if (!suffix) return true;
+  const s = String(suffix).trim().toLowerCase();
+  return s === '' || s === 'not applicable' || s === 'not apllicable' || s === 'na' || s === 'n/a' || s === 'none';
 };
 
-// =============================================================================
-// SUB-COMPONENT: Searchable Official Dropdown (Combobox)
-// =============================================================================
-const OfficialCombobox = ({ officials, selectedId, onSelect, placeholder = "Select an Official..." }) => {
-  const [isOpen, setIsOpen] = useState(false);
-  const [query, setQuery] = useState('');
-  const triggerRef = useRef(null);
-  const menuRef = useRef(null);
-  const [dropdownPos, setDropdownPos] = useState({ top: 0, left: 0, width: 0, maxHeight: 360, placement: 'bottom' });
+const sanitizeSuffix = (suffix) => {
+  if (isSuffixPlaceholder(suffix)) return '';
+  return String(suffix).trim();
+};
 
-  const selectedOfficial = useMemo(() => {
-    return officials.find(o => String(o.id) === String(selectedId) || (Array.isArray(o.other_masterlist_ids) && o.other_masterlist_ids.includes(Number(selectedId)))) || null;
-  }, [officials, selectedId]);
+const fullName = (o) => {
+  const suffix = sanitizeSuffix(o?.suffix);
+  return `${o?.first_name || ''} ${o?.middle_name ? o.middle_name + ' ' : ''}${o?.last_name || ''}${suffix ? ' ' + suffix : ''}`.trim();
+};
+
+// ─── Designation Combobox Component ─────────────────────────────────────────
+const DesignationCombobox = ({ value, onChange, options = [], placeholder = 'e.g. Officer-in-Charge, Regional Director…' }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [filterTab, setFilterTab] = useState('all'); // 'all' | 'regular' | 'oic'
+  const [highlightedIndex, setHighlightedIndex] = useState(-1);
+  const containerRef = useRef(null);
+  const inputRef = useRef(null);
+  const dropdownRef = useRef(null);
+  const [dropdownPos, setDropdownPos] = useState({ top: 0, left: 0, width: 0, maxHeight: 300 });
 
   const updatePosition = () => {
-    if (triggerRef.current) {
-      const rect = triggerRef.current.getBoundingClientRect();
+    if (inputRef.current) {
+      const rect = inputRef.current.getBoundingClientRect();
       const viewportHeight = window.innerHeight;
-      const viewportWidth = window.innerWidth;
-      const spaceBelow = viewportHeight - rect.bottom - 16;
-      const spaceAbove = rect.top - 16;
-      const preferredHeight = 360;
-
-      const width = Math.min(rect.width, viewportWidth - 24);
-      const left = Math.max(12, Math.min(rect.left, viewportWidth - width - 12));
-
-      if (spaceBelow < 220 && spaceAbove > spaceBelow) {
-        const maxHeight = Math.min(preferredHeight, Math.max(160, spaceAbove));
+      const spaceBelow = viewportHeight - rect.bottom;
+      const preferredHeight = 320;
+      
+      // Flip up if space below is limited
+      if (spaceBelow < 220 && rect.top > spaceBelow) {
+        const topPos = Math.max(10, rect.top - Math.min(preferredHeight, rect.top - 20) - 6);
         setDropdownPos({
-          top: Math.max(8, rect.top - maxHeight - 6),
-          left,
-          width,
-          maxHeight,
-          placement: 'top'
+          top: topPos,
+          left: rect.left,
+          width: rect.width,
+          maxHeight: Math.min(preferredHeight, rect.top - 20)
         });
       } else {
-        const maxHeight = Math.min(preferredHeight, Math.max(160, spaceBelow));
         setDropdownPos({
           top: rect.bottom + 6,
-          left,
-          width,
-          maxHeight,
-          placement: 'bottom'
+          left: rect.left,
+          width: rect.width,
+          maxHeight: Math.min(preferredHeight, Math.max(180, spaceBelow - 16))
         });
       }
     }
-  };
-
-  const toggleOpen = () => {
-    const next = !isOpen;
-    if (next) {
-      updatePosition();
-      if (triggerRef.current) {
-        setTimeout(() => {
-          triggerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-          updatePosition();
-        }, 50);
-      }
-    }
-    setIsOpen(next);
   };
 
   useEffect(() => {
@@ -156,13 +72,14 @@ const OfficialCombobox = ({ officials, selectedId, onSelect, placeholder = "Sele
         window.removeEventListener('resize', handleResize);
       };
     }
-  }, [isOpen]);
+  }, [isOpen, value]);
 
+  // Click outside detection
   useEffect(() => {
     const handleClickOutside = (e) => {
       if (
-        triggerRef.current && !triggerRef.current.contains(e.target) &&
-        menuRef.current && !menuRef.current.contains(e.target)
+        containerRef.current && !containerRef.current.contains(e.target) &&
+        dropdownRef.current && !dropdownRef.current.contains(e.target)
       ) {
         setIsOpen(false);
       }
@@ -173,638 +90,525 @@ const OfficialCombobox = ({ officials, selectedId, onSelect, placeholder = "Sele
     }
   }, [isOpen]);
 
-  // Deduplicate officials by unique name / identity so duplicates never render twice
-  const uniqueOfficials = useMemo(() => {
-    if (!Array.isArray(officials)) return [];
-    const seen = new Set();
-    const result = [];
-    for (const off of officials) {
-      // Exclude officials whose status is not 'Active'
-      const statusLower = (off.status || off.official_status || '').toLowerCase().trim();
-      if (statusLower !== 'active') {
-        continue;
-      }
-      const nameKey = (off.official_name || `${off.first_name || ''} ${off.last_name || ''}`).trim().toUpperCase();
-      const key = nameKey || `id_${off.id}`;
-      if (!seen.has(key)) {
-        seen.add(key);
-        result.push(off);
-      }
+  const query = (value || '').trim().toLowerCase();
+  
+  const filteredOptions = useMemo(() => {
+    let list = options;
+    if (filterTab === 'regular') {
+      list = list.filter(item => !/^OIC\b/i.test(item.trim()));
+    } else if (filterTab === 'oic') {
+      list = list.filter(item => /^OIC\b/i.test(item.trim()));
     }
-    return result;
-  }, [officials]);
 
-  const filtered = useMemo(() => {
-    if (!query.trim()) return uniqueOfficials;
-    const q = query.toLowerCase();
-    return uniqueOfficials.filter(o =>
-      (o.official_name && o.official_name.toLowerCase().includes(q)) ||
-      (o.tloid && o.tloid.toLowerCase().includes(q)) ||
-      (o.first_name && o.first_name.toLowerCase().includes(q)) ||
-      (o.last_name && o.last_name.toLowerCase().includes(q)) ||
-      (Array.isArray(o.active_designations) && o.active_designations.some(d => d && d.toLowerCase().includes(q)))
-    );
-  }, [uniqueOfficials, query]);
+    if (!query) return list;
+    return list.filter(item => item.toLowerCase().includes(query));
+  }, [options, filterTab, query]);
 
-  return (
-    <div className="relative w-full" ref={triggerRef}>
-      <div
-        onClick={toggleOpen}
-        className={`w-full bg-slate-50 border-2 border-slate-200 hover:border-[#08315F]/20 cursor-pointer rounded-2xl py-3.5 px-4 flex justify-between items-center transition-all group ${
-          isOpen ? 'border-[#08315F] ring-2 ring-[#08315F]/10 bg-white' : ''
-        }`}
-      >
-        <div className="flex items-center gap-3 overflow-hidden flex-1 min-w-0">
-          {selectedOfficial ? (
-            <>
-              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-50 to-indigo-50 flex items-center justify-center text-[#08315F] font-black text-xs border border-blue-200 shrink-0 shadow-2xs">
-                {selectedOfficial.first_name ? selectedOfficial.first_name[0] : 'O'}
-              </div>
-              <div className="truncate flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  <span className="font-['Plus_Jakarta_Sans'] font-black text-[15px] text-[#08315F] block truncate">
-                    {selectedOfficial.official_name || `${selectedOfficial.first_name} ${selectedOfficial.last_name}`}
-                  </span>
-                  <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300 shrink-0">
-                    Active
-                  </span>
-                </div>
-                {selectedOfficial.plantilla_item_no && (
-                  <span className="text-[11px] font-mono font-bold text-[#075985]">
-                    {selectedOfficial.plantilla_item_no}
-                  </span>
-                )}
-              </div>
-            </>
-          ) : (
-            <div className="flex items-center gap-2 text-slate-400 text-[14px] font-bold">
-              <FiSearch className="w-4 h-4 text-slate-400 shrink-0" />
-              <span className="truncate">{placeholder}</span>
-            </div>
-          )}
-        </div>
+  const regularCount = useMemo(() => options.filter(item => !/^OIC\b/i.test(item.trim())).length, [options]);
+  const oicCount = useMemo(() => options.filter(item => /^OIC\b/i.test(item.trim())).length, [options]);
 
-        <div className="flex items-center gap-2 shrink-0">
-          {selectedOfficial && (
-            <span
-              onClick={(e) => {
-                e.stopPropagation();
-                onSelect('');
-              }}
-              className="p-1 hover:bg-slate-200 rounded-full text-slate-400 hover:text-slate-600 transition-colors"
-              title="Clear selection"
-            >
-              <FiX className="w-3.5 h-3.5" />
-            </span>
-          )}
-          <FiChevronRight
-            className={`transition-transform duration-300 ${isOpen ? 'rotate-90 text-[#075985]' : 'text-slate-300'}`}
-            size={18}
-          />
-        </div>
-      </div>
+  const handleSelect = (item) => {
+    onChange(item);
+    setIsOpen(false);
+    setHighlightedIndex(-1);
+  };
 
-      {isOpen && createPortal(
-        <>
-          <div className="fixed inset-0 z-[125]" onClick={() => setIsOpen(false)} />
-          <motion.div
-            ref={menuRef}
-            initial={{ opacity: 0, y: dropdownPos.placement === 'top' ? 6 : -6, scale: 0.98 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: dropdownPos.placement === 'top' ? 6 : -6, scale: 0.98 }}
-            transition={{ duration: 0.15, ease: 'easeOut' }}
-            style={{
-              position: 'fixed',
-              top: `${dropdownPos.top}px`,
-              left: `${dropdownPos.left}px`,
-              width: `${dropdownPos.width}px`,
-              maxHeight: `${dropdownPos.maxHeight}px`,
-              zIndex: 130
-            }}
-            className="bg-white rounded-3xl shadow-[0_25px_60px_-15px_rgba(8,49,95,0.35)] border-2 border-slate-200 overflow-hidden flex flex-col"
-          >
-            <div className="p-3 border-b-2 border-slate-100 bg-slate-50/90 sticky top-0 z-10 flex items-center gap-2 shrink-0">
-              <FiSearch className="w-4 h-4 text-slate-400 shrink-0 ml-1" />
-              <input
-                type="text"
-                autoFocus
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder="Search official name or active designation..."
-                className="w-full bg-white border-2 border-slate-200 focus:border-[#08315F]/20 rounded-xl py-2 px-3 text-[13px] font-bold text-slate-700 outline-none transition-all"
-              />
-              <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 bg-slate-100 px-2.5 py-1.5 rounded-lg border border-slate-200 shrink-0">
-                {filtered.length} found
-              </span>
-            </div>
+  const handleKeyDown = (e) => {
+    if (!isOpen) {
+      if (e.key === 'ArrowDown' || e.key === 'Enter') {
+        setIsOpen(true);
+        e.preventDefault();
+      }
+      return;
+    }
 
-            <div className="overflow-y-auto divide-y divide-slate-100 flex-1 p-1 custom-scrollbar">
-              {filtered.length === 0 ? (
-                <div className="py-8 text-center text-[13px] text-slate-400 font-bold uppercase tracking-wider">
-                  No officials matching "{query}"
-                </div>
-              ) : (
-                filtered.map((off) => {
-                  const isSelected = String(off.id) === String(selectedId);
-                  const activeDesignations = (Array.isArray(off.active_designations) && off.active_designations.length > 0)
-                    ? off.active_designations
-                    : (off.active_assignments && off.active_assignments.length > 0)
-                      ? off.active_assignments.map(a => a.designation || (a.capacity === 'OIC' ? `OIC - ${a.position_title}` : a.position_title))
-                      : [];
-
-                  return (
-                    <div
-                      key={off.id}
-                      onClick={() => {
-                        onSelect(off.id);
-                        setIsOpen(false);
-                        setQuery('');
-                      }}
-                      className={`p-3 rounded-2xl cursor-pointer transition-all flex items-center justify-between gap-3 ${
-                        isSelected
-                          ? 'bg-blue-50/70 border-l-4 border-[#08315F]'
-                          : 'hover:bg-slate-50 border-l-4 border-transparent'
-                      }`}
-                    >
-                      <div className="flex items-center gap-3 overflow-hidden flex-1 min-w-0">
-                        <div
-                          className={`w-8 h-8 rounded-full flex items-center justify-center font-black text-xs shrink-0 ${
-                            isSelected
-                              ? 'bg-[#08315F] text-white'
-                              : 'bg-gradient-to-br from-blue-50 to-indigo-50 text-[#08315F] border border-blue-200'
-                          }`}
-                        >
-                          {off.first_name ? off.first_name[0] : 'O'}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
-                            <p className="font-['Plus_Jakarta_Sans'] font-black text-[14px] text-slate-900 truncate">
-                              {off.official_name || `${off.first_name} ${off.last_name}`}
-                            </p>
-                            <span className="text-[9.5px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300 shrink-0">
-                              Active
-                            </span>
-                          </div>
-                          {activeDesignations.length > 0 && (
-                            <div className="flex flex-wrap gap-1 items-center mt-1">
-                              {activeDesignations.map((desig, idx) => (
-                                <span
-                                  key={idx}
-                                  className="text-[10px] text-amber-800 font-bold bg-amber-50 px-2 py-0.5 rounded border border-amber-200 inline-flex items-center leading-tight whitespace-normal"
-                                  title={`Active: ${desig}`}
-                                >
-                                  Active: {desig}
-                                </span>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-
-                      {isSelected && (
-                        <div className="w-5 h-5 rounded-full bg-[#08315F] text-white flex items-center justify-center shrink-0 shadow-2xs">
-                          <FiCheck className="w-3 h-3" />
-                        </div>
-                      )}
-                    </div>
-                  );
-                })
-              )}
-            </div>
-          </motion.div>
-        </>,
-        document.body
-      )}
-    </div>
-  );
-};
-
-// =============================================================================
-// SUB-COMPONENT: Searchable Position Dropdown (Combobox)
-// =============================================================================
-const PositionCombobox = ({ positions, selectedId, onSelect, placeholder = "Select a Position..." }) => {
-  const [isOpen, setIsOpen] = useState(false);
-  const [query, setQuery] = useState('');
-  const triggerRef = useRef(null);
-  const menuRef = useRef(null);
-  const [dropdownPos, setDropdownPos] = useState({ top: 0, left: 0, width: 0, maxHeight: 360, placement: 'bottom' });
-
-  const selectedPosition = useMemo(() => {
-    return positions.find(p => String(p.id) === String(selectedId)) || null;
-  }, [positions, selectedId]);
-
-  const updatePosition = () => {
-    if (triggerRef.current) {
-      const rect = triggerRef.current.getBoundingClientRect();
-      const viewportHeight = window.innerHeight;
-      const viewportWidth = window.innerWidth;
-      const spaceBelow = viewportHeight - rect.bottom - 16;
-      const spaceAbove = rect.top - 16;
-      const preferredHeight = 360;
-
-      const width = Math.min(rect.width, viewportWidth - 24);
-      const left = Math.max(12, Math.min(rect.left, viewportWidth - width - 12));
-
-      if (spaceBelow < 220 && spaceAbove > spaceBelow) {
-        const maxHeight = Math.min(preferredHeight, Math.max(160, spaceAbove));
-        setDropdownPos({
-          top: Math.max(8, rect.top - maxHeight - 6),
-          left,
-          width,
-          maxHeight,
-          placement: 'top'
-        });
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setHighlightedIndex(prev => (prev < filteredOptions.length - 1 ? prev + 1 : 0));
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setHighlightedIndex(prev => (prev > 0 ? prev - 1 : filteredOptions.length - 1));
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      if (highlightedIndex >= 0 && highlightedIndex < filteredOptions.length) {
+        handleSelect(filteredOptions[highlightedIndex]);
       } else {
-        const maxHeight = Math.min(preferredHeight, Math.max(160, spaceBelow));
-        setDropdownPos({
-          top: rect.bottom + 6,
-          left,
-          width,
-          maxHeight,
-          placement: 'bottom'
-        });
-      }
-    }
-  };
-
-  const toggleOpen = () => {
-    const next = !isOpen;
-    if (next) {
-      updatePosition();
-      if (triggerRef.current) {
-        setTimeout(() => {
-          triggerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-          updatePosition();
-        }, 50);
-      }
-    }
-    setIsOpen(next);
-  };
-
-  useEffect(() => {
-    if (isOpen) {
-      updatePosition();
-      const handleScroll = () => updatePosition();
-      const handleResize = () => updatePosition();
-      window.addEventListener('scroll', handleScroll, true);
-      window.addEventListener('resize', handleResize);
-      return () => {
-        window.removeEventListener('scroll', handleScroll, true);
-        window.removeEventListener('resize', handleResize);
-      };
-    }
-  }, [isOpen]);
-
-  useEffect(() => {
-    const handleClickOutside = (e) => {
-      if (
-        triggerRef.current && !triggerRef.current.contains(e.target) &&
-        menuRef.current && !menuRef.current.contains(e.target)
-      ) {
         setIsOpen(false);
       }
-    };
-    if (isOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
-      return () => document.removeEventListener('mousedown', handleClickOutside);
+    } else if (e.key === 'Escape') {
+      setIsOpen(false);
     }
-  }, [isOpen]);
+  };
 
-  const filtered = useMemo(() => {
-    return filterAndRankPositions(positions, query);
-  }, [positions, query]);
+  const renderHighlighted = (text) => {
+    if (!query) return text;
+    const idx = text.toLowerCase().indexOf(query);
+    if (idx === -1) return text;
+    const before = text.substring(0, idx);
+    const match = text.substring(idx, idx + query.length);
+    const after = text.substring(idx + query.length);
+    return (
+      <>
+        {before}
+        <span className="bg-sky-200/80 text-brand-700 font-black rounded-lg px-0.5">{match}</span>
+        {after}
+      </>
+    );
+  };
 
   return (
-    <div className="relative w-full" ref={triggerRef}>
-      <div
-        onClick={toggleOpen}
-        className={`w-full bg-slate-50 border-2 border-slate-200 hover:border-[#08315F]/20 cursor-pointer rounded-2xl py-3.5 px-4 flex justify-between items-center transition-all group ${
-          isOpen ? 'border-[#08315F] ring-2 ring-[#08315F]/10 bg-white' : ''
-        }`}
-      >
-        <div className="flex items-center gap-3 overflow-hidden flex-1 min-w-0">
-          {selectedPosition ? (
-            <div className="truncate flex-1 min-w-0">
-              <div className="flex items-center gap-2">
-                <span className="font-['Plus_Jakarta_Sans'] font-black text-[15px] text-[#08315F] truncate">
-                  {selectedPosition.position_title}
-                </span>
-                <span className="font-mono text-[10px] text-amber-900 bg-amber-100 px-1.5 py-0.5 rounded border border-amber-200 font-bold shrink-0">
-                  {selectedPosition.position_code}
-                </span>
-              </div>
-              <div className="flex items-center gap-2 text-[11px] text-slate-500 mt-0.5">
-                <span className="font-bold text-[#075985]">{selectedPosition.region || 'CENTRAL OFFICE'}</span>
-                {selectedPosition.bureau && <span>• {selectedPosition.bureau}</span>}
-                {selectedPosition.salary_grade && <span className="font-bold text-slate-700">• SG {selectedPosition.salary_grade}</span>}
-              </div>
-            </div>
-          ) : (
-            <div className="flex items-center gap-2 text-slate-400 text-[14px] font-bold">
-              <FiSearch className="w-4 h-4 text-slate-400 shrink-0" />
-              <span className="truncate">{placeholder}</span>
-            </div>
-          )}
-        </div>
+    <div ref={containerRef} className="relative w-full">
+      <div className="relative flex items-center">
+        <FloatingLabelInput label={placeholder} className="w-full" ref={inputRef} type="text" value={value} onChange={(e) => {
+            onChange(e.target.value);
+            if (!isOpen) setIsOpen(true);
+          }} onFocus={() => {
+            updatePosition();
+            setIsOpen(true);
+          }} onKeyDown={handleKeyDown} placeholder={placeholder} style={{
+            background: 'var(--color-white)',
+            border: isOpen ? '2px solid var(--color-brand-700)' : '2px solid var(--color-muted)',
+            boxShadow: isOpen ? '0 0 0 3px rgb(var(--rgb-brand-700)/0.12)' : 'none'
+          }} />
 
-        <div className="flex items-center gap-2 shrink-0">
-          {selectedPosition && (
-            <span
-              onClick={(e) => {
-                e.stopPropagation();
-                onSelect('');
+        <div className="absolute right-2 flex items-center gap-1">
+          {value && (
+            <button
+              type="button"
+              onClick={() => {
+                onChange('');
+                inputRef.current?.focus();
               }}
-              className="p-1 hover:bg-slate-200 rounded-full text-slate-400 hover:text-slate-600 transition-colors"
+              className="w-6 h-6 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-slate-200/60 transition-colors"
               title="Clear selection"
             >
-              <FiX className="w-3.5 h-3.5" />
-            </span>
+              <FiX size={16} />
+            </button>
           )}
-          <FiChevronRight
-            className={`transition-transform duration-300 ${isOpen ? 'rotate-90 text-[#075985]' : 'text-slate-300'}`}
-            size={18}
-          />
+          <button
+            type="button"
+            onClick={() => {
+              if (isOpen) {
+                setIsOpen(false);
+              } else {
+                updatePosition();
+                setIsOpen(true);
+                inputRef.current?.focus();
+              }
+            }}
+            className="w-6 h-6 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-600 transition-transform duration-200"
+            style={{ transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)' }}
+          >
+            <FiChevronDown size={18} />
+          </button>
         </div>
       </div>
 
-      {isOpen && createPortal(
-        <>
-          <div className="fixed inset-0 z-[125]" onClick={() => setIsOpen(false)} />
-          <motion.div
-            ref={menuRef}
-            initial={{ opacity: 0, y: dropdownPos.placement === 'top' ? 6 : -6, scale: 0.98 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: dropdownPos.placement === 'top' ? 6 : -6, scale: 0.98 }}
-            transition={{ duration: 0.15, ease: 'easeOut' }}
-            style={{
-              position: 'fixed',
-              top: `${dropdownPos.top}px`,
-              left: `${dropdownPos.left}px`,
-              width: `${dropdownPos.width}px`,
-              maxHeight: `${dropdownPos.maxHeight}px`,
-              zIndex: 130
-            }}
-            className="bg-white rounded-3xl shadow-[0_25px_60px_-15px_rgba(8,49,95,0.35)] border-2 border-slate-200 overflow-hidden flex flex-col"
-          >
-            <div className="p-3 border-b-2 border-slate-100 bg-slate-50/90 sticky top-0 z-10 flex items-center gap-2 shrink-0">
-              <FiSearch className="w-4 h-4 text-slate-400 shrink-0 ml-1" />
-              <input
-                type="text"
-                autoFocus
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder="Search position title, code, region, bureau..."
-                className="w-full bg-white border-2 border-slate-200 focus:border-[#08315F]/20 rounded-xl py-2 px-3 text-[13px] font-bold text-slate-700 outline-none transition-all"
-              />
-              <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 bg-slate-100 px-2.5 py-1.5 rounded-lg border border-slate-200 shrink-0">
-                {filtered.length} found
+      {isOpen && (
+        <div
+          ref={dropdownRef}
+          style={{
+            position: 'fixed',
+            top: dropdownPos.top,
+            left: dropdownPos.left,
+            width: dropdownPos.width,
+            maxHeight: dropdownPos.maxHeight || 300,
+            zIndex: 999999
+          }}
+          className="flex flex-col bg-white rounded-card border-2 border-sky-200 shadow-[0_20px_45px_-10px_rgb(var(--rgb-brand-800)/0.28)] overflow-hidden animate-in fade-in zoom-in-95 duration-150"
+        >
+          {/* Header Category Filter Tabs */}
+          <div className="flex items-center gap-1.5 p-2 bg-gradient-to-r from-sky-50 to-slate-50 border-b-2 border-sky-100 shrink-0">
+            <button
+              type="button"
+              onMouseDown={(e) => { e.preventDefault(); setFilterTab('all'); }}
+              className={`px-2.5 py-1 rounded-lg text-[16.5px] font-black transition-all flex items-center gap-1 ${
+                filterTab === 'all'
+                  ? 'bg-brand-700 text-white shadow-sm'
+                  : 'bg-white text-slate-600 hover:bg-sky-100/60 border-2 border-slate-200/60'
+              }`}
+            >
+              <span>All</span>
+              <span className={`text-[13.5px] px-1.5 py-0.2 rounded-full font-bold ${filterTab === 'all' ? 'bg-sky-900/40 text-white' : 'bg-slate-100 text-slate-500'}`}>
+                {options.length}
               </span>
-            </div>
+            </button>
 
-            <div className="overflow-y-auto divide-y divide-slate-100 flex-1 p-1 custom-scrollbar">
-              {filtered.length === 0 ? (
-                <div className="py-8 text-center text-[13px] text-slate-400 font-bold uppercase tracking-wider">
-                  No positions matching "{query}"
-                </div>
-              ) : (
-                filtered.map((pos) => {
-                  const isSelected = String(pos.id) === String(selectedId);
-                  return (
-                    <div
-                      key={pos.id}
-                      onClick={() => {
-                        onSelect(pos.id);
-                        setIsOpen(false);
-                        setQuery('');
-                      }}
-                      className={`p-3 rounded-2xl cursor-pointer transition-all flex items-center justify-between gap-3 ${
-                        isSelected
-                          ? 'bg-blue-50/70 border-l-4 border-[#08315F]'
-                          : 'hover:bg-slate-50 border-l-4 border-transparent'
-                      }`}
-                    >
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <p className="font-['Plus_Jakarta_Sans'] font-black text-[14px] text-slate-900 truncate">
-                            {pos.position_title}
-                          </p>
-                          <span className="font-mono text-[9px] text-amber-900 bg-amber-100 px-1.5 py-0.5 rounded border border-amber-200 font-bold shrink-0">
-                            {pos.position_code}
-                          </span>
-                        </div>
-                        <div className="flex flex-wrap items-center gap-2 text-[11px] text-slate-500 mt-0.5">
-                          <span className="font-bold text-[#08315F]">{pos.region || 'CENTRAL OFFICE'}</span>
-                          {pos.bureau && <span>• {pos.bureau}</span>}
-                          {pos.division && <span>• {pos.division}</span>}
-                          {pos.salary_grade && <span className="font-bold text-slate-700">• SG {pos.salary_grade}</span>}
-                        </div>
-                      </div>
+            <button
+              type="button"
+              onMouseDown={(e) => { e.preventDefault(); setFilterTab('regular'); }}
+              className={`px-2.5 py-1 rounded-lg text-[16.5px] font-black transition-all flex items-center gap-1 ${
+                filterTab === 'regular'
+                  ? 'bg-brand-700 text-white shadow-sm'
+                  : 'bg-white text-slate-600 hover:bg-sky-100/60 border-2 border-slate-200/60'
+              }`}
+            >
+              <span>Regular</span>
+              <span className={`text-[13.5px] px-1.5 py-0.2 rounded-full font-bold ${filterTab === 'regular' ? 'bg-sky-900/40 text-white' : 'bg-slate-100 text-slate-500'}`}>
+                {regularCount}
+              </span>
+            </button>
 
-                      {isSelected && (
-                        <div className="w-5 h-5 rounded-full bg-[#08315F] text-white flex items-center justify-center shrink-0 shadow-2xs">
-                          <FiCheck className="w-3 h-3" />
-                        </div>
-                      )}
+            <button
+              type="button"
+              onMouseDown={(e) => { e.preventDefault(); setFilterTab('oic'); }}
+              className={`px-2.5 py-1 rounded-lg text-[16.5px] font-black transition-all flex items-center gap-1 ${
+                filterTab === 'oic'
+                  ? 'bg-brand-700 text-white shadow-sm'
+                  : 'bg-white text-slate-600 hover:bg-sky-100/60 border-2 border-slate-200/60'
+              }`}
+            >
+              <span>OIC</span>
+              <span className={`text-[13.5px] px-1.5 py-0.2 rounded-full font-bold ${filterTab === 'oic' ? 'bg-sky-900/40 text-white' : 'bg-slate-100 text-slate-500'}`}>
+                {oicCount}
+              </span>
+            </button>
+          </div>
+
+          {/* Options Scrollable List */}
+          <div className="overflow-y-auto flex-1 divide-y-2 divide-slate-100">
+            {filteredOptions.length > 0 ? (
+              filteredOptions.map((opt, idx) => {
+                const isSelected = opt.toLowerCase() === (value || '').trim().toLowerCase();
+                const isHighlighted = idx === highlightedIndex;
+                const isOIC = /^OIC\b/i.test(opt.trim());
+
+                return (
+                  <div
+                    key={opt}
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      handleSelect(opt);
+                    }}
+                    onMouseEnter={() => setHighlightedIndex(idx)}
+                    className={`flex items-center justify-between px-3.5 py-2.5 cursor-pointer transition-all ${
+                      isSelected
+                        ? 'bg-sky-100/80 text-brand-700 font-black'
+                        : isHighlighted
+                        ? 'bg-sky-50/90 text-slate-800 font-bold'
+                        : 'hover:bg-sky-50/50 text-slate-700 font-semibold'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2.5 min-w-0 pr-2">
+                      <span className={`text-[15px] font-black px-1.5 py-0.5 rounded-lg shrink-0 tracking-wider uppercase ${
+                        isOIC
+                          ? 'bg-amber-100/80 text-amber-800 border-2 border-amber-300/60'
+                          : 'bg-sky-100/80 text-sky-800 border-2 border-sky-300/60'
+                      }`}>
+                        {isOIC ? 'OIC' : 'EXEC'}
+                      </span>
+                      <span className="text-[19px] truncate">
+                        {renderHighlighted(opt)}
+                      </span>
                     </div>
-                  );
-                })
-              )}
-            </div>
-          </motion.div>
-        </>,
-        document.body
+
+                    {isSelected && (
+                      <div className="w-5 h-5 rounded-full bg-brand-700 text-white flex items-center justify-center shrink-0 shadow-sm">
+                        <FiCheck size={14} strokeWidth={3} />
+                      </div>
+                    )}
+                  </div>
+                );
+              })
+            ) : (
+              <div className="p-4 text-center">
+                <p className="text-[18px] font-bold text-slate-600">
+                  No preset matching "{value}"
+                </p>
+                <p className="text-[16.5px] text-slate-400 font-medium mt-0.5">
+                  You can use this custom designation. Press Enter or click outside.
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
       )}
     </div>
   );
 };
 
-// =============================================================================
-// MAIN COMPONENT: Staffing Action / New Position Assignment Modal
-// Replaces the legacy "Executive Dashboard Reassign Official" modal
-// =============================================================================
-export const NewPositionAssignmentModal = ({
-  isOpen,
-  onClose,
-  onRefresh,
-  token,
-  initialOfficial = null
-}) => {
-  const [officials, setOfficials] = useState([]);
-  const [vacantPositions, setVacantPositions] = useState([]);
-  const [loading, setLoading] = useState(false);
+// ─── Component ───────────────────────────────────────────────────────────────
+const ReassignOfficialModal = ({ isOpen, onClose, onRefresh, token, initialOfficial }) => {
+  // Step 1 – official search/select
+  const [query, setQuery] = useState('');
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [selected, setSelected] = useState(null);
+
+  // Step 2 – target office & vacant position selection
+  const [vacantSlots, setVacantSlots] = useState([]);
+  const [loadingVacancies, setLoadingVacancies] = useState(false);
+  const [selectedOffice, setSelectedOffice] = useState('');
+  const [selectedVacantItem, setSelectedVacantItem] = useState('');
+
+  // Destination fields
+  const [newRegion, setNewRegion] = useState('');
+  const [newDivision, setNewDivision] = useState('');
+  const [newOffice, setNewOffice] = useState('');
+  const [newStrand, setNewStrand] = useState('');
+  const [newDesignation, setNewDesignation] = useState('');
+  const [fromDate, setFromDate] = useState('');
+  const [toDate, setToDate] = useState('');
+  const [justification, setJustification] = useState('');
+
+  // Lookup options
+  const [options, setOptions] = useState({ regions: [], regionDivisions: {}, designations: [] });
+  const [allOfficials, setAllOfficials] = useState([]);
+
+  // File upload
+  const [file, setFile] = useState(null);
+  const fileRef = useRef();
+
+  // Submission
   const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState('');
+  const [loadingOfficials, setLoadingOfficials] = useState(false);
 
-  const [formData, setFormData] = useState({
-    tlo_masterlist_id: '',
-    position_id: '',
-    capacity: 'Full-fledged',
-    start_date: new Date().toISOString().split('T')[0],
-    remarks: ''
-  });
+  // Dropdown positioning for official search
+  const inputRef = useRef(null);
+  const [dropdownPos, setDropdownPos] = useState({ top: 0, left: 0, width: 0 });
 
-  const [vacateDecisions, setVacateDecisions] = useState({});
-
-  const authToken = token || localStorage.getItem('token');
-  const authHeaders = useMemo(() => ({
-    'Content-Type': 'application/json',
-    'Authorization': `Bearer ${authToken}`
-  }), [authToken]);
-
-  // Fetch Vacant Positions
-  const fetchVacantPositions = async () => {
-    try {
-      const res = await fetch(apiUrl('/api/third-level/assignments/vacant-positions'), { headers: authHeaders });
-      if (!res.ok) throw new Error('Failed to load vacant positions');
-      const data = await res.json();
-      setVacantPositions(data.data || []);
-    } catch (err) {
-      console.error('Error fetching vacant positions:', err);
+  useEffect(() => {
+    if (dropdownOpen && inputRef.current) {
+      const rect = inputRef.current.getBoundingClientRect();
+      setDropdownPos({ top: rect.bottom + 4, left: rect.left, width: rect.width });
     }
+  }, [dropdownOpen, query]);
+
+  const selectOfficial = (o) => {
+    setSelected(o);
+    setQuery(fullName(o));
+    setDropdownOpen(false);
+    setSelectedOffice('');
+    setSelectedVacantItem('');
+    setNewRegion('');
+    setNewDivision('');
+    setNewOffice('');
+    setNewStrand('');
+    setNewDesignation('');
+    setJustification('');
+    setFromDate(o?.appointment_date ? String(o.appointment_date).split('T')[0] : '');
+    setToDate(new Date().toISOString().split('T')[0]);
   };
 
-  // Fetch Officials for Assignment Dropdown
-  const fetchOfficials = async () => {
-    try {
-      const res = await fetch(apiUrl('/api/third-level/assignments/officials'), { headers: authHeaders });
-      if (!res.ok) throw new Error('Failed to load officials');
-      const data = await res.json();
-      setOfficials(data.data || []);
-    } catch (err) {
-      console.error('Error fetching officials:', err);
-    }
-  };
-
-  // Reset & Load Data on Open
+  // ── Reset on open/close ──
   useEffect(() => {
-    if (isOpen) {
-      setFormData({
-        tlo_masterlist_id: '',
-        position_id: '',
-        capacity: 'Full-fledged',
-        start_date: new Date().toISOString().split('T')[0],
-        remarks: ''
-      });
-      setVacateDecisions({});
-      setLoading(true);
-      Promise.all([fetchVacantPositions(), fetchOfficials()]).finally(() => setLoading(false));
-    }
-  }, [isOpen]);
-
-  // Pre-select initialOfficial if passed
-  useEffect(() => {
-    if (isOpen && initialOfficial && officials.length > 0) {
-      const targetTloid = (initialOfficial.TLOid || initialOfficial.tloid || initialOfficial.tlo_id || '').toLowerCase();
-      const targetId = String(initialOfficial.id || initialOfficial.tlo_masterlist_id || '');
-      const match = officials.find(o =>
-        (targetId && String(o.id) === targetId) ||
-        (targetTloid && o.tloid && o.tloid.toLowerCase() === targetTloid)
-      );
-      if (match) {
-        setFormData(prev => ({ ...prev, tlo_masterlist_id: match.id }));
-      }
-    }
-  }, [isOpen, initialOfficial, officials]);
-
-  // Resolve currently selected official
-  const selectedOfficialObj = useMemo(() => {
-    if (!formData.tlo_masterlist_id) return null;
-    return officials.find(o => String(o.id) === String(formData.tlo_masterlist_id) || (Array.isArray(o.other_masterlist_ids) && o.other_masterlist_ids.includes(Number(formData.tlo_masterlist_id)))) || null;
-  }, [officials, formData.tlo_masterlist_id]);
-
-  // Active positions of currently selected official
-  const displayedAssignments = useMemo(() => {
-    if (!selectedOfficialObj) return [];
-    if (Array.isArray(selectedOfficialObj.active_assignments) && selectedOfficialObj.active_assignments.length > 0) {
-      return selectedOfficialObj.active_assignments.filter(a => (a.status || '').toLowerCase().trim() === 'active');
-    }
-    if (Array.isArray(selectedOfficialObj.existing_assignments) && selectedOfficialObj.existing_assignments.length > 0) {
-      return selectedOfficialObj.existing_assignments.filter(a => (a.status || '').toLowerCase().trim() === 'active');
-    }
-    return [];
-  }, [selectedOfficialObj]);
-
-  // Default vacate decisions when selected official changes
-  useEffect(() => {
-    if (displayedAssignments.length > 0) {
-      setVacateDecisions(prev => {
-        const next = { ...prev };
-        displayedAssignments.forEach(a => {
-          if (next[a.id] === undefined) {
-            next[a.id] = true; // default to vacate
-          }
-        });
-        return next;
-      });
+    if (!isOpen) return;
+    if (initialOfficial) {
+      selectOfficial(initialOfficial);
     } else {
-      setVacateDecisions({});
+      setQuery('');
+      setSelected(null);
     }
-  }, [displayedAssignments]);
+    setSelectedOffice('');
+    setSelectedVacantItem('');
+    setNewRegion('');
+    setNewDivision('');
+    setNewOffice('');
+    setNewStrand('');
+    setNewDesignation('');
+    setJustification('');
+    setFromDate('');
+    setToDate(new Date().toISOString().split('T')[0]);
+    setFile(null);
+    setDropdownOpen(false);
+    fetchOfficials();
+    fetchOptions();
+    fetchVacancies();
+  }, [isOpen, initialOfficial]);
 
-  // Handle Form Submission
-  const handleSubmitAssignment = async (e) => {
-    e.preventDefault();
-
-    if (!formData.tlo_masterlist_id) {
-      Swal.fire('Missing Information', 'Please select an official from the dropdown.', 'warning');
-      return;
-    }
-    if (!formData.position_id) {
-      Swal.fire('Missing Information', 'Please select a vacant position from the dropdown.', 'warning');
-      return;
-    }
-
-    setSubmitting(true);
+  const fetchOfficials = async () => {
+    setLoadingOfficials(true);
     try {
-      const vacatedAssignIds = Object.keys(vacateDecisions)
-        .filter(id => vacateDecisions[id] === true)
-        .map(id => parseInt(id, 10));
-
-      const payload = {
-        tlo_masterlist_id: parseInt(formData.tlo_masterlist_id, 10),
-        position_id: parseInt(formData.position_id, 10),
-        capacity: formData.capacity,
-        start_date: formData.start_date,
-        remarks: formData.remarks || null,
-        vacate_previous_position: vacatedAssignIds.length > 0,
-        vacate_assignment_ids: vacatedAssignIds
-      };
-
-      const res = await fetch(apiUrl('/api/third-level/assignments'), {
-        method: 'POST',
-        headers: authHeaders,
-        body: JSON.stringify(payload)
+      const res = await fetch(apiUrl('/api/third-level/officials-registry/officials-kpi-summary'), {
+        headers: { Authorization: `Bearer ${token}` }
       });
-
       const data = await res.json();
-
-      if (!res.ok) {
-        if (res.status === 409) {
-          Swal.fire({
-            icon: 'error',
-            title: 'Position Not Vacant',
-            text: data.error || 'This position is no longer vacant. Another administrator may have just assigned it.',
-            confirmButtonColor: '#08315F'
-          });
-          fetchVacantPositions();
-          return;
-        }
-        throw new Error(data.error || 'Failed to create assignment');
-      }
-
-      Swal.fire({
-        icon: 'success',
-        title: 'Assignment Created',
-        text: data.message || 'Official successfully assigned.',
-        confirmButtonColor: '#08315F',
-        timer: 2000
-      });
-
-      onClose();
-      if (typeof onRefresh === 'function') {
-        onRefresh();
+      if (data.success) {
+        setAllOfficials(data.data.filter(o => o.status === 'Active' && o.first_name && o.first_name !== 'VACANT'));
       }
     } catch (err) {
-      Swal.fire('Error', err.message || 'An error occurred while creating assignment.', 'error');
+      console.error('[ReassignModal] Failed to fetch officials', err);
+    } finally {
+      setLoadingOfficials(false);
+    }
+  };
+
+  const fetchOptions = async () => {
+    try {
+      const res = await fetch(apiUrl('/api/third-level/official-profiling/positions'), {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const data = await res.json();
+      if (data.success) {
+        setOptions({
+          regions: data.regions || [],
+          regionDivisions: data.regionDivisions || {},
+          designations: data.designations || []
+        });
+      }
+    } catch (err) {
+      console.error('[ReassignModal] Failed to fetch options', err);
+    }
+  };
+
+  const fetchVacancies = async () => {
+    setLoadingVacancies(true);
+    try {
+      const res = await fetch(apiUrl('/api/third-level/official-profiling/vacancies'), {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const data = await res.json();
+      if (data.success) {
+        setVacantSlots(data.data || []);
+      }
+    } catch (err) {
+      console.error('[ReassignModal] Failed to fetch vacancies', err);
+    } finally {
+      setLoadingVacancies(false);
+    }
+  };
+
+  // ── Target Offices derived from real vacant positions ──
+  const uniqueTargetOffices = useMemo(() => {
+    const offices = vacantSlots.map(s => s.office).filter(Boolean);
+    return [...new Set(offices)].sort();
+  }, [vacantSlots]);
+
+  // ── Vacant positions scoped to selected office ──
+  const filteredVacantPositions = useMemo(() => {
+    if (!selectedOffice) return [];
+    return vacantSlots.filter(s => s.office === selectedOffice);
+  }, [vacantSlots, selectedOffice]);
+
+  const handleSelectOffice = (off) => {
+    setSelectedOffice(off);
+    setSelectedVacantItem('');
+    const sample = vacantSlots.find(s => s.office === off);
+    if (sample) {
+      setNewRegion(sample.region || '');
+      setNewDivision(sample.division || '');
+      setNewOffice(sample.office || off);
+      setNewStrand(sample.strand || '');
+    }
+  };
+
+  const handleSelectVacantPosition = (itemNum) => {
+    setSelectedVacantItem(itemNum);
+    const slot = vacantSlots.find(s => (s.item_number || s.TLOid) === itemNum);
+    if (slot) {
+      setNewRegion(slot.region || '');
+      setNewDivision(slot.division || '');
+      setNewOffice(slot.office || '');
+      setNewStrand(slot.strand || '');
+      const validTitle = slot.position_title && slot.position_title.toUpperCase() !== 'N/A' ? slot.position_title : (selected?.designation || '');
+      setNewDesignation(validTitle);
+    }
+  };
+
+  // ── Official search filtering ──
+  const filteredOfficials = query.trim().length < 1
+    ? []
+    : allOfficials.filter(o => {
+        const name = fullName(o).toLowerCase();
+        const email = (o.email || '').toLowerCase();
+        const q = query.toLowerCase();
+        return name.includes(q) || email.includes(q);
+      }).slice(0, 10);
+
+  // ── Divisions for selected region ──
+  const isRegionOrOfficeName = (str) => {
+    if (!str) return true;
+    const up = String(str).trim().toUpperCase();
+    if (newRegion && newRegion.trim().toUpperCase() === 'CENTRAL OFFICE') {
+      return false;
+    }
+    if (newRegion && up === newRegion.trim().toUpperCase()) return true;
+    if ((options.regions || []).some(r => r.toUpperCase() !== 'CENTRAL OFFICE' && r.toUpperCase() === up)) return true;
+    return /^REGION\s+/i.test(up) || up === 'REGIONAL OFFICE' || up === 'N/A';
+  };
+
+  const availableDivisions = useMemo(() => {
+    if (!newRegion) return [];
+    if (newRegion.trim().toUpperCase() === 'CENTRAL OFFICE') {
+      const coDivs = (options.regionDivisions?.['Central Office'] || options.regionDivisions?.['CENTRAL OFFICE'] || ['Central Office']);
+      return coDivs.length > 0 ? coDivs : ['Central Office'];
+    }
+    const regionKey = Object.keys(options.regionDivisions || {}).find(r => r.toUpperCase() === newRegion.toUpperCase());
+    const raw = regionKey ? options.regionDivisions[regionKey] : (options.divisions || []);
+    return (raw || []).filter(d => !isRegionOrOfficeName(d));
+  }, [newRegion, options.regionDivisions, options.divisions, options.regions]);
+
+  // ── Same-assignment guard ──
+  const isSameAssignment =
+    selected &&
+    newRegion &&
+    newDivision &&
+    newDesignation &&
+    newRegion.trim().toUpperCase() === (selected.region || '').trim().toUpperCase() &&
+    newDivision.trim().toUpperCase() === (selected.division || '').trim().toUpperCase() &&
+    newDesignation.trim().toUpperCase() === (selected.designation || '').trim().toUpperCase();
+
+  const canSubmit =
+    selected &&
+    (selectedVacantItem || (newRegion.trim() && newDivision.trim())) &&
+    newDesignation.trim() &&
+    toDate &&
+    !isSameAssignment &&
+    !submitting;
+
+  const errors = {
+    target: isSameAssignment ? 'New assignment is identical to the current one. Please select a different target office or vacant position.' : '',
+    submit: submitError,
+  };
+  const summaryErrors = [errors.target, errors.submit].filter(Boolean);
+
+  // ── Submit handler: Append-only Reassignment ──
+  const handleSubmit = async () => {
+    if (!canSubmit) return;
+    setSubmitting(true);
+    setSubmitError('');
+    try {
+      const formData = new FormData();
+      if (file) {
+        formData.append('file', file);
+      }
+      formData.append('tloId', selected.TLOid);
+      formData.append('vacantItemNumber', selectedVacantItem || '');
+      formData.append('target_TLOid', selectedVacantItem || '');
+      formData.append('newRegion', newRegion.trim());
+      formData.append('newDivision', newDivision.trim());
+      formData.append('newOffice', newOffice || selectedOffice || '');
+      formData.append('newStrand', newStrand || '');
+      formData.append('newDesignation', newDesignation.trim());
+      formData.append('effectiveDate', toDate || '');
+      formData.append('inclusiveDateStart', fromDate || '');
+      formData.append('inclusiveDateEnd', toDate || '');
+      formData.append('justification', justification.trim());
+      formData.append('remarks', justification.trim());
+
+      const reassignRes = await fetch(apiUrl('/api/third-level/officials-registry/reassign-official'), {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`
+        },
+        body: formData
+      });
+
+      const reassignData = await reassignRes.json();
+      if (!reassignRes.ok || !reassignData.success) {
+        throw new Error(reassignData.error || 'Reassignment failed');
+      }
+
+      await Swal.fire({
+        icon: 'success',
+        title: 'Official Reassigned',
+        text: `${fullName(selected)} has been successfully reassigned to ${newDivision || selectedOffice || 'target office'}, ${newRegion}.`,
+        confirmButtonColor: 'var(--color-brand-700)'
+      });
+      onRefresh();
+      onClose();
+    } catch (err) {
+      setSubmitError(`Reassignment failed: ${err.message || 'An unexpected error occurred.'}`);
     } finally {
       setSubmitting(false);
     }
@@ -812,305 +616,360 @@ export const NewPositionAssignmentModal = ({
 
   if (!isOpen) return null;
 
-  const vacateCount = displayedAssignments.filter(ea => vacateDecisions[ea.id] === true).length;
-  const retainCount = displayedAssignments.length - vacateCount;
-
-  let submitButtonText = 'Confirm Assignment';
-  if (displayedAssignments.length > 0) {
-    if (vacateCount > 0 && retainCount > 0) {
-      submitButtonText = `Assign & Vacate ${vacateCount} (Retain ${retainCount})`;
-    } else if (vacateCount > 0) {
-      submitButtonText = `Assign & Vacate ${vacateCount} ${vacateCount === 1 ? 'Position' : 'Positions'}`;
-    } else {
-      submitButtonText = 'Confirm Assignment (Retain Current)';
-    }
-  }
-
+  // ─── Render ───────────────────────────────────────────────────────────────
   return (
-    <AnimatePresence>
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-slate-900/60 backdrop-blur-sm">
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95, y: 30 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.95, y: 30 }}
-          className="bg-white rounded-[2.5rem] sm:rounded-[3rem] w-full max-w-2xl shadow-2xl border-2 border-slate-200 overflow-hidden flex flex-col max-h-[92vh]"
+    <div
+      className="fixed inset-0 z-[9999] flex items-center justify-center p-4"
+      style={{ backgroundColor: 'rgb(var(--rgb-brand-800)/0.72)', backdropFilter: 'blur(6px)' }}
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+    >
+      <div
+        className="relative w-full max-w-xl flex flex-col rounded-lg shadow-2xl overflow-hidden"
+        style={{
+          background: 'linear-gradient(160deg, var(--color-brand-50) 0%, var(--color-white) 60%)',
+          border: '2px solid var(--color-brand-300)',
+          maxHeight: '92vh'
+        }}
+      >
+        {/* ── Header ── */}
+        <div
+          className="flex items-center justify-between px-7 py-5"
+          style={{
+            background: 'linear-gradient(135deg, var(--color-brand-800) 0%, var(--color-brand-800) 100%)',
+            borderBottom: '2px solid rgb(var(--rgb-white)/0.15)'
+          }}
         >
-          {/* Modal Header */}
-          <div className="p-6 sm:p-8 pb-4 flex justify-between items-start border-b-2 border-slate-100">
-            <div>
-              <span className="text-[13px] font-black text-[#075985] uppercase tracking-widest mb-1 block">Staffing Action</span>
-              <h2 className="text-[26px] sm:text-[32px] font-['Plus_Jakarta_Sans'] font-black text-[#08315F] tracking-tighter uppercase italic leading-none">
-                New Position Assignment
-              </h2>
-              <p className="text-slate-400 font-bold text-[14px] mt-1.5">
-                Deploy an official into a verified vacant plantilla position.
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={onClose}
-              className="p-3 rounded-2xl bg-slate-50 text-slate-400 hover:text-red-600 transition-all border-2 border-slate-200"
-              title="Close"
+          <div className="flex items-center gap-3">
+            <div
+              className="w-10 h-10 rounded-xl flex items-center justify-center shadow-inner"
+              style={{ background: 'rgb(var(--rgb-white)/0.12)' }}
             >
-              <FiX size={18} />
-            </button>
+              <FiArrowRight size={20} color="white" />
+            </div>
+            <div>
+              <p className="text-[13.5px] font-black text-sky-300 uppercase tracking-[0.2em] leading-none mb-0.5">
+                Executive Dashboard
+              </p>
+              <h2 className="text-[24px] font-black text-white leading-none tracking-tight">
+                Reassign Official
+              </h2>
+            </div>
           </div>
+          <button
+            onClick={onClose}
+            className="w-9 h-9 rounded-full flex items-center justify-center transition-colors hover:bg-white/20"
+            style={{ background: 'rgb(var(--rgb-white)/0.1)' }}
+          >
+            <FiX size={18} color="white" />
+          </button>
+        </div>
 
-          {/* Form Body */}
-          <form onSubmit={handleSubmitAssignment} className="flex flex-col flex-1 min-h-0 overflow-hidden">
-            <div className="p-6 sm:p-8 pb-8 overflow-y-auto space-y-5 flex-1 min-h-0 custom-scrollbar">
-              {/* 1. Official Selection */}
-              <div>
-                <label className="text-[13.5px] font-black text-slate-400 uppercase tracking-widest mb-2 block">
-                  1. Select Official <span className="text-red-500">*</span>
-                </label>
-                <OfficialCombobox
-                  officials={officials}
-                  selectedId={formData.tlo_masterlist_id}
-                  onSelect={(id) => setFormData(prev => ({ ...prev, tlo_masterlist_id: id }))}
-                  placeholder="Search official by name or TLO ID..."
-                />
-              </div>
+        {/* ── Scrollable body ── */}
+        <div className="overflow-y-auto flex-1 px-7 py-6 space-y-5">
 
-              {/* Official's Active Positions: Display all active positions of selected official */}
-              {selectedOfficialObj && (
-                <div className="bg-slate-50/90 border-2 border-slate-200 rounded-2xl p-4 sm:p-5">
-                  <div className="mb-3.5 space-y-1">
-                    <div className="flex items-center justify-between gap-2">
-                      <div className="flex items-center gap-2">
-                        <FiLayers className="w-4 h-4 text-[#075985]" />
-                        <h3 className="text-[13px] font-black text-[#08315F] uppercase tracking-wider">
-                          Current Positions of Official
-                        </h3>
-                      </div>
-                      <span className="text-[10.5px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-sky-100 text-[#075985] border border-sky-200 shrink-0">
-                        {displayedAssignments.length} {displayedAssignments.length === 1 ? 'Active Position' : 'Active Positions'}
+          {/* — Official Search — */}
+          <section>
+            <label className="block text-[15px] font-black text-slate-500 uppercase tracking-widest mb-2">
+              Select Official
+            </label>
+            <div className="relative">
+              <FiSearch
+                size={16}
+                className="absolute left-3.5 top-1/2 -translate-y-1/2 text-sky-500 pointer-events-none"
+              />
+              <FloatingLabelInput label={loadingOfficials ? 'Loading officials…' : 'Search by name or email…'} className="w-full" ref={inputRef} type="text" value={query} onChange={(e) => {
+                  setQuery(e.target.value);
+                  setDropdownOpen(true);
+                  if (!e.target.value) setSelected(null);
+                }} onFocus={() => setDropdownOpen(true)} onBlur={() => setTimeout(() => setDropdownOpen(false), 180)} placeholder={loadingOfficials ? 'Loading officials…' : 'Search by name or email…'} style={{
+                  background: 'var(--color-white)',
+                  border: '2px solid var(--color-brand-300)',
+                  boxShadow: 'var(--shadow-xs)'
+                }} disabled={loadingOfficials} />
+              {query && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setQuery('');
+                    setSelected(null);
+                  }}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                >
+                  <FiX size={16} />
+                </button>
+              )}
+              {dropdownOpen && filteredOfficials.length > 0 && (
+                <ul
+                  style={{
+                    position: 'fixed',
+                    top: dropdownPos.top,
+                    left: dropdownPos.left,
+                    width: dropdownPos.width,
+                    zIndex: 99999,
+                    border: '2px solid var(--color-brand-300)',
+                    background: 'white',
+                    borderRadius: 'var(--radius-md)',
+                    boxShadow: 'var(--shadow-xl)',
+                    overflow: 'hidden',
+                    maxHeight: '240px',
+                    overflowY: 'auto'
+                  }}
+                >
+                  {filteredOfficials.map((o) => (
+                    <li
+                      key={o.TLOid}
+                      onMouseDown={() => selectOfficial(o)}
+                      className="flex flex-col px-4 py-3 cursor-pointer transition-colors hover:bg-sky-50 border-b-2 border-slate-50 last:border-0"
+                    >
+                      <span className="font-black text-[19.5px] text-slate-800">{fullName(o)}</span>
+                      <span className="text-[16.5px] text-slate-400 font-semibold mt-0.5">
+                        {o.position_title || o.designation || '—'} · {o.region || '—'}
                       </span>
-                    </div>
-                    <p className="text-[11.5px] text-slate-500">
-                      {displayedAssignments.length > 0
-                        ? 'Select below which position(s) should be vacated:'
-                        : 'No active positions currently held by this official.'}
-                    </p>
-                  </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              {dropdownOpen && query.trim().length > 0 && filteredOfficials.length === 0 && !loadingOfficials && (
+                <div
+                  style={{
+                    position: 'fixed',
+                    top: dropdownPos.top,
+                    left: dropdownPos.left,
+                    width: dropdownPos.width,
+                    zIndex: 99999,
+                    border: '2px solid var(--color-brand-300)',
+                    background: 'white',
+                    borderRadius: 'var(--radius-md)',
+                    padding: '12px 16px',
+                    fontSize: '18px',
+                    fontWeight: 600,
+                    color: 'var(--color-secondary)',
+                    boxShadow: 'var(--shadow-xl)'
+                  }}
+                >
+                  No active officials found for "{query}"
+                </div>
+              )}
+            </div>
+          </section>
 
-                  {displayedAssignments.length === 0 ? (
-                    <div className="p-4 bg-white rounded-xl border-2 border-dashed border-slate-200 text-center">
-                      <p className="text-[12.5px] font-bold text-slate-400">
-                        No active positions found for this official.
+          {/* — Current Assignment (read-only card) — */}
+          {selected && (
+            <section
+              className="rounded-lg px-5 py-4 transition-all animate-in fade-in duration-150"
+              style={{
+                background: 'linear-gradient(135deg, var(--color-brand-50) 0%, var(--color-brand-100) 100%)',
+                border: '2px solid var(--color-brand-300)'
+              }}
+            >
+              <div className="flex items-center justify-between mb-3">
+                <p className="text-[13.5px] font-black text-sky-600 uppercase tracking-[0.2em]">
+                  Current Assignment
+                </p>
+                <span className="text-[15px] font-black px-2 py-0.5 rounded-full bg-sky-200/60 text-sky-800">
+                  {selected.TLOid}
+                </span>
+              </div>
+              <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+                <InfoRow label="Name" value={fullName(selected)} span={2} />
+                <InfoRow label="Position" value={selected.position_title || '—'} />
+                <InfoRow label="Designation" value={selected.designation || '—'} />
+                <InfoRow label="Region" value={selected.region || '—'} />
+                <InfoRow label="Division" value={selected.division || '—'} />
+              </div>
+            </section>
+          )}
+
+          {/* — Destination Fields — */}
+          {selected && (
+            <section className="space-y-4 pt-1">
+              <p className="text-[13.5px] font-black text-slate-500 uppercase tracking-[0.2em] mb-3">
+                Target Assignment & Vacant Position
+              </p>
+              <div className="space-y-3.5">
+                {/* 1. Target Office */}
+                <div>
+                  <FloatingLabelInput as="select" label="Select Target Office" requiredMark className="w-full" value={selectedOffice} onChange={(e) => handleSelectOffice(e.target.value)} style={{ background: 'var(--color-brand-50)', border: '2px solid var(--color-muted)' }}>
+                      <option value="">Choose Office…</option>
+                      {uniqueTargetOffices.map((off) => (
+                        <option key={off} value={off}>{off}</option>
+                      ))}
+                    </FloatingLabelInput>
+                </div>
+
+                {/* 2. Vacant Position Picker */}
+                <div>
+                  <label className="block text-[15px] font-black text-slate-500 uppercase tracking-widest mb-1.5">
+                    Select Vacant Position <span className="text-rose-500">*</span>
+                  </label>
+                  {!selectedOffice ? (
+                    <div className="p-3.5 rounded-lg bg-slate-50 border-2 border-dashed border-slate-200 text-center">
+                      <p className="text-[15px] font-black text-slate-400 uppercase tracking-wider">
+                        Please select an office first to view vacant positions
+                      </p>
+                    </div>
+                  ) : filteredVacantPositions.length === 0 ? (
+                    <div className="p-3.5 rounded-lg bg-amber-50 border-2 border-dashed border-amber-200 text-center">
+                      <p className="text-[15px] font-black text-amber-600 uppercase tracking-wider">
+                        No vacant positions found in {selectedOffice}
                       </p>
                     </div>
                   ) : (
-                    <div className="space-y-3 max-h-60 overflow-y-auto custom-scrollbar pr-1">
-                      {displayedAssignments.map((ea) => {
-                        const isVacate = vacateDecisions[ea.id] === true;
-                        return (
-                          <div
-                            key={ea.id}
-                            className={`p-4 rounded-xl border-2 transition-all bg-white ${
-                              isVacate
-                                ? 'border-amber-500 ring-2 ring-amber-400/30 shadow-xs'
-                                : 'border-slate-200 shadow-2xs'
-                            }`}
-                          >
-                            {/* Position info */}
-                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                              <div>
-                                <div className="flex items-center gap-2">
-                                  <span className="font-black text-slate-800 text-[13.5px]">
-                                    {ea.position_title}
-                                  </span>
-                                  <span className="font-mono text-[9.5px] text-amber-900 bg-amber-100 px-1.5 py-0.5 rounded border border-amber-200 font-bold">
-                                    {ea.position_code || 'POS'}
-                                  </span>
-                                </div>
-                                <div className="flex flex-wrap items-center gap-2 text-[11.5px] text-slate-500 mt-1">
-                                  <span className="font-bold text-[#08315F]">{ea.region || 'CENTRAL OFFICE'}</span>
-                                  {ea.bureau && <span>• {ea.bureau}</span>}
-                                  {ea.salary_grade && <span className="font-bold text-slate-700">• SG {ea.salary_grade}</span>}
-                                  {ea.start_date && (
-                                    <span className="font-mono text-slate-400">
-                                      • Since {new Date(ea.start_date).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
-                                    </span>
-                                  )}
-                                </div>
-                              </div>
-                              <div className="flex items-center gap-2 shrink-0">
-                                <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider border ${
-                                  ea.capacity === 'Full' || ea.capacity === 'Full-fledged'
-                                    ? 'bg-blue-50 text-[#075985] border-blue-200'
-                                    : ea.capacity === 'OIC' || ea.capacity === 'Officer-in-Charge (OIC)'
-                                      ? 'bg-amber-50 text-amber-800 border-amber-200'
-                                      : 'bg-purple-50 text-purple-700 border-purple-200'
-                                }`}>
-                                  Current: {ea.capacity === 'Full' ? 'Full-fledged' : ea.capacity === 'OIC' ? 'Officer-in-Charge (OIC)' : ea.capacity || 'Full-fledged'}
-                                </span>
-                              </div>
-                            </div>
-
-                            {/* Question per position */}
-                            <div className="mt-3 pt-3 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
-                              <div className="flex items-center gap-2">
-                                <FiHelpCircle className="w-4 h-4 text-amber-600 shrink-0" />
-                                <div>
-                                  <span className="text-[12px] font-black text-slate-800 uppercase tracking-wide">
-                                    Need to vacate this position?
-                                  </span>
-                                  <p className="text-[11px] text-slate-500">
-                                    {isVacate ? (
-                                      <span className="text-amber-700 font-bold">
-                                        Will be marked Inactive and returned to the vacant pool.
-                                      </span>
-                                    ) : (
-                                      <span className="text-[#075985] font-semibold">
-                                        Will remain Active alongside new deployment (Retained).
-                                      </span>
-                                    )}
-                                  </p>
-                                </div>
-                              </div>
-
-                              {/* Decision buttons per position */}
-                              <div className="flex items-center gap-2 shrink-0">
-                                <button
-                                  type="button"
-                                  onClick={() => setVacateDecisions(prev => ({ ...prev, [ea.id]: true }))}
-                                  className={`px-3 py-1.5 rounded-xl text-[11px] font-black uppercase tracking-wider border-2 transition-all cursor-pointer flex items-center gap-1.5 ${
-                                    isVacate
-                                      ? 'bg-amber-500 border-amber-600 text-white shadow-xs'
-                                      : 'bg-slate-100 border-slate-200 text-slate-600 hover:bg-slate-200'
-                                  }`}
-                                >
-                                  <FiCheck className="w-3.5 h-3.5 stroke-[3]" />
-                                  YES — Vacate
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => setVacateDecisions(prev => ({ ...prev, [ea.id]: false }))}
-                                  className={`px-3 py-1.5 rounded-xl text-[11px] font-black uppercase tracking-wider border-2 transition-all cursor-pointer flex items-center gap-1.5 ${
-                                    !isVacate
-                                      ? 'bg-[#08315F] border-[#08315F] text-white shadow-xs'
-                                      : 'bg-slate-100 border-slate-200 text-slate-600 hover:bg-slate-200'
-                                  }`}
-                                >
-                                  <FiX className="w-3.5 h-3.5 stroke-[3]" />
-                                  NO — Retain
-                                </button>
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
+                    <FloatingLabelInput as="select" label="Choose Vacant Position…" className="w-full" value={selectedVacantItem} onChange={(e) => handleSelectVacantPosition(e.target.value)} style={{ background: 'var(--color-brand-50)', border: '2px solid var(--color-brand-300)' }}>
+                        <option value="">Choose Vacant Position…</option>
+                        {filteredVacantPositions.map((slot) => (
+                          <option key={slot.item_number} value={slot.item_number}>
+                            {slot.position_title} ({slot.item_number}){slot.strand ? ` — ${slot.strand}` : ''}
+                          </option>
+                        ))}
+                      </FloatingLabelInput>
                   )}
                 </div>
-              )}
 
-              {/* Capacity / Type */}
-              <div>
-                <label className="text-[13.5px] font-black text-slate-400 uppercase tracking-widest mb-2 block">
-                  Capacity / Type <span className="text-red-500">*</span>
-                </label>
-                <div className="relative">
-                  <select
-                    value={
-                      formData.capacity === 'Full' || formData.capacity === 'Full-fledged'
-                        ? 'Full-fledged'
-                        : formData.capacity === 'OIC' || formData.capacity === 'Officer-in-Charge (OIC)'
-                          ? 'Officer-in-Charge (OIC)'
-                          : formData.capacity
-                    }
-                    onChange={(e) => setFormData(prev => ({ ...prev, capacity: e.target.value }))}
-                    className="w-full bg-slate-50 border-2 border-slate-200 focus:border-[#08315F]/20 rounded-2xl py-3.5 px-4 text-[15px] font-bold text-slate-700 outline-none transition-all appearance-none pr-10 cursor-pointer"
+                {/* Selected Vacant Position Info Card */}
+                {selectedVacantItem && (
+                  <div
+                    className="rounded-lg p-3.5 transition-all"
+                    style={{ background: 'var(--color-success-50)', border: '2px solid var(--color-success-300)' }}
                   >
-                    <option value="Full-fledged">Full-fledged</option>
-                    <option value="Officer-in-Charge (OIC)">Officer-in-Charge (OIC)</option>
-                  </select>
-                  <FiChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none w-4 h-4" />
-                </div>
-              </div>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <span className="text-[13.5px] font-black text-green-700 uppercase tracking-widest">
+                        Selected Vacancy
+                      </span>
+                      <span className="text-[15px] font-black px-2 py-0.5 rounded-full bg-green-200 text-green-800">
+                        {selectedVacantItem}
+                      </span>
+                    </div>
+                    <p className="text-[19px] font-bold text-slate-800">
+                      {newDesignation || 'Plantilla Position'}
+                    </p>
+                    <p className="text-[16.5px] text-slate-500 font-medium mt-0.5">
+                      {newOffice} {newStrand ? `· ${newStrand}` : ''} {newRegion ? `(${newRegion})` : ''}
+                    </p>
+                  </div>
+                )}
 
-              {/* 2. Vacant Position Selection */}
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <label className="text-[13.5px] font-black text-slate-400 uppercase tracking-widest block">
-                    2. Select Vacant Position <span className="text-red-500">*</span>
-                  </label>
-                  <span className="text-[11px] font-black uppercase tracking-wider text-amber-700 bg-amber-50 px-2.5 py-0.5 rounded-full border border-amber-200 shrink-0">
-                    {vacantPositions.length} Vacant Available
-                  </span>
-                </div>
-
-                <PositionCombobox
-                  positions={vacantPositions}
-                  selectedId={formData.position_id}
-                  onSelect={(id) => setFormData(prev => ({ ...prev, position_id: id }))}
-                  placeholder="Search vacant positions..."
-                />
-              </div>
-
-              {/* 3. Deployment Details: Start Date & Remarks */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {/* Date of Effectivity */}
                 <div>
-                  <label className="text-[13.5px] font-black text-slate-400 uppercase tracking-widest mb-2 block">
-                    Start Date <span className="text-red-500">*</span>
+                  <label className="block text-[15px] font-black text-slate-500 uppercase tracking-widest mb-1.5">
+                    Date of Effectivity <span className="text-rose-500">*</span>
                   </label>
-                  <input
-                    type="date"
-                    value={formData.start_date}
-                    onChange={(e) => setFormData(prev => ({ ...prev, start_date: e.target.value }))}
-                    required
-                    className="w-full bg-slate-50 border-2 border-slate-200 focus:border-[#08315F]/20 rounded-2xl py-3 px-4 text-[15px] font-bold text-slate-700 outline-none transition-all"
+                  <ModernDatePicker
+                    value={toDate}
+                    onChange={(val) => setToDate(val)}
+                    placeholder="Select effective date"
+                    className="!rounded-[14px] !py-2.5 !px-3 !text-[19.5px] !font-semibold !bg-brand-50 !border-2 !border-muted"
                   />
                 </div>
 
+                {/* Justification / Remarks */}
                 <div>
-                  <label className="text-[13.5px] font-black text-slate-400 uppercase tracking-widest mb-2 block">
-                    Remarks / Notes
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.remarks}
-                    onChange={(e) => setFormData(prev => ({ ...prev, remarks: e.target.value }))}
-                    placeholder="e.g., Special Order No. 2026-081"
-                    className="w-full bg-slate-50 border-2 border-slate-200 focus:border-[#08315F]/20 rounded-2xl py-3 px-4 text-[15px] font-bold text-slate-700 outline-none transition-all placeholder:text-slate-400"
-                  />
+                  <FloatingLabelInput as="textarea" label="Justification / Remarks" className="w-full" rows={2} value={justification} onChange={(e) => setJustification(e.target.value)} placeholder="Optional reassignment note or administrative justification..." style={{ background: 'var(--color-white)', border: '2px solid var(--color-muted)' }} />
                 </div>
               </div>
-            </div>
 
-            {/* Fixed Modal Footer */}
-            <div className="p-6 sm:p-8 pt-4 border-t-2 border-slate-100 flex flex-col-reverse sm:flex-row items-center justify-end gap-3 shrink-0 bg-white">
-              <button
-                type="button"
-                onClick={onClose}
-                className="w-full sm:w-auto px-6 py-3.5 rounded-2xl bg-white border-2 border-slate-200 text-slate-500 font-black uppercase tracking-widest text-[13.5px] hover:bg-slate-50 transition-all text-center active:scale-95 cursor-pointer"
+              {errors.target && (
+                <p role="alert" className="mt-3 text-[13px] font-medium text-danger-700">{errors.target}</p>
+              )}
+            </section>
+          )}
+
+          {/* — Reassignment Order Upload (PDF) — */}
+          {selected && (
+            <section className="pt-1">
+              <label className="block text-[15px] font-black text-slate-500 uppercase tracking-widest mb-2">
+                Reassignment Order (PDF) <span className="text-slate-400 font-normal">(Optional)</span>
+              </label>
+              <div
+                onClick={() => fileRef.current?.click()}
+                className="flex flex-col items-center justify-center gap-2 rounded-lg px-5 py-4 cursor-pointer transition-all hover:scale-[1.005]"
+                style={{
+                  border: file ? '2px solid var(--color-success-700)' : '2px dashed var(--color-brand-300)',
+                  background: file ? 'var(--color-success-50)' : 'var(--color-brand-50)'
+                }}
               >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                disabled={submitting}
-                className="w-full sm:w-auto px-8 py-3.5 bg-[#08315F] hover:bg-[#004A99] text-white rounded-2xl text-[13.5px] font-black uppercase tracking-widest transition-all disabled:opacity-50 flex justify-center items-center gap-2 border-2 border-transparent shadow-lg shadow-blue-900/20 active:scale-95 cursor-pointer"
-              >
-                {submitting ? (
+                {file ? (
                   <>
-                    <FiRefreshCw className="w-4 h-4 animate-spin" />
-                    <span>Verifying & Assigning...</span>
+                    <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center text-green-600 shadow-sm">
+                      <FiCheck size={20} strokeWidth={3} />
+                    </div>
+                    <p className="text-[18px] font-black text-green-700">{file.name}</p>
+                    <p className="text-[15px] text-slate-400 font-semibold">
+                      {(file.size / 1024).toFixed(1)} KB · Click to change PDF
+                    </p>
                   </>
                 ) : (
                   <>
-                    <FiCheckCircle className="w-4 h-4" />
-                    <span>{submitButtonText}</span>
+                    <div className="w-10 h-10 rounded-full bg-sky-100 flex items-center justify-center text-sky-600 shadow-sm">
+                      <FiUploadCloud size={20} />
+                    </div>
+                    <p className="text-[17px] font-black text-slate-700">Attach Reassignment Order (Optional)</p>
+                    <p className="text-[14px] text-slate-400 font-semibold">PDF document only, max 10 MB</p>
                   </>
                 )}
-              </button>
-            </div>
-          </form>
-        </motion.div>
+              </div>
+              <input
+                ref={fileRef}
+                type="file"
+                accept=".pdf,application/pdf"
+                className="hidden"
+                onChange={(e) => setFile(e.target.files?.[0] || null)}
+              />
+            </section>
+          )}
+        </div>
+
+        <div className="px-7 pt-3">
+          <FormErrorSummary errors={summaryErrors} />
+        </div>
+
+        {/* ── Footer ── */}
+        <div
+          className="flex items-center justify-end gap-3 px-7 py-4"
+          style={{ borderTop: '2px solid var(--color-muted)', background: 'var(--color-brand-50)' }}
+        >
+          <button
+            onClick={onClose}
+            className="px-5 py-2.5 rounded-lg text-[18px] font-black text-slate-500 transition-colors hover:bg-slate-200/60"
+            style={{ background: 'var(--color-brand-50)', border: '2px solid var(--color-muted)' }}
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleSubmit}
+            disabled={!canSubmit}
+            className="flex items-center gap-2 px-6 py-2.5 rounded-lg text-[18px] font-black text-white transition-all disabled:opacity-40 disabled:cursor-not-allowed hover:shadow-lg active:scale-95"
+            style={{
+              background: 'linear-gradient(135deg, var(--color-brand-700) 0%, var(--color-brand-800) 100%)',
+              boxShadow: canSubmit ? '0 4px 14px rgb(var(--rgb-brand-700)/0.35)' : 'none'
+            }}
+          >
+            {submitting ? (
+              <>
+                <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+                </svg>
+                Reassigning…
+              </>
+            ) : (
+              <>
+                <FiCheck size={16} /> Confirm Reassignment
+              </>
+            )}
+          </button>
+        </div>
       </div>
-    </AnimatePresence>
+    </div>
   );
 };
 
-export default NewPositionAssignmentModal;
+// ── InfoRow sub-component ──────────────────────────────────────────────────
+const InfoRow = ({ label, value, span = 1 }) => (
+  <div className={`flex flex-col gap-0.5 ${span === 2 ? 'col-span-2' : ''}`}>
+    <span className="text-[13.5px] font-black text-sky-600 uppercase tracking-widest">{label}</span>
+    <span className="text-[19px] font-bold text-slate-700">{value}</span>
+  </div>
+);
+
+export default ReassignOfficialModal;

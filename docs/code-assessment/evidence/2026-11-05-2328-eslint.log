@@ -1,0 +1,136 @@
+(node:9420) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///C:/InsightED%20and%20STRIDE/InsightED%20v2/thirdlevel-file/eslint.config.js?mtime=1793891034787 is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to C:\InsightED and STRIDE\InsightED v2\thirdlevel-file\package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+C:\InsightED and STRIDE\InsightED v2\thirdlevel-file\api\src\features\official-profiling\applications.js
+  148:39  warning  'strand' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u          no-unused-vars
+  148:47  warning  'search' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u          no-unused-vars
+  289:7   warning  The value assigned to 'applicantData' is not used in subsequent statements                      no-useless-assignment
+  717:5   warning  'newRegion' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u       no-unused-vars
+  718:5   warning  'newDivision' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u     no-unused-vars
+  719:5   warning  'newOffice' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u       no-unused-vars
+  720:5   warning  'office' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u          no-unused-vars
+  721:5   warning  'targetOffice' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u    no-unused-vars
+  722:5   warning  'newStrand' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u       no-unused-vars
+  723:5   warning  'strand' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u          no-unused-vars
+  724:5   warning  'targetStrand' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u    no-unused-vars
+  725:5   warning  'newDesignation' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars
+
+C:\InsightED and STRIDE\InsightED v2\thirdlevel-file\api\src\features\officials-registry\controller.js
+    1:8   warning  'fs' is defined but never used. Allowed unused vars must match /^[A-Z_]/u                              no-unused-vars
+  166:51  warning  'include_test_accounts' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars
+
+C:\InsightED and STRIDE\InsightED v2\thirdlevel-file\api\src\services\emailService.js
+  22:102  warning  'tloId' is defined but never used. Allowed unused args must match /^_/u  no-unused-vars
+
+C:\InsightED and STRIDE\InsightED v2\thirdlevel-file\api\src\utils\officialRules.js
+  3:5  warning  'oicSchemaReady' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars
+
+C:\InsightED and STRIDE\InsightED v2\thirdlevel-file\ui\src\components\AdminSidebar.jsx
+  11:13  warning  'user' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars
+
+C:\InsightED and STRIDE\InsightED v2\thirdlevel-file\ui\src\components\PinLogin.jsx
+  31:35  warning  'accountCategory' is defined but never used. Allowed unused args must match /^_/u  no-unused-vars
+
+C:\InsightED and STRIDE\InsightED v2\thirdlevel-file\ui\src\components\ReassignOfficialModal.jsx
+  347:10  warning  'loadingVacancies' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u    no-unused-vars
+  537:9   warning  'availableDivisions' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars
+
+C:\InsightED and STRIDE\InsightED v2\thirdlevel-file\ui\src\components\RegisterPersonnelModal.jsx
+  31:10  warning  'positions' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars
+
+C:\InsightED and STRIDE\InsightED v2\thirdlevel-file\ui\src\components\RetireesModal.jsx
+  8:58  warning  'applicationsThisMonth' is assigned a value but never used. Allowed unused args must match /^_/u  no-unused-vars
+  8:86  warning  'elementsThisMonth' is assigned a value but never used. Allowed unused args must match /^_/u      no-unused-vars
+  9:9   warning  'navigate' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u          no-unused-vars
+
+C:\InsightED and STRIDE\InsightED v2\thirdlevel-file\ui\src\components\YearInput.jsx
+  11:5  warning  'required' is assigned a value but never used. Allowed unused args must match /^_/u  no-unused-vars
+  12:5  warning  'label' is assigned a value but never used. Allowed unused args must match /^_/u     no-unused-vars
+
+C:\InsightED and STRIDE\InsightED v2\thirdlevel-file\ui\src\components\official-profiling\DocumentsTab.jsx
+  3:25  warning  'certified' is defined but never used. Allowed unused args must match /^_/u  no-unused-vars
+
+C:\InsightED and STRIDE\InsightED v2\thirdlevel-file\ui\src\components\official-profiling\LocationUnlockModal.jsx
+  4:32  warning  'profile' is defined but never used. Allowed unused args must match /^_/u  no-unused-vars
+
+C:\InsightED and STRIDE\InsightED v2\thirdlevel-file\ui\src\components\official-profiling\SummaryTab.jsx
+  849:102  warning  'FiXCircle' is not defined  no-undef
+
+C:\InsightED and STRIDE\InsightED v2\thirdlevel-file\ui\src\components\officials-registry\ApprovalTabs.jsx
+  3:35  warning  'officials' is defined but never used. Allowed unused args must match /^_/u  no-unused-vars
+
+C:\InsightED and STRIDE\InsightED v2\thirdlevel-file\ui\src\components\officials-registry\ContentArea.jsx
+  27:80  warning  'index' is defined but never used. Allowed unused args must match /^_/u  no-unused-vars
+
+C:\InsightED and STRIDE\InsightED v2\thirdlevel-file\ui\src\context\AuthContext.jsx
+  50:25  warning  Empty block statement  no-empty
+
+C:\InsightED and STRIDE\InsightED v2\thirdlevel-file\ui\src\pages\AllVacancies.jsx
+  12:12  warning  'searchParams' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars
+  13:13  warning  'user' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u          no-unused-vars
+
+C:\InsightED and STRIDE\InsightED v2\thirdlevel-file\ui\src\pages\Home.jsx
+  132:24  warning  'logout' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u                   no-unused-vars
+  291:9   warning  'divisionChiefsCount' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u      no-unused-vars
+  331:9   warning  'divisionChiefsBreakdown' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars
+  342:9   warning  'pendingVerifications' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u     no-unused-vars
+  348:9   warning  'flaggedProfiles' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u          no-unused-vars
+  420:9   warning  'pendingRegionBreakdown' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u   no-unused-vars
+  435:9   warning  'flaggedRegionBreakdown' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u   no-unused-vars
+  451:9   warning  'elementsRegionBreakdown' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars
+  466:9   warning  'retireesRegionBreakdown' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars
+
+C:\InsightED and STRIDE\InsightED v2\thirdlevel-file\ui\src\pages\Login.jsx
+   36:12  warning  'isSchoolHead' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u       no-unused-vars
+   37:12  warning  'isPortalEnforced' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u   no-unused-vars
+   38:12  warning  'showBackPrompt' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u     no-unused-vars
+   38:28  warning  'setShowBackPrompt' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars
+   99:13  warning  'login' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u              no-unused-vars
+  168:11  warning  'handlePinVerify' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u    no-unused-vars
+
+C:\InsightED and STRIDE\InsightED v2\thirdlevel-file\ui\src\pages\MainDashboard\components\FilterPanel.jsx
+  24:3  warning  'onToggleAdvancedMode' is defined but never used. Allowed unused args must match /^_/u  no-unused-vars
+
+C:\InsightED and STRIDE\InsightED v2\thirdlevel-file\ui\src\pages\NexusGate.jsx
+  44:12  warning  'clickedCard' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars
+
+C:\InsightED and STRIDE\InsightED v2\thirdlevel-file\ui\src\pages\OfficialProfiling.jsx
+    43:12   warning  'denialReason' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u              no-unused-vars
+    49:12   warning  'saved' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u                     no-unused-vars
+    87:12   warning  'vacanciesLoading' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u          no-unused-vars
+   102:12   warning  'selectedEducationType' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u     no-unused-vars
+   102:35   warning  'setSelectedEducationType' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars
+   945:21   warning  There is no `cause` attached to the symptom error being thrown                                            preserve-caught-error
+  1711:114  warning  'FiRefreshCw' is not defined                                                                              no-undef
+
+C:\InsightED and STRIDE\InsightED v2\thirdlevel-file\ui\src\pages\OfficialsRegistry.jsx
+    24:19  warning  'logout' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u                         no-unused-vars
+   260:12  warning  'offices' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u                        no-unused-vars
+   296:11  warning  'thirdLevelActiveCount' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u          no-unused-vars
+   297:11  warning  'thirdLevelOicActiveCount' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u       no-unused-vars
+   298:11  warning  'divisionChiefsOicActiveCount' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u   no-unused-vars
+   299:11  warning  'divisionChiefsActiveCount' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u      no-unused-vars
+   341:11  warning  'thirdLevelBreakdown' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u            no-unused-vars
+   352:11  warning  'thirdLevelOicBreakdown' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u         no-unused-vars
+   363:11  warning  'divisionChiefsBreakdown' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u        no-unused-vars
+   374:11  warning  'divisionChiefsNotOicBreakdown' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars
+   688:31  warning  'setApplications' is not defined                                                                               no-undef
+  1194:11  warning  'handleProcessApplication' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u       no-unused-vars
+  1227:9   warning  'setProcessingId' is not defined                                                                               no-undef
+  1248:13  warning  'setProcessingId' is not defined                                                                               no-undef
+
+C:\InsightED and STRIDE\InsightED v2\thirdlevel-file\ui\src\pages\Register.jsx
+  29:11  warning  'coAuthCode' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars
+
+C:\InsightED and STRIDE\InsightED v2\thirdlevel-file\ui\src\pages\Settings.jsx
+  10:35  warning  'logout' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars
+
+C:\InsightED and STRIDE\InsightED v2\thirdlevel-file\ui\src\utils\directoryParser.js
+  46:13  warning  The value assigned to 'lastName' is not used in subsequent statements   no-useless-assignment
+  47:13  warning  The value assigned to 'firstName' is not used in subsequent statements  no-useless-assignment
+
+✖ 76 problems (0 errors, 76 warnings)
+
+error: unknown option '--format=json'

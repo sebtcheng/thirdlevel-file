@@ -31,7 +31,7 @@ const CompositionChart = ({ counts, total, viewType, onToggleView }) => {
             <>
               <div className="mdb-donut-svg-wrap">
                 <svg viewBox="0 0 36 36" style={{ width: '100%', height: '100%', transform: 'rotate(-90deg)' }}>
-                  <circle cx="18" cy="18" r="15.915" fill="none" stroke="#E2E8F0" strokeWidth="3.8" />
+                  <circle cx="18" cy="18" r="15.915" fill="none" stroke="var(--color-muted)" strokeWidth="3.8" />
                   <circle
                     cx="18"
                     cy="18"
@@ -103,7 +103,7 @@ const CompositionChart = ({ counts, total, viewType, onToggleView }) => {
                   <span>Regular Permanent</span>
                   <span>{counts.Regular} ({regularPct}%)</span>
                 </div>
-                <div style={{ height: '12px', background: 'var(--mdb-green-100)', borderRadius: '6px', overflow: 'hidden', marginTop: '4px' }}>
+                <div style={{ height: '12px', background: 'var(--mdb-green-100)', borderRadius: 'var(--radius-md)', overflow: 'hidden', marginTop: '4px' }}>
                   <div style={{ width: `${regDash}%`, height: '100%', background: 'var(--mdb-green)' }} />
                 </div>
               </div>
@@ -113,7 +113,7 @@ const CompositionChart = ({ counts, total, viewType, onToggleView }) => {
                   <span>Acting OIC</span>
                   <span>{counts.OIC} ({oicPct}%)</span>
                 </div>
-                <div style={{ height: '12px', background: '#FEF3C7', borderRadius: '6px', overflow: 'hidden', marginTop: '4px' }}>
+                <div style={{ height: '12px', background: 'var(--color-warning-50)', borderRadius: 'var(--radius-md)', overflow: 'hidden', marginTop: '4px' }}>
                   <div style={{ width: `${oicDash}%`, height: '100%', background: 'var(--mdb-gold)' }} />
                 </div>
               </div>
@@ -123,7 +123,7 @@ const CompositionChart = ({ counts, total, viewType, onToggleView }) => {
                   <span>Vacant Position</span>
                   <span>{counts.Vacant} ({vacantPct}%)</span>
                 </div>
-                <div style={{ height: '12px', background: 'var(--mdb-red-100)', borderRadius: '6px', overflow: 'hidden', marginTop: '4px' }}>
+                <div style={{ height: '12px', background: 'var(--mdb-red-100)', borderRadius: 'var(--radius-md)', overflow: 'hidden', marginTop: '4px' }}>
                   <div style={{ width: `${vacDash}%`, height: '100%', background: 'var(--mdb-red)' }} />
                 </div>
               </div>

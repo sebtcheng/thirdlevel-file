@@ -1,7 +1,8 @@
 import React, { useState, useRef } from 'react';
+import ConfirmDestructiveDialog from './forms/ConfirmDestructiveDialog.jsx';
 import * as XLSX from 'xlsx';
-import { motion, AnimatePresence } from 'framer-motion';
-import { FiX, FiUploadCloud, FiFile, FiCheckCircle, FiAlertCircle } from 'react-icons/fi';
+import { motion, AnimatePresence } from '../utils/staticElements.jsx';
+import { X as FiX, CloudArrowUp as FiUploadCloud, File as FiFile, CheckCircle as FiCheckCircle, WarningCircle as FiAlertCircle } from '@phosphor-icons/react';
 import { useAuth } from '../context/AuthContext';
 import Swal from 'sweetalert2';
 import { uploadNotableAchievements } from '../utils/directoryApi';
@@ -10,6 +11,7 @@ const NotableAchievementsModal = ({ isOpen, onClose, onSuccess }) => {
   const { token } = useAuth();
   const fileInputRef = useRef(null);
   const [file, setFile] = useState(null);
+  const [confirmRemove, setConfirmRemove] = useState(false);
   const [records, setRecords] = useState([]);
   const [isParsing, setIsParsing] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -124,22 +126,22 @@ const NotableAchievementsModal = ({ isOpen, onClose, onSuccess }) => {
     <AnimatePresence>
       {isOpen && (
         <motion.div
-          className="fixed inset-0 z-[100] flex items-center justify-center bg-[#08315F]/60 backdrop-blur-sm p-4 font-['Plus_Jakarta_Sans',system-ui,sans-serif]"
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-brand-800/60 backdrop-blur-sm p-4 font-['Plus_Jakarta_Sans',system-ui,sans-serif]"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
         >
           <motion.div
-            className="bg-white rounded-[28px] shadow-2xl w-full max-w-3xl max-h-[90vh] flex flex-col overflow-hidden border-2 border-blue-100"
+            className="bg-white rounded-card shadow-2xl w-full max-w-3xl max-h-[90vh] flex flex-col overflow-hidden border-2 border-blue-100"
             initial={{ opacity: 0, rotateY: -90, scale: 0.95 }}
             animate={{ opacity: 1, rotateY: 0, scale: 1 }}
             exit={{ opacity: 0, scale: 0.5, rotateX: -20, rotateY: 20 }}
             transition={{ duration: 0.6, type: 'spring', bounce: 0.35 }}
             style={{ transformPerspective: 1200, transformOrigin: "center" }}
           >
-            <div className="flex items-center justify-between p-6 border-b-2 border-blue-50 bg-[#f8fafc]">
+            <div className="flex items-center justify-between p-6 border-b-2 border-blue-50 bg-brand-50">
               <div>
-                <h2 className="text-[36px] font-black text-[#08315f] m-0 leading-tight">Notable Achievements</h2>
+                <h2 className="modal-title text-[36px] text-brand-800 m-0 leading-tight">Notable Achievements</h2>
                 <p className="text-[21px] font-bold text-slate-500 m-0 uppercase tracking-wider mt-1">Bulk Upload & Process</p>
               </div>
               <button
@@ -168,7 +170,7 @@ const NotableAchievementsModal = ({ isOpen, onClose, onSuccess }) => {
                   </div>
 
                   <div
-                    className="border-2 border-dashed border-blue-200 rounded-[24px] p-12 flex flex-col items-center justify-center bg-white hover:bg-blue-50/50 hover:border-blue-400 transition-all cursor-pointer group"
+                    className="border-2 border-dashed border-blue-200 rounded-card p-12 flex flex-col items-center justify-center bg-white hover:bg-blue-50/50 hover:border-blue-400 transition-all cursor-pointer group"
                     onDragOver={(e) => e.preventDefault()}
                     onDrop={handleFileDrop}
                     onClick={() => fileInputRef.current?.click()}
@@ -193,7 +195,7 @@ const NotableAchievementsModal = ({ isOpen, onClose, onSuccess }) => {
 
               {file && !summary && (
                 <div className="space-y-6">
-                  <div className="flex items-center justify-between bg-white p-4 rounded-2xl border-2 border-blue-100 shadow-sm">
+                  <div className="flex items-center justify-between bg-white p-4 rounded-card border-2 border-blue-100 shadow-sm">
                     <div className="flex items-center gap-4">
                       <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center text-blue-600">
                         <FiFile size={26} />
@@ -205,15 +207,23 @@ const NotableAchievementsModal = ({ isOpen, onClose, onSuccess }) => {
                         </p>
                       </div>
                     </div>
-                    <button onClick={resetModal} className="text-[21px] font-bold text-red-500 hover:text-red-700 px-4 py-2 bg-red-50 hover:bg-red-100 rounded-xl transition-colors">
+                    <button onClick={() => setConfirmRemove(true)} className="text-[21px] font-bold text-red-500 hover:text-red-700 px-4 py-2 bg-red-50 hover:bg-red-100 rounded-xl transition-colors">
                       Remove File
                     </button>
+                    <ConfirmDestructiveDialog
+                      open={confirmRemove}
+                      title={`Remove ${file.name}?`}
+                      body={`This clears the uploaded file and its ${records.length} parsed records. You will need to upload again.`}
+                      confirmLabel="Remove file"
+                      onConfirm={() => { setConfirmRemove(false); resetModal(); }}
+                      onCancel={() => setConfirmRemove(false)}
+                    />
                   </div>
 
                   {records.length > 0 && (
-                    <div className="bg-white rounded-2xl border-2 border-blue-100 shadow-sm overflow-hidden flex flex-col max-h-[300px]">
+                    <div className="bg-white rounded-card border-2 border-blue-100 shadow-sm overflow-hidden flex flex-col max-h-[300px]">
                       <div className="px-6 py-4 border-b-2 border-slate-100 flex justify-between items-center bg-slate-50">
-                        <h3 className="font-black text-[#08315f] text-[21px]">Data Preview</h3>
+                        <h3 className="font-black text-brand-800 text-[21px]">Data Preview</h3>
                         <div className="text-[18px] font-bold bg-blue-100 text-blue-800 px-3 py-1 rounded-full uppercase tracking-wider">
                           {records.filter(r => !r.isValid).length} Invalid Rows
                         </div>
@@ -256,25 +266,25 @@ const NotableAchievementsModal = ({ isOpen, onClose, onSuccess }) => {
               {summary && (
                 <div className="space-y-6">
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <div className="bg-white p-4 rounded-2xl border-2 border-blue-100 text-center">
+                    <div className="bg-white p-4 rounded-card border-2 border-blue-100 text-center">
                       <p className="text-[15px] font-black text-slate-400 uppercase tracking-widest mb-1">Total</p>
-                      <p className="text-[45px] font-black text-[#08315f]">{summary.summary.total}</p>
+                      <p className="text-[45px] font-black text-brand-800">{summary.summary.total}</p>
                     </div>
-                    <div className="bg-white p-4 rounded-2xl border-2 border-green-200 text-center bg-green-50/30">
+                    <div className="bg-white p-4 rounded-card border-2 border-green-200 text-center bg-green-50/30">
                       <p className="text-[15px] font-black text-green-600 uppercase tracking-widest mb-1">Inserted</p>
                       <p className="text-[45px] font-black text-green-700">{summary.summary.inserted}</p>
                     </div>
-                    <div className="bg-white p-4 rounded-2xl border-2 border-amber-200 text-center bg-amber-50/30">
+                    <div className="bg-white p-4 rounded-card border-2 border-amber-200 text-center bg-amber-50/30">
                       <p className="text-[15px] font-black text-amber-600 uppercase tracking-widest mb-1">Updated</p>
                       <p className="text-[45px] font-black text-amber-700">{summary.summary.updated}</p>
                     </div>
-                    <div className="bg-white p-4 rounded-2xl border-2 border-red-200 text-center bg-red-50/30">
+                    <div className="bg-white p-4 rounded-card border-2 border-red-200 text-center bg-red-50/30">
                       <p className="text-[15px] font-black text-red-500 uppercase tracking-widest mb-1">Failed</p>
                       <p className="text-[45px] font-black text-red-700">{summary.summary.failed}</p>
                     </div>
                   </div>
 
-                  <div className="bg-white p-6 rounded-2xl border-2 border-blue-100 flex justify-center text-center">
+                  <div className="bg-white p-6 rounded-card border-2 border-blue-100 flex justify-center text-center">
                     <h3 className="font-black text-green-700 text-[27px]">Processing Complete!</h3>
                   </div>
                 </div>
@@ -294,7 +304,7 @@ const NotableAchievementsModal = ({ isOpen, onClose, onSuccess }) => {
                   <button
                     onClick={handleProceed}
                     disabled={!file || records.filter(r => r.isValid).length === 0 || isProcessing}
-                    className="px-8 py-3 rounded-xl font-black text-white bg-[#075985] hover:bg-[#0369a1] transition-all shadow-lg shadow-[#075985]/30 disabled:opacity-50 disabled:shadow-none flex items-center gap-2 text-[18px]"
+                    className="px-8 py-3 rounded-xl font-black text-white bg-brand-700 hover:bg-brand-700 transition-all shadow-lg shadow-brand-700/30 disabled:opacity-50 disabled:shadow-none flex items-center gap-2 text-[18px]"
                   >
                     {isProcessing && <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>}
                     Proceed
@@ -303,7 +313,7 @@ const NotableAchievementsModal = ({ isOpen, onClose, onSuccess }) => {
               ) : (
                 <button
                   onClick={handleClose}
-                  className="px-8 py-3 rounded-xl font-black text-white bg-[#075985] hover:bg-[#0369a1] transition-all shadow-lg shadow-[#075985]/30 text-[18px]"
+                  className="px-8 py-3 rounded-xl font-black text-white bg-brand-700 hover:bg-brand-700 transition-all shadow-lg shadow-brand-700/30 text-[18px]"
                 >
                   Close Summary
                 </button>

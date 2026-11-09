@@ -7,7 +7,6 @@ import 'aos/dist/aos.css';
 // Pages
 import NexusGate from './pages/NexusGate';
 import Login from './pages/Login';
-import VacancyLogin from './pages/VacancyLogin';
 import Register from './pages/Register';
 import OfficialProfiling from './pages/OfficialProfiling';
 import OfficialsRegistry from './pages/OfficialsRegistry';
@@ -17,42 +16,30 @@ import Settings from './pages/Settings';
 import NotableAchievements from './pages/NotableAchievements';
 import LoadingScreen from './components/LoadingScreen';
 import AllVacancies from './pages/AllVacancies';
-import VacancyDashboard from './pages/VacancyDashboard';
 import ResetPassword from './pages/ResetPassword';
-import CesPlantilla from './pages/CesPlantilla';
-import PositionAssignments from './pages/PositionAssignments';
-import TloPositions from './pages/TloPositions';
-import AdminVacancies from './pages/AdminVacancies';
 
 import MainDashboard from './pages/MainDashboard';
 
-// Vacancies Route Handler: Serves AdminVacancies for Central Office / Admin roles
-const VacanciesRoute = () => {
-    const { user } = useAuth();
-    const roleLower = user?.role?.toLowerCase() || '';
-    if (['central office', 'super user', 'personnel admin'].includes(roleLower)) {
-        return <AdminVacancies />;
-    }
-    return <VacancyDashboard defaultTab="vacancies" />;
-};
-
-// Public Route Component
+// Public Route Component with Return URL Handling
 const PublicRoute = ({ children }) => {
     const { user, loading } = useAuth();
     const location = useLocation();
+
     if (loading) return <LoadingScreen />;
     if (user) {
-        if (location.state?.redirectTo) {
-            return <Navigate to={location.state.redirectTo} replace />;
+        const searchParams = new URLSearchParams(location.search);
+        const returnUrl = searchParams.get('returnUrl') || searchParams.get('redirect') || location.state?.redirectTo || location.state?.returnUrl;
+
+        // Check if returnUrl is safe and not pointing back to auth pages to prevent loops
+        if (returnUrl && returnUrl.startsWith('/') && !returnUrl.startsWith('//') && !returnUrl.startsWith('/login') && !returnUrl.startsWith('/register') && !returnUrl.startsWith('/reset-password')) {
+            return <Navigate to={returnUrl} replace />;
         }
-        const activePortal = sessionStorage.getItem('active_portal') || localStorage.getItem('active_portal');
+
         const roleLower = user.role?.toLowerCase() || '';
-        if (roleLower === 'third level official' || roleLower === 'tlo applicant') {
-            return <Navigate to="/official-profiling" replace />;
-        } else if (activePortal === 'vacancies' || roleLower === 'vacancy applicant') {
-            return <Navigate to="/vacancy-dashboard" replace />;
-        } else if (['personnel admin', 'super user', 'central office', 'regional office', 'school division office'].includes(roleLower)) {
+        if (['personnel admin', 'super user', 'central office', 'regional office', 'school division office'].includes(roleLower)) {
             return <Navigate to="/home" replace />;
+        } else if (['tlo applicant', 'third level applicant'].includes(roleLower)) {
+            return <Navigate to="/timon-applications" replace />;
         } else {
             return <Navigate to="/official-profiling" replace />;
         }
@@ -60,11 +47,23 @@ const PublicRoute = ({ children }) => {
     return children;
 };
 
-// Protected Route Component
-const ProtectedRoute = ({ children }) => {
+// Protected Route Component with Authentication Guard & Return URL Redirection
+const ProtectedRoute = ({ children, redirectPath = '/login' }) => {
     const { user, loading } = useAuth();
+    const location = useLocation();
+
     if (loading) return <LoadingScreen />;
-    if (!user) return <Navigate to="/" replace />;
+    if (!user) {
+        const currentPath = location.pathname + location.search;
+        const encodedUrl = encodeURIComponent(currentPath);
+        return (
+            <Navigate 
+                to={`${redirectPath}?returnUrl=${encodedUrl}&redirect=${encodedUrl}`} 
+                state={{ redirectTo: currentPath, returnUrl: currentPath }} 
+                replace 
+            />
+        );
+    }
     return children;
 };
 
@@ -80,7 +79,6 @@ const App = () => {
             
             {/* Auth Routes */}
             <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
-            <Route path="/vacancy-login" element={<PublicRoute><VacancyLogin /></PublicRoute>} />
             <Route path="/register" element={<PublicRoute><Register /></PublicRoute>} />
             <Route path="/reset-password" element={<PublicRoute><ResetPassword /></PublicRoute>} />
             
@@ -134,98 +132,26 @@ const App = () => {
                 } 
             />
             <Route 
-                path="/vacancy-dashboard" 
+                path="/timon-applications" 
                 element={
                     <ProtectedRoute>
-                        <VacancyDashboard defaultTab="overview" />
-                    </ProtectedRoute>
-                } 
-            />
-            <Route 
-                path="/applicant-dashboard" 
-                element={
-                    <ProtectedRoute>
-                        <VacancyDashboard defaultTab="overview" />
-                    </ProtectedRoute>
-                } 
-            />
-            <Route 
-                path="/admin-vacancies" 
-                element={
-                    <ProtectedRoute>
-                        <AdminVacancies />
+                        <AllVacancies />
                     </ProtectedRoute>
                 } 
             />
             <Route 
                 path="/all-vacancies" 
-                element={
-                    <ProtectedRoute>
-                        <VacancyDashboard defaultTab="vacancies" />
-                    </ProtectedRoute>
-                } 
+                element={<Navigate to="/timon-applications" replace />} 
             />
             <Route 
                 path="/vacancies" 
-                element={
-                    <ProtectedRoute>
-                        <VacanciesRoute />
-                    </ProtectedRoute>
-                } 
+                element={<Navigate to="/timon-applications" replace />} 
             />
             <Route 
-                path="/my-applications" 
+                path="/admin/records/applications" 
                 element={
                     <ProtectedRoute>
-                        <VacancyDashboard defaultTab="applications" />
-                    </ProtectedRoute>
-                } 
-            />
-            <Route 
-                path="/vacancy-applications" 
-                element={
-                    <ProtectedRoute>
-                        <VacancyDashboard defaultTab="applications" />
-                    </ProtectedRoute>
-                } 
-            />
-            <Route 
-                path="/my-applicant-data" 
-                element={
-                    <ProtectedRoute>
-                        <VacancyDashboard defaultTab="profile" />
-                    </ProtectedRoute>
-                } 
-            />
-            <Route 
-                path="/applicant-profile" 
-                element={
-                    <ProtectedRoute>
-                        <VacancyDashboard defaultTab="profile" />
-                    </ProtectedRoute>
-                } 
-            />
-            <Route 
-                path="/ces-plantilla" 
-                element={
-                    <ProtectedRoute>
-                        <CesPlantilla />
-                    </ProtectedRoute>
-                } 
-            />
-            <Route 
-                path="/position-assignments" 
-                element={
-                    <ProtectedRoute>
-                        <PositionAssignments />
-                    </ProtectedRoute>
-                } 
-            />
-            <Route 
-                path="/tlo-positions" 
-                element={
-                    <ProtectedRoute>
-                        <TloPositions />
+                        <Navigate to="/officials-registry?status=Applications" replace />
                     </ProtectedRoute>
                 } 
             />

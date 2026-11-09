@@ -1,20 +1,21 @@
 import { defineConfig, loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
 import path from 'path'
+import { devLogSink } from './src/devtools/vite-plugin-dev-log-sink'
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => {
   const rootDir = path.resolve(__dirname, '..')
   const env = loadEnv(mode, rootDir, '')
-  const apiTarget = normalizeApiBaseUrl(env.VITE_API_URL) || 'http://localhost:3008'
+  const apiTarget = normalizeApiBaseUrl(process.env.API_PROXY_TARGET || env.VITE_API_URL)
   const base = env.VITE_BASE_PATH || '/'
 
   return {
-    plugins: [react()],
+    plugins: [react(), devLogSink()],
     envDir: rootDir,
     base,
     server: {
-      port: 5173,
+      port: Number(process.env.VITE_PORT) || 5173,
       strictPort: true,
       proxy: apiTarget ? {
         '/insighted-third-level-officials/api': {

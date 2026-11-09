@@ -1,5 +1,6 @@
 import React from 'react';
-import { FiSettings, FiRotateCcw, FiSliders } from 'react-icons/fi';
+import { Gear as FiSettings, ArrowCounterClockwise as FiRotateCcw, Sliders as FiSliders } from '@phosphor-icons/react';
+import FloatingLabelInput from '../../../components/forms/FloatingLabelInput.jsx';
 
 const FilterPanel = ({
   regions = [],
@@ -55,61 +56,33 @@ const FilterPanel = ({
         {/* Basic Filters Subcard */}
         <div className="mdb-controls-subcard">
           <div className="mdb-controls-row">
-            <label className="mdb-label">
-              <span>Region</span>
-              <select
-                className="mdb-select"
-                value={selectedRegion}
-                onChange={(e) => onRegionChange(e.target.value)}
-              >
+            <FloatingLabelInput as="select" label="Region" value={selectedRegion} onChange={(e) => onRegionChange(e.target.value)}>
                 <option value="">All Regions</option>
                 {regions.map((r) => (
                   <option key={r} value={r}>{r}</option>
                 ))}
-              </select>
-            </label>
+              </FloatingLabelInput>
 
-            <label className="mdb-label">
-              <span>Division</span>
-              <select
-                className="mdb-select"
-                value={selectedDivision}
-                onChange={(e) => onDivisionChange(e.target.value)}
-              >
+            <FloatingLabelInput as="select" label="Division" value={selectedDivision} onChange={(e) => onDivisionChange(e.target.value)}>
                 <option value="">{selectedRegion ? `All Divisions (${selectedRegion})` : 'Select Region First'}</option>
                 {divisions.map((d) => (
                   <option key={d} value={d}>{d}</option>
                 ))}
-              </select>
-            </label>
+              </FloatingLabelInput>
 
-            <label className="mdb-label">
-              <span>Employment Status</span>
-              <select
-                className="mdb-select"
-                value={selectedStatus}
-                onChange={(e) => onStatusChange(e.target.value)}
-              >
+            <FloatingLabelInput as="select" label="Employment Status" value={selectedStatus} onChange={(e) => onStatusChange(e.target.value)}>
                 <option value="">All Statuses</option>
                 <option value="Regular">Regular / Permanent</option>
                 <option value="OIC">Designated OIC</option>
                 <option value="Vacant">Vacant Position</option>
-              </select>
-            </label>
+              </FloatingLabelInput>
 
-            <label className="mdb-label">
-              <span>Office</span>
-              <select
-                className="mdb-select"
-                value={selectedOfficeType}
-                onChange={(e) => onOfficeTypeChange(e.target.value)}
-              >
+            <FloatingLabelInput as="select" label="Office" value={selectedOfficeType} onChange={(e) => onOfficeTypeChange(e.target.value)}>
                 <option value="">All Offices</option>
                 {officeTypes.map((o) => (
                   <option key={o} value={o}>{o}</option>
                 ))}
-              </select>
-            </label>
+              </FloatingLabelInput>
           </div>
         </div>
 
@@ -120,52 +93,25 @@ const FilterPanel = ({
             <div className="mdb-controls-row">
               <label className="mdb-label">
                 <span>Distribution By</span>
-                <div style={{ display: 'flex', gap: '6px' }}>
-                  <select
-                    className="mdb-select"
-                    value={globalDistribution}
-                    onChange={(e) => onDistributionChange(e.target.value)}
-                  >
+                <FloatingLabelInput as="select" label="Position Title" trailing={<button type="button" style={{ width: '40px' }} onClick={onOpenCategoryModal} title="Category Picker" className="flex items-center text-secondary">
+                    <FiSettings size={14} />
+                  </button>} value={globalDistribution} onChange={(e) => onDistributionChange(e.target.value)}>
                     <option value="Position">Position Title</option>
                     <option value="Employment_Status">Employment Status</option>
                     <option value="Region">Region</option>
                     <option value="Office">Office / Station</option>
-                  </select>
-                  <button
-                    type="button"
-                    className="mdb-button outline"
-                    style={{ width: '40px' }}
-                    onClick={onOpenCategoryModal}
-                    title="Category Picker"
-                  >
-                    <FiSettings size={14} />
-                  </button>
-                </div>
+                  </FloatingLabelInput>
               </label>
 
-              <label className="mdb-label">
-                <span>Units / Aggregation Metric</span>
-                <select
-                  className="mdb-select"
-                  value={selectedUnit}
-                  onChange={(e) => onUnitChange(e.target.value)}
-                >
+              <FloatingLabelInput as="select" label="Units / Aggregation Metric" value={selectedUnit} onChange={(e) => onUnitChange(e.target.value)}>
                   <option value="count">Number of Personnel (Headcount)</option>
                   <option value="years">Sum of Years in Service</option>
-                </select>
-              </label>
+                </FloatingLabelInput>
 
-              <label className="mdb-label">
-                <span>Jurisdiction Level</span>
-                <select
-                  className="mdb-select"
-                  value={jurisdiction}
-                  onChange={(e) => onJurisdictionChange(e.target.value)}
-                >
+              <FloatingLabelInput as="select" label="Jurisdiction Level" value={jurisdiction} onChange={(e) => onJurisdictionChange(e.target.value)}>
                   <option value="municipality">Municipality / City</option>
                   <option value="district">Legislative District</option>
-                </select>
-              </label>
+                </FloatingLabelInput>
             </div>
           </div>
         )}

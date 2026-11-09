@@ -1,0 +1,30 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "plugins": [
+    "import",
+    "react",
+    "unicorn"
+  ],
+  "env": {
+    "browser": true,
+    "node": true,
+    "es2023": true
+  },
+  "categories": {
+    "correctness": "warn"
+  },
+  "rules": {
+    "no-unused-vars": "warn",
+    "no-undef": "warn",
+    "import/no-cycle": "error",
+    "no-restricted-imports": "error"
+  },
+  "ignorePatterns": [
+    "**/node_modules/**",
+    "**/dist/**",
+    "**/uploads/**",
+    "**/.logs/**",
+    "**/coverage/**",
+    "**/scratch/**"
+  ]
+}

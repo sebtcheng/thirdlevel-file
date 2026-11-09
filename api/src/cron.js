@@ -1,5 +1,5 @@
 import pool from './config/db.js';
-import { processScheduledVacancies, processAnticipatedVacancies } from './controllers/thirdLevelController.js';
+import { processScheduledVacancies, processAnticipatedVacancies } from './features/official-profiling/index.js';
 
 console.log('==================================================');
 console.log('🚀 Starting Standalone CRON Service');

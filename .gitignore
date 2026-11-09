@@ -3,7 +3,6 @@
 .env.local
 .env.*.local
 .env_server
-.env_staging
 
 # Node modules
 node_modules/
@@ -44,9 +43,4 @@ stride.conf.patch
 __pycache__/
 .claude/
 desktop.ini
-
-# Database Backups & Dumps
-database/backups/
-*.sql.gz
-*.dump
-*.tmp
+.logs/

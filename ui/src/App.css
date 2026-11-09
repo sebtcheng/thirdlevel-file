@@ -1,11 +1,11 @@
 .counter {
   font-size: 16px;
   padding: 5px 10px;
-  border-radius: 5px;
+  border-radius: var(--radius-md);
   color: var(--accent);
   background: var(--accent-bg);
   border: 2px solid transparent;
-  transition: border-color 0.3s;
+  transition: border-color 0.2s cubic-bezier(0.2, 0, 0, 1);
   margin-bottom: 24px;
 
   &:hover {
@@ -118,14 +118,14 @@
   a {
     color: var(--text-h);
     font-size: 16px;
-    border-radius: 6px;
+    border-radius: var(--radius-md);
     background: var(--social-bg);
     display: flex;
     padding: 6px 12px;
     align-items: center;
     gap: 8px;
     text-decoration: none;
-    transition: box-shadow 0.3s;
+    transition: box-shadow 0.2s cubic-bezier(0.2, 0, 0, 1);
 
     &:hover {
       box-shadow: var(--shadow);

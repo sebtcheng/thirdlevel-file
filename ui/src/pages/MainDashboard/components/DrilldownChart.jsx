@@ -70,7 +70,7 @@ const DrilldownChart = ({
   }
 
   return (
-    <div style={{ overflowX: 'auto', borderRadius: '12px', border: '1.5px solid var(--mdb-line)' }}>
+    <div style={{ overflowX: 'auto', borderRadius: 'var(--radius-md)', border: '1.5px solid var(--mdb-line)' }}>
       <table className="mdb-heatmap-table">
         <thead>
           <tr>
@@ -92,13 +92,13 @@ const DrilldownChart = ({
                 title={`Click to drill down into ${gName}`}
               >
                 <td style={{ fontWeight: 700, textAlign: 'left', color: 'var(--mdb-navy)' }}>{gName}</td>
-                <td style={{ background: `rgba(22, 163, 74, ${Math.min(g.regular / maxTotal + 0.1, 0.85)})`, color: 'white' }}>
+                <td style={{ background: `rgb(var(--rgb-success-700)/${Math.min(g.regular / maxTotal + 0.1, 0.85)})`, color: 'white' }}>
                   {g.regular}
                 </td>
-                <td style={{ background: `rgba(251, 191, 36, ${Math.min(g.oic / maxTotal + 0.1, 0.85)})`, color: 'var(--mdb-navy)' }}>
+                <td style={{ background: `rgb(var(--rgb-gold)/${Math.min(g.oic / maxTotal + 0.1, 0.85)})`, color: 'var(--mdb-navy)' }}>
                   {g.oic}
                 </td>
-                <td style={{ background: `rgba(185, 28, 28, ${Math.min(g.vacant / maxTotal + 0.1, 0.85)})`, color: 'white' }}>
+                <td style={{ background: `rgb(var(--rgb-danger-700)/${Math.min(g.vacant / maxTotal + 0.1, 0.85)})`, color: 'white' }}>
                   {g.vacant}
                 </td>
                 <td style={{ fontWeight: 800, color: 'var(--mdb-navy)' }}>{g.total}</td>

@@ -1,13 +1,15 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
-import { FiSearch, FiFilter, FiDownload, FiUploadCloud, FiPlus, FiEdit2, FiTrash2, FiChevronLeft, FiChevronRight, FiCheckCircle, FiX, FiAward } from 'react-icons/fi';
+import { motion, AnimatePresence } from '../utils/staticElements.jsx';
+import { MagnifyingGlass as FiSearch, Funnel as FiFilter, DownloadSimple as FiDownload, CloudArrowUp as FiUploadCloud, Plus as FiPlus, PencilSimple as FiEdit2, Trash as FiTrash2, CaretLeft as FiChevronLeft, CaretRight as FiChevronRight, CheckCircle as FiCheckCircle, X as FiX, Medal as FiAward } from '@phosphor-icons/react';
 import { useAuth } from '../context/AuthContext';
 import PageTransition from '../components/PageTransition';
-import AdminSidebar from '../components/AdminSidebar';
 import NotableAchievementsModal from '../components/NotableAchievementsModal';
 import Swal from 'sweetalert2';
 import { apiUrl } from '../utils/api';
+import FloatingLabelInput from '../components/forms/FloatingLabelInput.jsx';
+import PageHeaderCard from '../components/PageHeaderCard.jsx';
+import AdminLayout from '../components/layout/AdminLayout.jsx';
 
 const generateHash = (id) => {
     if (!id) return '';
@@ -46,7 +48,7 @@ const NotableAchievements = () => {
     const fetchAchievements = async () => {
         setLoading(true);
         try {
-            const res = await fetch(apiUrl('/api/third-level/notable-achievements-full'), {
+            const res = await fetch(apiUrl('/api/third-level/notable-achievements/notable-achievements-full'), {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             const data = await res.json();
@@ -137,15 +139,15 @@ const NotableAchievements = () => {
             text: `Do you want to delete achievement #${generateHash(index_number)}?`,
             icon: 'warning',
             showCancelButton: true,
-            confirmButtonColor: '#e11d48', // rose-600 to match the button
-            cancelButtonColor: '#64748b', // slate-500
+            confirmButtonColor: 'var(--color-danger-600)', // rose-600 to match the button
+            cancelButtonColor: 'var(--color-secondary)', // slate-500
             confirmButtonText: 'Yes, delete it'
         });
 
         if (!result.isConfirmed) return;
 
         try {
-            const res = await fetch(apiUrl(`/api/third-level/notable-achievements/${index_number}`), {
+            const res = await fetch(apiUrl(`/api/third-level/notable-achievements/notable-achievements/${index_number}`), {
                 method: 'DELETE',
                 headers: { 'Authorization': `Bearer ${token}` }
             });
@@ -170,8 +172,8 @@ const NotableAchievements = () => {
         setSaving(true);
         try {
             const url = editMode === 'add'
-                ? apiUrl('/api/third-level/notable-achievements')
-                : apiUrl(`/api/third-level/notable-achievements/${formData.index_number}`);
+                ? apiUrl('/api/third-level/notable-achievements/notable-achievements')
+                : apiUrl(`/api/third-level/notable-achievements/notable-achievements/${formData.index_number}`);
 
             const res = await fetch(url, {
                 method: editMode === 'add' ? 'POST' : 'PUT',
@@ -211,35 +213,24 @@ const NotableAchievements = () => {
 
     return (
         <PageTransition>
-            <div className="flex h-screen bg-transparent font-['Plus_Jakarta_Sans'] text-[#08315F] flex-col lg:flex-row relative overflow-hidden">
-                <AdminSidebar />
-                <div className="flex-1 flex flex-col min-w-0 h-screen overflow-y-auto relative">
+            <AdminLayout>
+                
+                <div className="flex-1 flex flex-col min-w-0 relative">
                     
                     {/* TOP NAVIGATION BAR */}
-                    <header className="sticky top-0 z-50 bg-[#08315F] backdrop-blur-md border-b border-blue-900 px-8 py-4 flex items-center justify-between shadow-lg shadow-blue-900/20 shrink-0">
-                        <div className="flex items-center gap-4 text-white">
-                            <div className="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center text-white shadow-inner">
-                                <FiAward size={20} />
-                            </div>
-                            <div>
-                                <h1 className="text-lg font-['Plus_Jakarta_Sans'] font-black text-white tracking-tight leading-none italic uppercase">Notable <span className="text-blue-300 not-italic">Achievements</span></h1>
-                                <p className="text-[9px] font-bold text-blue-200 uppercase tracking-widest mt-1">
-                                    {achievements.length} Total Achievements
-                                </p>
-                            </div>
-                        </div>
-                        <div className="flex flex-wrap items-center gap-3">
-                            <button onClick={() => setIsImportModalOpen(true)} className="flex items-center gap-2 px-4 py-2 bg-emerald-500/20 text-emerald-100 rounded-lg text-[9px] font-black uppercase tracking-widest border border-emerald-500/30 hover:bg-emerald-500 hover:text-white transition-all shadow-sm">
+                    <PageHeaderCard title="Notable Achievements" subtitle={<>{achievements.length} Total Achievements</>}>
+<div className="flex flex-wrap items-center gap-3">
+                            <button onClick={() => setIsImportModalOpen(true)} className="flex items-center gap-2 px-4 py-2 bg-success-50 text-success-700 rounded-md text-[13px] font-medium border border-success-700/30 hover:bg-success-700 hover:text-white transition-all">
                                 <FiUploadCloud size={14} /> Import Data
                             </button>
-                            <button onClick={handleExport} className="flex items-center gap-2 px-4 py-2 bg-blue-500/20 text-blue-100 rounded-lg text-[9px] font-black uppercase tracking-widest border border-blue-500/30 hover:bg-blue-500 hover:text-white transition-all shadow-sm">
+                            <button onClick={handleExport} className="flex items-center gap-2 px-4 py-2 bg-brand-50 text-brand-700 rounded-md text-[13px] font-medium border border-brand-700/30 hover:bg-brand-700 hover:text-white transition-all">
                                 <FiDownload size={14} /> Export Data
                             </button>
-                            <button onClick={handleOpenAdd} className="flex items-center gap-2 px-4 py-2 bg-white text-[#08315F] rounded-lg text-[9px] font-black uppercase tracking-widest hover:bg-blue-50 shadow-md shadow-black/10 transition-all border border-white">
+                            <button onClick={handleOpenAdd} className="flex items-center gap-2 px-4 py-2 bg-brand-700 text-white rounded-md text-[13px] font-medium hover:bg-brand-800 transition-all border border-brand-700">
                                 <FiPlus size={14} /> Add Record
                             </button>
                         </div>
-                    </header>
+</PageHeaderCard>
 
                     <div className="flex-1 p-8 max-w-[1600px] mx-auto w-full">
                         {/* Filters */}
@@ -247,16 +238,12 @@ const NotableAchievements = () => {
                             <div className="flex-1 max-w-xl flex items-center gap-3">
                                 <div className="relative flex-1">
                                     <FiFilter className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-                                    <select
-                                        value={searchTerm}
-                                        onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
-                                        className="w-full pl-11 pr-10 py-3 bg-white border border-slate-200 rounded-2xl text-xs font-bold text-slate-700 outline-none focus:border-[#08315F] shadow-sm transition-all appearance-none cursor-pointer"
-                                    >
+                                    <FloatingLabelInput as="select" label="Achievement" className="w-full" value={searchTerm} onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}>
                                         <option value="">All Achievements</option>
                                         {uniqueAchievements.map((ach, idx) => (
                                             <option key={idx} value={ach}>{ach}</option>
                                         ))}
-                                    </select>
+                                    </FloatingLabelInput>
                                     <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
                                         <svg className="w-4 h-4 fill-current" viewBox="0 0 20 20"><path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" /></svg>
                                     </div>
@@ -281,21 +268,27 @@ const NotableAchievements = () => {
                         <AnimatePresence mode="wait">
                             {loading ? (
                                 <div className="h-64 flex items-center justify-center">
-                                    <div className="w-12 h-12 border-4 border-[#08315F]/10 border-t-[#08315F] rounded-full animate-spin"></div>
+                                    <div className="w-12 h-12 border-4 border-brand-800/10 border-t-brand-800 rounded-full animate-spin"></div>
                                 </div>
+                            ) : sortedRecords.length === 0 ? (
+                                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="bg-white rounded-card p-20 text-center border-2 border-dashed border-slate-200">
+                                    <div className="w-20 h-20 bg-slate-50 text-slate-300 rounded-full flex items-center justify-center mx-auto mb-6"><FiSearch size={40} /></div>
+                                    <h3 className="text-xl font-black text-brand-800 uppercase italic tracking-tight">No Records Found</h3>
+                                    <p className="text-slate-400 font-medium mt-2">Adjust your filters or add a new record.</p>
+                                </motion.div>
                             ) : (
-                                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="bg-white rounded-[2.5rem] overflow-hidden shadow-2xl shadow-slate-200/50 border-2 border-[#08315F]">
+                                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="bg-white rounded-card overflow-hidden shadow-2xl shadow-slate-200/50 border-2 border-brand-800">
                                     <div className="w-full overflow-x-auto">
                                         <table className="w-full text-left border-collapse">
                                             <thead>
                                                 <tr className="bg-slate-50/50 border-b border-slate-100">
                                                     <th className="px-6 py-4 w-32">
-                                                        <button onClick={() => handleSort('index_number')} className="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] hover:text-[#075985] transition-colors">
+                                                        <button onClick={() => handleSort('index_number')} className="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] hover:text-brand-700 transition-colors">
                                                             No. {sortConfig.key === 'index_number' ? (sortConfig.direction === 'asc' ? '↑' : '↓') : '↕'}
                                                         </button>
                                                     </th>
                                                     <th className="px-6 py-4">
-                                                        <button onClick={() => handleSort('achievement')} className="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] hover:text-[#075985] transition-colors">
+                                                        <button onClick={() => handleSort('achievement')} className="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] hover:text-brand-700 transition-colors">
                                                             Achievement Details {sortConfig.key === 'achievement' ? (sortConfig.direction === 'asc' ? '↑' : '↓') : '↕'}
                                                         </button>
                                                     </th>
@@ -305,24 +298,15 @@ const NotableAchievements = () => {
                                                 </tr>
                                             </thead>
                                             <tbody className="divide-y divide-slate-50">
-                                                {pagedRecords.length === 0 ? (
-                                                    <tr>
-                                                        <td colSpan={3} className="p-20 text-center">
-                                                            <div className="w-20 h-20 bg-slate-50 text-slate-300 rounded-full flex items-center justify-center mx-auto mb-6"><FiSearch size={40} /></div>
-                                                            <h3 className="text-xl font-['Plus_Jakarta_Sans'] font-black text-[#08315F] uppercase italic tracking-tight">No Records Found</h3>
-                                                            <p className="text-slate-400 font-medium mt-2">Adjust your filters or add a new record.</p>
-                                                        </td>
-                                                    </tr>
-                                                ) : (
-                                                    pagedRecords.map((item) => (
-                                                    <motion.tr key={item.index_number} whileHover={{ backgroundColor: 'rgba(248, 250, 252, 0.8)' }} className="group transition-colors relative">
+                                                {pagedRecords.map((item) => (
+                                                    <motion.tr key={item.index_number} whileHover={{ backgroundColor: 'rgb(var(--rgb-brand-50)/0.8)' }} className="group transition-colors relative">
                                                         <td className="px-6 py-4">
-                                                            <div className="w-12 h-10 rounded-[1rem] bg-gradient-to-br from-blue-50 to-indigo-50 flex items-center justify-center font-black text-blue-400 text-xs border border-white shadow-sm tracking-widest">
+                                                            <div className="w-12 h-10 rounded-lg bg-gradient-to-br from-blue-50 to-indigo-50 flex items-center justify-center font-black text-blue-400 text-xs border border-white shadow-sm tracking-widest">
                                                                 {generateHash(item.index_number)}
                                                             </div>
                                                         </td>
                                                         <td className="px-6 py-4">
-                                                            <div className="font-['Plus_Jakarta_Sans'] font-black text-[#08315F] text-sm leading-none group-hover:text-[#08315F] transition-colors line-clamp-2">
+                                                            <div className="font-black text-brand-800 text-sm leading-none group-hover:text-brand-800 transition-colors line-clamp-2">
                                                                 {item.achievement}
                                                             </div>
                                                         </td>
@@ -337,7 +321,7 @@ const NotableAchievements = () => {
                                                             </div>
                                                         </td>
                                                     </motion.tr>
-                                                )))}
+                                                ))}
                                             </tbody>
                                         </table>
                                     </div>
@@ -355,14 +339,14 @@ const NotableAchievements = () => {
                                                 <button
                                                     key={page}
                                                     onClick={() => setCurrentPage(page)}
-                                                    className={`w-8 h-8 flex items-center justify-center rounded-lg text-[10px] font-black border transition-all ${currentPage === page ? 'bg-[#08315F] text-white border-[#08315F]' : 'bg-white text-slate-500 border-slate-200 hover:border-blue-200'}`}
+                                                    className={`w-8 h-8 flex items-center justify-center rounded-lg text-[10px] font-black border transition-all ${currentPage === page ? 'bg-brand-800 text-white border-brand-800' : 'bg-white text-slate-500 border-slate-200 hover:border-blue-200'}`}
                                                 >
                                                     {page}
                                                 </button>
                                             ) : (
                                                 <span key={page} className="w-8 h-8 flex items-center justify-center text-slate-400 font-black">...</span>
                                             )) : (
-                                                <button className="w-8 h-8 flex items-center justify-center rounded-lg text-[10px] font-black border transition-all bg-[#08315F] text-white border-[#08315F]">1</button>
+                                                <button className="w-8 h-8 flex items-center justify-center rounded-lg text-[10px] font-black border transition-all bg-brand-800 text-white border-brand-800">1</button>
                                             )}
                                             <button disabled={currentPage >= pageCount} onClick={() => setCurrentPage(p => Math.min(pageCount, p + 1))} className="w-8 h-8 flex items-center justify-center bg-white border border-slate-200 text-slate-500 rounded-lg disabled:opacity-40 hover:bg-slate-50">
                                                 <FiChevronRight size={14} />
@@ -374,7 +358,7 @@ const NotableAchievements = () => {
                         </AnimatePresence>
                     </div>
                 </div>
-            </div>
+            </AdminLayout>
 
             {/* EDIT/ADD MODAL */}
             <AnimatePresence>
@@ -384,32 +368,26 @@ const NotableAchievements = () => {
                             initial={{ opacity: 0, scale: 0.95, y: 20 }}
                             animate={{ opacity: 1, scale: 1, y: 0 }}
                             exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                            className="bg-white rounded-[2rem] w-full max-w-lg shadow-2xl overflow-hidden flex flex-col"
+                            className="bg-white rounded-card w-full max-w-lg shadow-2xl overflow-hidden flex flex-col"
                         >
                             <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
                                 <div>
-                                    <h2 className="text-xl font-black text-[#08315F] uppercase tracking-tighter">{editMode === 'add' ? 'Add New Record' : 'Edit Record'}</h2>
+                                    <h2 className="text-xl font-black text-brand-800 uppercase tracking-tighter">{editMode === 'add' ? 'Add New Record' : 'Edit Record'}</h2>
                                 </div>
-                                <button onClick={() => setIsEditModalOpen(false)} className="p-2 text-slate-400 hover:text-red-500 bg-white rounded-xl shadow-sm border border-slate-200 transition-all">
+                                <button onClick={() => setIsEditModalOpen(false)} className="p-2 text-slate-400 hover:text-red-500 bg-white rounded-card shadow-sm border border-slate-200 transition-all">
                                     <FiX size={18} />
                                 </button>
                             </div>
 
                             <div className="p-8 space-y-6">
                                 <div>
-                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Achievement Details</label>
-                                    <textarea
-                                        value={formData.achievement}
-                                        onChange={e => setFormData({ ...formData, achievement: e.target.value })}
-                                        rows={4}
-                                        className="w-full bg-slate-50 border border-slate-200 focus:border-[#08315F] rounded-xl py-3 px-4 text-xs font-bold text-slate-700 outline-none transition-all resize-none"
-                                    />
+                                    <FloatingLabelInput as="textarea" label="Achievement Details" className="w-full" value={formData.achievement} onChange={e => setFormData({ ...formData, achievement: e.target.value })} rows={4} placeholder="Enter achievement details..." />
                                 </div>
                             </div>
 
                             <div className="p-6 border-t border-slate-100 bg-slate-50/50 flex justify-end gap-3">
                                 <button onClick={() => setIsEditModalOpen(false)} className="px-5 py-2.5 bg-white text-slate-500 rounded-xl text-xs font-black uppercase tracking-widest border border-slate-200 hover:bg-slate-100 transition-all">Cancel</button>
-                                <button onClick={handleSave} disabled={saving} className="px-6 py-2.5 bg-[#08315F] text-white rounded-xl text-xs font-black uppercase tracking-widest shadow-lg shadow-blue-900/20 hover:bg-[#075985] transition-all flex items-center gap-2">
+                                <button onClick={handleSave} disabled={saving} className="px-6 py-2.5 bg-brand-800 text-white rounded-xl text-xs font-black uppercase tracking-widest shadow-lg shadow-blue-900/20 hover:bg-brand-700 transition-all flex items-center gap-2">
                                     {saving ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <FiCheckCircle size={16} />}
                                     Save Record
                                 </button>

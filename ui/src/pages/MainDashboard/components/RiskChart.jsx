@@ -31,7 +31,7 @@ const RiskChart = ({ issueCount, totalCount, viewType, onToggleView }) => {
                 <span>OIC / Action Flagged</span>
                 <span>{issueCount} ({issuePct}%)</span>
               </div>
-              <div style={{ height: '14px', background: '#FEF3C7', borderRadius: '6px', overflow: 'hidden', marginTop: '6px' }}>
+              <div style={{ height: '14px', background: 'var(--color-warning-50)', borderRadius: 'var(--radius-md)', overflow: 'hidden', marginTop: '6px' }}>
                 <div style={{ width: `${(issueCount / total) * 100}%`, height: '100%', background: 'var(--mdb-amber)' }} />
               </div>
             </div>
@@ -41,7 +41,7 @@ const RiskChart = ({ issueCount, totalCount, viewType, onToggleView }) => {
                 <span>Verified Regular Records</span>
                 <span>{normalCount} ({normalPct}%)</span>
               </div>
-              <div style={{ height: '14px', background: 'var(--mdb-blue-100)', borderRadius: '6px', overflow: 'hidden', marginTop: '6px' }}>
+              <div style={{ height: '14px', background: 'var(--mdb-blue-100)', borderRadius: 'var(--radius-md)', overflow: 'hidden', marginTop: '6px' }}>
                 <div style={{ width: `${(normalCount / total) * 100}%`, height: '100%', background: 'var(--mdb-blue-600)' }} />
               </div>
             </div>

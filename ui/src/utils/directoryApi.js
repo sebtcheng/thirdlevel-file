@@ -1,7 +1,7 @@
 import { apiUrl } from './api';
 
 export const uploadDirectoryBulk = async (records, token) => {
-  const response = await fetch(apiUrl('/api/third-level/bulk-process-directory'), {
+  const response = await fetch(apiUrl('/api/third-level/officials-registry/bulk-process-directory'), {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -17,7 +17,7 @@ export const uploadDirectoryBulk = async (records, token) => {
 };
 
 export const uploadNotableAchievements = async (records, token) => {
-  const response = await fetch(apiUrl('/api/third-level/bulk-process-achievements'), {
+  const response = await fetch(apiUrl('/api/third-level/officials-registry/bulk-process-achievements'), {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',

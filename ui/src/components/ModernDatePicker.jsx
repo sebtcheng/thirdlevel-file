@@ -1,7 +1,8 @@
 import React from 'react';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
-import { FiCalendar, FiChevronLeft, FiChevronRight } from 'react-icons/fi';
+import { Calendar as FiCalendar, CaretLeft as FiChevronLeft, CaretRight as FiChevronRight } from '@phosphor-icons/react';
+import FloatingLabelInput from './forms/FloatingLabelInput.jsx';
 
 const MONTHS = [
     "January", "February", "March", "April", "May", "June",
@@ -12,30 +13,16 @@ const currentYear = new Date().getFullYear();
 const startYear = 1900;
 const YEARS = Array.from({ length: currentYear - startYear + 1 }, (_, i) => currentYear - i);
 
-const ModernDatePicker = ({ value, onChange, placeholder, minDate, maxDate, openToDate, className, isMonthPicker, isYearPicker, disabled, todayButton }) => {
+const ModernDatePicker = ({ value, onChange, placeholder, minDate, maxDate, className, isMonthPicker, isYearPicker, disabled }) => {
     // Convert string to Date object
     let selectedDate = null;
     if (value) {
         if (isYearPicker) {
             selectedDate = new Date(value.toString(), 0, 1);
-        } else if (isMonthPicker) {
-            selectedDate = new Date(value + '-01T00:00:00');
         } else {
-            const valStr = value.toString();
-            selectedDate = new Date(valStr.includes('-') && !valStr.includes('T') ? valStr + 'T00:00:00' : valStr);
+            // If it's just YYYY-MM, we append -01 to make it a valid date object
+            selectedDate = isMonthPicker ? new Date(value + '-01') : new Date(value);
         }
-        if (!(selectedDate instanceof Date) || isNaN(selectedDate.getTime())) {
-            selectedDate = null;
-        }
-    }
-
-    let initialOpenDate = undefined;
-    if (openToDate) {
-        const d = typeof openToDate === 'string' ? new Date(openToDate.includes('-') && !openToDate.includes('T') ? openToDate + 'T00:00:00' : openToDate) : openToDate;
-        if (d instanceof Date && !isNaN(d.getTime())) initialOpenDate = d;
-    } else if (!selectedDate && minDate) {
-        const d = typeof minDate === 'string' ? new Date(minDate.includes('-') && !minDate.includes('T') ? minDate + 'T00:00:00' : minDate) : minDate;
-        if (d instanceof Date && !isNaN(d.getTime())) initialOpenDate = d;
     }
 
     // Handle date change
@@ -62,16 +49,6 @@ const ModernDatePicker = ({ value, onChange, placeholder, minDate, maxDate, open
         }
     };
 
-    React.useEffect(() => {
-        if (typeof document !== 'undefined' && !document.getElementById('root-portal')) {
-            const portalEl = document.createElement('div');
-            portalEl.id = 'root-portal';
-            portalEl.style.position = 'relative';
-            portalEl.style.zIndex = '99999';
-            document.body.appendChild(portalEl);
-        }
-    }, []);
-
     return (
         <div className="relative w-full">
             <DatePicker
@@ -80,8 +57,6 @@ const ModernDatePicker = ({ value, onChange, placeholder, minDate, maxDate, open
                 onChange={handleChange}
                 minDate={minDate}
                 maxDate={maxDate}
-                openToDate={initialOpenDate}
-                todayButton={todayButton}
                 placeholderText={placeholder || "Select a date"}
                 showMonthDropdown={!(isMonthPicker || isYearPicker)}
                 showYearDropdown
@@ -107,25 +82,17 @@ const ModernDatePicker = ({ value, onChange, placeholder, minDate, maxDate, open
                             </button>
 
                             <div className="flex items-center space-x-2">
-                                <select
-                                    value={MONTHS[date.getMonth()]}
-                                    onChange={({ target: { value } }) => changeMonth(MONTHS.indexOf(value))}
-                                    className="bg-slate-50 border-2 border-slate-200 text-slate-700 text-[18px] rounded-md px-2 py-1 outline-none focus:border-[#0038A8] font-medium cursor-pointer"
-                                >
+                                <FloatingLabelInput as="select" label="Month" value={MONTHS[date.getMonth()]} onChange={({ target: { value } }) => changeMonth(MONTHS.indexOf(value))}>
                                     {MONTHS.map(option => (
                                         <option key={option} value={option}>{option}</option>
                                     ))}
-                                </select>
+                                </FloatingLabelInput>
 
-                                <select
-                                    value={date.getFullYear()}
-                                    onChange={({ target: { value } }) => changeYear(value)}
-                                    className="bg-slate-50 border-2 border-slate-200 text-slate-700 text-[18px] rounded-md px-2 py-1 outline-none focus:border-[#0038A8] font-medium cursor-pointer"
-                                >
+                                <FloatingLabelInput as="select" label="Year" value={date.getFullYear()} onChange={({ target: { value } }) => changeYear(value)}>
                                     {YEARS.map(option => (
                                         <option key={option} value={option}>{option}</option>
                                     ))}
-                                </select>
+                                </FloatingLabelInput>
                             </div>
 
                             <button
@@ -143,9 +110,8 @@ const ModernDatePicker = ({ value, onChange, placeholder, minDate, maxDate, open
                 showMonthYearPicker={isMonthPicker && !isYearPicker}
                 showYearPicker={isYearPicker}
                 popperPlacement="bottom-start"
-                popperClassName="!z-[99999]"
-                portalId="root-portal"
-                className={`w-full bg-white border-2 border-slate-200 focus:border-[#0038A8] focus:ring-2 focus:ring-blue-50/50 rounded-xl px-3 py-2 text-[18px] font-semibold text-slate-800 outline-none transition-all pr-10 shadow-sm cursor-pointer ${className || ''}`}
+                portalId={typeof document !== 'undefined' && document.getElementById('root-portal') ? 'root-portal' : undefined}
+                className={`w-full bg-white border-2 border-slate-200 focus:border-brand-700 focus:ring-2 focus:ring-blue-50/50 rounded-xl px-3 py-2 text-[18px] font-semibold text-slate-800 outline-none transition-all pr-10 shadow-sm cursor-pointer ${className || ''}`}
             />
             <FiCalendar className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={14} />
         </div>

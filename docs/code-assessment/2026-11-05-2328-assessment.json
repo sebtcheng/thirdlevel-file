@@ -1,0 +1,664 @@
+{
+  "rubric_version": "1.0.0",
+  "evidence_file": "evidence-2026-11-05-2328.json",
+  "tier": 2,
+  "git_head": "027c554c6ec66b1ddd382bddc28dbac498218fc5",
+  "generated_at": "2026-11-05T15:28:32.761Z",
+  "assessed_weight": 53,
+  "total_weight": 100,
+  "raw_score": 40,
+  "capped_score": 40,
+  "overall_score": 40,
+  "grade": "F",
+  "caps_fired": [],
+  "categories": [
+    {
+      "id": "A",
+      "name": "Static analysis and linting",
+      "weight": 20,
+      "assessed": 9,
+      "earned": 2,
+      "score": 22.2,
+      "checks": [
+        {
+          "id": "oxlint_present_and_runs",
+          "points": 3,
+          "earned": 0,
+          "status": "fail",
+          "value": null,
+          "evidence": "config.oxlint_present=false; stations.oxlint.status=\"missing\"",
+          "nominal_points": 3,
+          "effort": "S"
+        },
+        {
+          "id": "eslint_flat_config_present_and_runs",
+          "points": 3,
+          "earned": 0,
+          "status": "unverified",
+          "value": null,
+          "evidence": "config.eslint_flat_config_present=true; stations.eslint.status=null",
+          "nominal_points": 3,
+          "effort": "S"
+        },
+        {
+          "id": "lint_errors",
+          "points": 6,
+          "earned": 0,
+          "status": "unverified",
+          "value": null,
+          "evidence": "",
+          "nominal_points": 6,
+          "effort": "M"
+        },
+        {
+          "id": "lint_warnings_budget",
+          "points": 2,
+          "earned": 0,
+          "status": "unverified",
+          "value": null,
+          "evidence": "",
+          "nominal_points": 2,
+          "effort": "M"
+        },
+        {
+          "id": "architecture_boundaries_enforced",
+          "points": 4,
+          "earned": 0,
+          "status": "fail",
+          "value": null,
+          "evidence": "circular-dependency rule: no; restricted or cross-slice import rule: no",
+          "nominal_points": 4,
+          "effort": "M"
+        },
+        {
+          "id": "suppression_density",
+          "points": 2,
+          "earned": 2,
+          "status": "pass",
+          "value": 0,
+          "evidence": "derived.suppressions_per_100_files=0 (full at 5, zero at 25)",
+          "nominal_points": 2,
+          "effort": "M"
+        }
+      ],
+      "contribution": 3.77
+    },
+    {
+      "id": "B",
+      "name": "Type safety",
+      "weight": 15,
+      "assessed": 7,
+      "earned": 2,
+      "score": 28.6,
+      "checks": [
+        {
+          "id": "typecheck_passes",
+          "points": 8,
+          "earned": 0,
+          "status": "unverified",
+          "value": null,
+          "evidence": "stations.typecheck.exitCode=null",
+          "nominal_points": 8,
+          "effort": "M"
+        },
+        {
+          "id": "strict_mode",
+          "points": 3,
+          "earned": 0,
+          "status": "fail",
+          "value": null,
+          "evidence": "config.tsconfig.strict=false",
+          "nominal_points": 3,
+          "effort": "M"
+        },
+        {
+          "id": "any_density",
+          "points": 2,
+          "earned": 2,
+          "status": "pass",
+          "value": 0,
+          "evidence": "derived.any_per_kloc=0 (full at 1, zero at 10)",
+          "nominal_points": 2,
+          "effort": "M"
+        },
+        {
+          "id": "extra_strict_flags",
+          "points": 2,
+          "earned": 0,
+          "status": "fail",
+          "value": null,
+          "evidence": "config.tsconfig.noUncheckedIndexedAccess=false",
+          "nominal_points": 2,
+          "effort": "M"
+        }
+      ],
+      "contribution": 3.77
+    },
+    {
+      "id": "C",
+      "name": "Unit and integration tests",
+      "weight": 20,
+      "assessed": 7,
+      "earned": 2,
+      "score": 28.6,
+      "checks": [
+        {
+          "id": "vitest_present",
+          "points": 3,
+          "earned": 0,
+          "status": "fail",
+          "value": null,
+          "evidence": "config.vitest.present=false; stations.unit.status=\"missing\"",
+          "nominal_points": 3,
+          "effort": "S"
+        },
+        {
+          "id": "unit_pass_rate",
+          "points": 7,
+          "earned": 0,
+          "status": "unverified",
+          "value": null,
+          "evidence": "",
+          "nominal_points": 7,
+          "effort": "M"
+        },
+        {
+          "id": "coverage_lines",
+          "points": 4,
+          "earned": 0,
+          "status": "unverified",
+          "value": null,
+          "evidence": "",
+          "nominal_points": 4,
+          "effort": "L"
+        },
+        {
+          "id": "coverage_thresholds_enforced",
+          "points": 2,
+          "earned": 0,
+          "status": "fail",
+          "value": null,
+          "evidence": "config.vitest.coverage_thresholds=false",
+          "nominal_points": 2,
+          "effort": "S"
+        },
+        {
+          "id": "unit_suite_duration",
+          "points": 2,
+          "earned": 0,
+          "status": "unverified",
+          "value": null,
+          "evidence": "",
+          "nominal_points": 2,
+          "effort": "M"
+        },
+        {
+          "id": "no_focused_or_skipped_tests",
+          "points": 2,
+          "earned": 2,
+          "status": "pass",
+          "value": null,
+          "evidence": "derived.focus_ok=true",
+          "nominal_points": 2,
+          "effort": "S"
+        }
+      ],
+      "contribution": 3.77
+    },
+    {
+      "id": "D",
+      "name": "End-to-end tests",
+      "weight": 20,
+      "assessed": 5,
+      "earned": 0,
+      "score": 0,
+      "checks": [
+        {
+          "id": "playwright_present",
+          "points": 3,
+          "earned": 0,
+          "status": "fail",
+          "value": null,
+          "evidence": "config.playwright.present=false",
+          "nominal_points": 3,
+          "effort": "S"
+        },
+        {
+          "id": "e2e_pass_rate",
+          "points": 8,
+          "earned": 0,
+          "status": "unverified",
+          "value": null,
+          "evidence": "",
+          "nominal_points": 8,
+          "effort": "M"
+        },
+        {
+          "id": "e2e_flakiness",
+          "points": 3,
+          "earned": 0,
+          "status": "unverified",
+          "value": null,
+          "evidence": "",
+          "nominal_points": 3,
+          "effort": "M"
+        },
+        {
+          "id": "e2e_artifacts_configured",
+          "points": 2,
+          "earned": 0,
+          "status": "unverified",
+          "value": null,
+          "evidence": "config.playwright.trace=null",
+          "nominal_points": 2,
+          "effort": "S"
+        },
+        {
+          "id": "e2e_critical_flow_coverage",
+          "points": 2,
+          "earned": 0,
+          "status": "unverified",
+          "value": null,
+          "evidence": "",
+          "nominal_points": 2,
+          "effort": "L"
+        },
+        {
+          "id": "e2e_parallelism",
+          "points": 2,
+          "earned": 0,
+          "status": "fail",
+          "value": null,
+          "evidence": "parallel workers: no; shard-ready CI: no",
+          "nominal_points": 2,
+          "effort": "S"
+        }
+      ],
+      "contribution": 0
+    },
+    {
+      "id": "E",
+      "name": "CI/CD pipeline",
+      "weight": 10,
+      "assessed": 10,
+      "earned": 3,
+      "score": 30,
+      "checks": [
+        {
+          "id": "ci_workflow_exists",
+          "points": 2,
+          "earned": 2,
+          "status": "pass",
+          "value": null,
+          "evidence": "ci.workflows_found=1",
+          "nominal_points": 2,
+          "effort": "M"
+        },
+        {
+          "id": "ci_runs_all_stations",
+          "points": 3,
+          "earned": 0,
+          "status": "fail",
+          "value": null,
+          "evidence": "lint: no; type-check: no; tests: no",
+          "nominal_points": 3,
+          "effort": "S"
+        },
+        {
+          "id": "ci_e2e_sharded",
+          "points": 1,
+          "earned": 0,
+          "status": "fail",
+          "value": null,
+          "evidence": "ci.runs_e2e=false; ci.sharded_or_matrix=false",
+          "nominal_points": 1,
+          "effort": "M"
+        },
+        {
+          "id": "ci_artifacts_uploaded",
+          "points": 1,
+          "earned": 0,
+          "status": "fail",
+          "value": null,
+          "evidence": "ci.uploads_artifacts=false",
+          "nominal_points": 1,
+          "effort": "S"
+        },
+        {
+          "id": "ci_cache_and_concurrency",
+          "points": 1,
+          "earned": 0,
+          "status": "fail",
+          "value": null,
+          "evidence": "ci.uses_cache=false; ci.uses_concurrency=false",
+          "nominal_points": 1,
+          "effort": "S"
+        },
+        {
+          "id": "ci_two_tier_gating",
+          "points": 1,
+          "earned": 0,
+          "status": "fail",
+          "value": null,
+          "evidence": "ci.uses_needs=false",
+          "nominal_points": 1,
+          "effort": "S"
+        },
+        {
+          "id": "ci_actions_pinned",
+          "points": 1,
+          "earned": 1,
+          "status": "pass",
+          "value": 100,
+          "evidence": "ci.pinned_share_pct=100 (full at 100, zero at 0)",
+          "nominal_points": 1,
+          "effort": "S"
+        }
+      ],
+      "contribution": 5.66
+    },
+    {
+      "id": "F",
+      "name": "Security and dependency hygiene",
+      "weight": 10,
+      "assessed": 10,
+      "earned": 7.2,
+      "score": 72,
+      "checks": [
+        {
+          "id": "audit_high_critical",
+          "points": 5,
+          "earned": 5,
+          "status": "pass",
+          "value": 0,
+          "evidence": "derived.audit_high_critical=0 (full at 0, zero at 5)",
+          "nominal_points": 5,
+          "effort": "M"
+        },
+        {
+          "id": "audit_moderate",
+          "points": 2,
+          "earned": 1.2,
+          "status": "partial",
+          "value": 4,
+          "evidence": "derived.audit_moderate=4 (full at 0, zero at 10)",
+          "nominal_points": 2,
+          "effort": "M"
+        },
+        {
+          "id": "lockfile_committed",
+          "points": 1,
+          "earned": 1,
+          "status": "pass",
+          "value": null,
+          "evidence": "config.lockfile_committed=true",
+          "nominal_points": 1,
+          "effort": "S"
+        },
+        {
+          "id": "static_security_gate_in_ci",
+          "points": 2,
+          "earned": 0,
+          "status": "fail",
+          "value": null,
+          "evidence": "ci.runs_static_security_gate=false",
+          "nominal_points": 2,
+          "effort": "M"
+        }
+      ],
+      "contribution": 13.58
+    },
+    {
+      "id": "G",
+      "name": "Build health",
+      "weight": 5,
+      "assessed": 5,
+      "earned": 5,
+      "score": 100,
+      "checks": [
+        {
+          "id": "build_passes",
+          "points": 4,
+          "earned": 4,
+          "status": "pass",
+          "value": null,
+          "evidence": "stations.build.exitCode=0",
+          "nominal_points": 4,
+          "effort": "M"
+        },
+        {
+          "id": "build_duration",
+          "points": 1,
+          "earned": 1,
+          "status": "pass",
+          "value": 11.01,
+          "evidence": "stations.build.durationMs=11.01 (full at 120, zero at 600)",
+          "nominal_points": 1,
+          "effort": "M"
+        }
+      ],
+      "contribution": 9.43
+    }
+  ],
+  "unverified": [
+    {
+      "id": "eslint_flat_config_present_and_runs",
+      "category": "A",
+      "points": 3,
+      "reason": "eslint unverified: eslint produced no JSON output"
+    },
+    {
+      "id": "lint_errors",
+      "category": "A",
+      "points": 6,
+      "reason": "input not available in evidence (heuristic could not be computed)"
+    },
+    {
+      "id": "lint_warnings_budget",
+      "category": "A",
+      "points": 2,
+      "reason": "input not available in evidence (heuristic could not be computed)"
+    },
+    {
+      "id": "typecheck_passes",
+      "category": "B",
+      "points": 8,
+      "reason": "typecheck missing: no tsconfig.json found"
+    },
+    {
+      "id": "unit_pass_rate",
+      "category": "C",
+      "points": 7,
+      "reason": "input not available in evidence (heuristic could not be computed)"
+    },
+    {
+      "id": "coverage_lines",
+      "category": "C",
+      "points": 4,
+      "reason": "coverage missing: vitest is missing"
+    },
+    {
+      "id": "unit_suite_duration",
+      "category": "C",
+      "points": 2,
+      "reason": "unit missing: no vitest config or dependency"
+    },
+    {
+      "id": "e2e_pass_rate",
+      "category": "D",
+      "points": 8,
+      "reason": "input not available in evidence (heuristic could not be computed)"
+    },
+    {
+      "id": "e2e_flakiness",
+      "category": "D",
+      "points": 3,
+      "reason": "input not available in evidence (heuristic could not be computed)"
+    },
+    {
+      "id": "e2e_artifacts_configured",
+      "category": "D",
+      "points": 2,
+      "reason": "input not available in evidence (heuristic could not be computed)"
+    },
+    {
+      "id": "e2e_critical_flow_coverage",
+      "category": "D",
+      "points": 2,
+      "reason": "input not available in evidence (heuristic could not be computed)"
+    }
+  ],
+  "findings": [
+    {
+      "id": "ci_runs_all_stations",
+      "category": "E",
+      "status": "fail",
+      "evidence": "lint: no; type-check: no; tests: no",
+      "points_recoverable": 3,
+      "effort": "S",
+      "priority_score": 3,
+      "recommendation": "Add CI steps for 'npm run lint', 'npm run typecheck' and 'npm run test:unit' to the GitHub Actions workflow."
+    },
+    {
+      "id": "oxlint_present_and_runs",
+      "category": "A",
+      "status": "fail",
+      "evidence": "config.oxlint_present=false; stations.oxlint.status=\"missing\"",
+      "points_recoverable": 3,
+      "effort": "S",
+      "priority_score": 3,
+      "recommendation": "Add oxlint as a devDependency with a root .oxlintrc.json and a lint:fast script (oxlint apps packages) so a 3-second pre-pass runs before ESLint."
+    },
+    {
+      "id": "playwright_present",
+      "category": "D",
+      "status": "fail",
+      "evidence": "config.playwright.present=false",
+      "points_recoverable": 3,
+      "effort": "S",
+      "priority_score": 3,
+      "recommendation": "Add @playwright/test with a playwright.config.ts and an e2e/ folder, then 'npx playwright install' on the CI runner."
+    },
+    {
+      "id": "vitest_present",
+      "category": "C",
+      "status": "fail",
+      "evidence": "config.vitest.present=false; stations.unit.status=\"missing\"",
+      "points_recoverable": 3,
+      "effort": "S",
+      "priority_score": 3,
+      "recommendation": "Add vitest with a vitest.config.ts per workspace and a test:unit script so 'vitest run' executes the specs."
+    },
+    {
+      "id": "architecture_boundaries_enforced",
+      "category": "A",
+      "status": "fail",
+      "evidence": "circular-dependency rule: no; restricted or cross-slice import rule: no",
+      "points_recoverable": 4,
+      "effort": "M",
+      "priority_score": 2,
+      "recommendation": "Add eslint-plugin-boundaries and forbid imports between feature slices, or enable import/no-cycle and import/no-restricted-paths at error level."
+    },
+    {
+      "id": "coverage_thresholds_enforced",
+      "category": "C",
+      "status": "fail",
+      "evidence": "config.vitest.coverage_thresholds=false",
+      "points_recoverable": 2,
+      "effort": "S",
+      "priority_score": 2,
+      "recommendation": "Set test.coverage.thresholds (lines, branches, functions) in vitest.config.ts so CI fails when coverage drops."
+    },
+    {
+      "id": "e2e_parallelism",
+      "category": "D",
+      "status": "fail",
+      "evidence": "parallel workers: no; shard-ready CI: no",
+      "points_recoverable": 2,
+      "effort": "S",
+      "priority_score": 2,
+      "recommendation": "Set fullyParallel: true (or workers > 1) in playwright.config.ts and run E2E in CI with a strategy.matrix or --shard=N/M."
+    },
+    {
+      "id": "strict_mode",
+      "category": "B",
+      "status": "fail",
+      "evidence": "config.tsconfig.strict=false",
+      "points_recoverable": 3,
+      "effort": "M",
+      "priority_score": 1.5,
+      "recommendation": "Set \"strict\": true in tsconfig.base.json and fix the resulting errors per workspace."
+    },
+    {
+      "id": "extra_strict_flags",
+      "category": "B",
+      "status": "fail",
+      "evidence": "config.tsconfig.noUncheckedIndexedAccess=false",
+      "points_recoverable": 2,
+      "effort": "M",
+      "priority_score": 1,
+      "recommendation": "Enable noUncheckedIndexedAccess (and exactOptionalPropertyTypes if feasible) in tsconfig.base.json and fix indexed-access errors."
+    },
+    {
+      "id": "static_security_gate_in_ci",
+      "category": "F",
+      "status": "fail",
+      "evidence": "ci.runs_static_security_gate=false",
+      "points_recoverable": 2,
+      "effort": "M",
+      "priority_score": 1,
+      "recommendation": "Wire SonarQube (or CodeQL/Semgrep) into the GitHub Actions workflow as a secondary quality gate."
+    },
+    {
+      "id": "ci_artifacts_uploaded",
+      "category": "E",
+      "status": "fail",
+      "evidence": "ci.uploads_artifacts=false",
+      "points_recoverable": 1,
+      "effort": "S",
+      "priority_score": 1,
+      "recommendation": "Add actions/upload-artifact for playwright-report and test-results with if: always()."
+    },
+    {
+      "id": "ci_cache_and_concurrency",
+      "category": "E",
+      "status": "fail",
+      "evidence": "ci.uses_cache=false; ci.uses_concurrency=false",
+      "points_recoverable": 1,
+      "effort": "S",
+      "priority_score": 1,
+      "recommendation": "Use actions/setup-node with cache: npm and add a concurrency group with cancel-in-progress: true."
+    },
+    {
+      "id": "ci_two_tier_gating",
+      "category": "E",
+      "status": "fail",
+      "evidence": "ci.uses_needs=false",
+      "points_recoverable": 1,
+      "effort": "S",
+      "priority_score": 1,
+      "recommendation": "Split CI into a fast lint/unit job and a Tier 2 e2e/build job that declares needs: on the fast job."
+    },
+    {
+      "id": "ci_e2e_sharded",
+      "category": "E",
+      "status": "fail",
+      "evidence": "ci.runs_e2e=false; ci.sharded_or_matrix=false",
+      "points_recoverable": 1,
+      "effort": "M",
+      "priority_score": 0.5,
+      "recommendation": "Add a Playwright job with strategy.matrix shard: [1/3, 2/3, 3/3] and 'npx playwright test --shard=${{ matrix.shard }}'."
+    },
+    {
+      "id": "audit_moderate",
+      "category": "F",
+      "status": "partial",
+      "evidence": "derived.audit_moderate=4 (full at 0, zero at 10)",
+      "points_recoverable": 0.8,
+      "effort": "M",
+      "priority_score": 0.4,
+      "recommendation": "Upgrade or override the dependencies behind the moderate npm audit advisories."
+    }
+  ],
+  "delta_vs_previous": null
+}

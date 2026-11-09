@@ -102,27 +102,3 @@ export const formatPositionTitle = (title) => {
   return trimmed;
 };
 
-export const THIRD_LEVEL_POSITIONS = [
-  'Secretary',
-  'Undersecretary',
-  'Assistant Secretary',
-  'Director IV',
-  'Director III',
-  'Regional Director',
-  'Assistant Regional Director',
-  'Schools Division Superintendent',
-  'Assistant Schools Division Superintendent',
-  'RD',
-  'ARD',
-  'SDS',
-  'ASDS'
-];
-
-export const isThirdLevelPosition = (pos) => {
-  if (!pos) return false;
-  const formatted = formatPositionTitle(pos);
-  if (THIRD_LEVEL_POSITIONS.includes(formatted)) return true;
-  const upper = pos.trim().toUpperCase();
-  return THIRD_LEVEL_POSITIONS.some(p => p.toUpperCase() === upper);
-};
-

@@ -17,21 +17,6 @@ export const EXPECTED_HEADERS = [
   'Alternative Contact Details 2'
 ];
 
-export const PLANTILLA_HEADERS = [
-  'permanent_item_no',
-  'salary_grade',
-  'employment_type',
-  'last_name',
-  'first_name'
-];
-
-export const POSITION_HEADERS = [
-  'region',
-  'division',
-  'bureau',
-  'position_title'
-];
-
 export const parseDirectoryFile = (fileBuffer) => {
   return new Promise((resolve, reject) => {
     try {
@@ -122,54 +107,6 @@ export const parseDirectoryFile = (fileBuffer) => {
       });
 
       resolve(parsedRecords);
-    } catch (err) {
-      reject(err);
-    }
-  });
-};
-
-export const parsePlantillaFile = (fileBuffer) => {
-  return new Promise((resolve, reject) => {
-    try {
-      const data = new Uint8Array(fileBuffer);
-      const workbook = XLSX.read(data, { type: 'array' });
-      const sheetName = workbook.SheetNames[0];
-      const worksheet = workbook.Sheets[sheetName];
-      
-      const rawRows = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
-      const headers = (rawRows[0] || []).map(h => String(h || '').trim().toLowerCase());
-      
-      const missingHeaders = PLANTILLA_HEADERS.filter(h => !headers.includes(h.toLowerCase()));
-      if (missingHeaders.length > 0) {
-        return reject(new Error(`Missing required plantilla columns: ${missingHeaders.join(', ')}`));
-      }
-
-      const json = XLSX.utils.sheet_to_json(worksheet, { defval: '' });
-      resolve(json);
-    } catch (err) {
-      reject(err);
-    }
-  });
-};
-
-export const parsePositionsFile = (fileBuffer) => {
-  return new Promise((resolve, reject) => {
-    try {
-      const data = new Uint8Array(fileBuffer);
-      const workbook = XLSX.read(data, { type: 'array' });
-      const sheetName = workbook.SheetNames[0];
-      const worksheet = workbook.Sheets[sheetName];
-      
-      const rawRows = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
-      const headers = (rawRows[0] || []).map(h => String(h || '').trim().toLowerCase());
-      
-      const missingHeaders = POSITION_HEADERS.filter(h => !headers.includes(h.toLowerCase()));
-      if (missingHeaders.length > 0) {
-        return reject(new Error(`Missing required position columns: ${missingHeaders.join(', ')}`));
-      }
-
-      const json = XLSX.utils.sheet_to_json(worksheet, { defval: '' });
-      resolve(json);
     } catch (err) {
       reject(err);
     }

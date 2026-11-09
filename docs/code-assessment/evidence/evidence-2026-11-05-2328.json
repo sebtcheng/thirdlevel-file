@@ -1,0 +1,173 @@
+{
+  "meta": {
+    "repo": "insighted-third-level-standalone",
+    "git_head": "027c554c6ec66b1ddd382bddc28dbac498218fc5",
+    "dirty": true,
+    "diff_hash": "12f90c273fb98213",
+    "node_version": "v24.11.1",
+    "os": "win32 10.0.26300",
+    "tier": 2,
+    "skip": "e2e",
+    "started": "2026-11-05T15:28:17.476Z",
+    "finished": "2026-11-05T15:28:32.761Z"
+  },
+  "stations": {
+    "oxlint": {
+      "status": "missing",
+      "reason": "no .oxlintrc.json or oxlint dependency",
+      "command": null,
+      "exitCode": null,
+      "durationMs": 0,
+      "timedOut": false,
+      "metrics": {},
+      "tail": ""
+    },
+    "eslint": {
+      "status": "unverified",
+      "reason": "eslint produced no JSON output",
+      "command": "npm.cmd run lint --silent -- --format=json",
+      "exitCode": 1,
+      "durationMs": 2539,
+      "timedOut": false,
+      "metrics": {},
+      "tail": "C:\\InsightED and STRIDE\\InsightED v2\\thirdlevel-file\\ui\\src\\components\\officials-registry\\ContentArea.jsx\n  27:80  warning  'index' is defined but never used. Allowed unused args must match /^_/u  no-unused-vars\nC:\\InsightED and STRIDE\\InsightED v2\\thirdlevel-file\\ui\\src\\context\\AuthContext.jsx\n  50:25  warning  Empty block statement  no-empty\nC:\\InsightED and STRIDE\\InsightED v2\\thirdlevel-file\\ui\\src\\pages\\AllVacancies.jsx\n  12:12  warning  'searchParams' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars\n  13:13  warning  'user' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u          no-unused-vars\nC:\\InsightED and STRIDE\\InsightED v2\\thirdlevel-file\\ui\\src\\pages\\Home.jsx\n  132:24  warning  'logout' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u                   no-unused-vars\n  291:9   warning  'divisionChiefsCount' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u      no-unused-vars\n  331:9   warning  'divisionChiefsBreakdown' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars\n  342:9   warning  'pendingVerifications' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u     no-unused-vars\n  348:9   warning  'flaggedProfiles' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u          no-unused-vars\n  420:9   warning  'pendingRegionBreakdown' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u   no-unused-vars\n  435:9   warning  'flaggedRegionBreakdown' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u   no-unused-vars\n  451:9   warning  'elementsRegionBreakdown' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars\n  466:9   warning  'retireesRegionBreakdown' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars\nC:\\InsightED and STRIDE\\InsightED v2\\thirdlevel-file\\ui\\src\\pages\\Login.jsx\n   36:12  warning  'isSchoolHead' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u       no-unused-vars\n   37:12  warning  'isPortalEnforced' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u   no-unused-vars\n   38:12  warning  'showBackPrompt' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u     no-unused-vars\n   38:28  warning  'setShowBackPrompt' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars\n   99:13  warning  'login' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u              no-unused-vars\n  168:11  warning  'handlePinVerify' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u    no-unused-vars\nC:\\InsightED and STRIDE\\InsightED v2\\thirdlevel-file\\ui\\src\\pages\\MainDashboard\\components\\FilterPanel.jsx\n  24:3  warning  'onToggleAdvancedMode' is defined but never used. Allowed unused args must match /^_/u  no-unused-vars\nC:\\InsightED and STRIDE\\InsightED v2\\thirdlevel-file\\ui\\src\\pages\\NexusGate.jsx\n  44:12  warning  'clickedCard' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars\nC:\\InsightED and STRIDE\\InsightED v2\\thirdlevel-file\\ui\\src\\pages\\OfficialProfiling.jsx\n    43:12   warning  'denialReason' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u              no-unused-vars\n    49:12   warning  'saved' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u                     no-unused-vars\n    87:12   warning  'vacanciesLoading' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u          no-unused-vars\n   102:12   warning  'selectedEducationType' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u     no-unused-vars\n   102:35   warning  'setSelectedEducationType' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars\n   945:21   warning  There is no `cause` attached to the symptom error being thrown                                            preserve-caught-error\n  1711:114  warning  'FiRefreshCw' is not defined                                                                              no-undef\nC:\\InsightED and STRIDE\\InsightED v2\\thirdlevel-file\\ui\\src\\pages\\OfficialsRegistry.jsx\n    24:19  warning  'logout' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u                         no-unused-vars\n   260:12  warning  'offices' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u                        no-unused-vars\n   296:11  warning  'thirdLevelActiveCount' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u          no-unused-vars\n   297:11  warning  'thirdLevelOicActiveCount' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u       no-unused-vars\n   298:11  warning  'divisionChiefsOicActiveCount' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u   no-unused-vars\n   299:11  warning  'divisionChiefsActiveCount' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u      no-unused-vars\n   341:11  warning  'thirdLevelBreakdown' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u            no-unused-vars\n   352:11  warning  'thirdLevelOicBreakdown' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u         no-unused-vars\n   363:11  warning  'divisionChiefsBreakdown' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u        no-unused-vars\n   374:11  warning  'divisionChiefsNotOicBreakdown' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars\n   688:31  warning  'setApplications' is not defined                                                                               no-undef\n  1194:11  warning  'handleProcessApplication' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u       no-unused-vars\n  1227:9   warning  'setProcessingId' is not defined                                                                               no-undef\n  1248:13  warning  'setProcessingId' is not defined                                                                               no-undef\nC:\\InsightED and STRIDE\\InsightED v2\\thirdlevel-file\\ui\\src\\pages\\Register.jsx\n  29:11  warning  'coAuthCode' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars\nC:\\InsightED and STRIDE\\InsightED v2\\thirdlevel-file\\ui\\src\\pages\\Settings.jsx\n  10:35  warning  'logout' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars\nC:\\InsightED and STRIDE\\InsightED v2\\thirdlevel-file\\ui\\src\\utils\\directoryParser.js\n  46:13  warning  The value assigned to 'lastName' is not used in subsequent statements   no-useless-assignment\n  47:13  warning  The value assigned to 'firstName' is not used in subsequent statements  no-useless-assignment\n✖ 76 problems (0 errors, 76 warnings)\nerror: unknown option '--format=json'"
+    },
+    "typecheck": {
+      "status": "missing",
+      "reason": "no tsconfig.json found",
+      "command": null,
+      "exitCode": null,
+      "durationMs": 0,
+      "timedOut": false,
+      "metrics": {},
+      "tail": ""
+    },
+    "unit": {
+      "status": "missing",
+      "reason": "no vitest config or dependency",
+      "command": null,
+      "exitCode": null,
+      "durationMs": 0,
+      "timedOut": false,
+      "metrics": {},
+      "tail": ""
+    },
+    "coverage": {
+      "status": "missing",
+      "reason": "vitest is missing",
+      "command": null,
+      "exitCode": null,
+      "durationMs": 0,
+      "timedOut": false,
+      "metrics": {},
+      "tail": ""
+    },
+    "build": {
+      "status": "ok",
+      "reason": null,
+      "command": "npm.cmd run build --silent",
+      "exitCode": 0,
+      "durationMs": 11014,
+      "timedOut": false,
+      "metrics": {},
+      "tail": ""
+    },
+    "e2e": {
+      "status": "skipped",
+      "reason": "excluded with --skip",
+      "command": null,
+      "exitCode": null,
+      "durationMs": 0,
+      "timedOut": false,
+      "metrics": {},
+      "tail": ""
+    },
+    "audit": {
+      "status": "ok",
+      "reason": null,
+      "command": "npm.cmd audit --json",
+      "exitCode": 1,
+      "durationMs": 1725,
+      "timedOut": false,
+      "metrics": {
+        "info": 0,
+        "low": 0,
+        "moderate": 4,
+        "high": 0,
+        "critical": 0,
+        "high_critical_packages": []
+      },
+      "tail": ""
+    }
+  },
+  "config": {
+    "oxlint_present": false,
+    "eslint_flat_config_present": true,
+    "boundaries": {
+      "circular_dependency_rule": false,
+      "restricted_imports_rule": false,
+      "plugin_boundaries": false
+    },
+    "tsconfig": {
+      "files": [],
+      "strict": false,
+      "noUncheckedIndexedAccess": false
+    },
+    "vitest": {
+      "present": false,
+      "config_files": [],
+      "coverage_thresholds": false
+    },
+    "playwright": {
+      "present": false,
+      "config_file": null,
+      "fullyParallel": null,
+      "retries": null,
+      "workers": null,
+      "trace": null,
+      "projects": 0,
+      "webServer": false,
+      "parallel": false
+    },
+    "lockfile_committed": true,
+    "sonarqube_configured": false
+  },
+  "code_stats": {
+    "source_files": 134,
+    "source_loc": 21034,
+    "any_escape_count": 0,
+    "suppression_count": 0,
+    "any_escapes": [],
+    "suppressions": [],
+    "tests": {
+      "test_files": 2,
+      "only_count": 0,
+      "skip_count": 0,
+      "e2e_spec_files": 0
+    },
+    "heuristic_e2e": true,
+    "features_detected": [],
+    "features_without_e2e": [],
+    "e2e_spec_ratio": null
+  },
+  "ci": {
+    "workflows_found": 1,
+    "workflow_files": [
+      "ci-cd.yml"
+    ],
+    "runs_lint": false,
+    "runs_typecheck": false,
+    "runs_unit": false,
+    "runs_e2e": false,
+    "sharded_or_matrix": false,
+    "uploads_artifacts": false,
+    "uses_concurrency": false,
+    "uses_cache": false,
+    "uses_needs": false,
+    "pinned_share_pct": 100,
+    "third_party_actions": 0,
+    "runs_static_security_gate": false,
+    "branch_protection": "unverified",
+    "branch_protection_reason": "cannot be read offline"
+  }
+}

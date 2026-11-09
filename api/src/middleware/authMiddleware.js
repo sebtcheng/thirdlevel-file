@@ -12,11 +12,7 @@ const authMiddleware = (req, res, next) => {
   try {
     const secret = process.env.JWT_SECRET || 'STRIDE_INSIGHTED_SECRET_2026_KEY_PROD';
     const decoded = jwt.verify(token, secret);
-    req.user = {
-      ...decoded,
-      is_testaccount: Boolean(decoded.is_testaccount)
-    };
-    req.isTest = Boolean(req.user.is_testaccount);
+    req.user = decoded;
     next();
   } catch (err) {
     return res.status(401).json({ error: 'Invalid or expired token.' });

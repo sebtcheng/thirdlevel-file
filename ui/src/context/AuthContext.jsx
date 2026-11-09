@@ -1,66 +1,34 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
 import { normalizeRole } from '../utils/roleUtils';
 import { apiUrl } from '../utils/api';
 
 const AuthContext = createContext();
-
-const INACTIVITY_TIMEOUT_MS = 3 * 60 * 60 * 1000; // 3 continuous hours of inactivity
-const ACTIVITY_THROTTLE_MS = 30 * 1000; // Throttle storage writes to once every 30 seconds
-const LAST_ACTIVITY_KEY = 'last_activity_time';
-
-const ACTIVITY_EVENTS = [
-    'mousemove',
-    'mousedown',
-    'keydown',
-    'scroll',
-    'touchstart',
-    'touchmove',
-    'click',
-    'focus'
-];
 
 export const AuthProvider = ({ children }) => {
     const [user, setUser] = useState(null);
     const [token, setToken] = useState(localStorage.getItem('token'));
     const [loading, setLoading] = useState(true);
 
-    const logout = useCallback(() => {
-        localStorage.removeItem('user');
-        localStorage.removeItem('token');
-        localStorage.removeItem(LAST_ACTIVITY_KEY);
-        sessionStorage.removeItem('hasSeenRetireesPrompt');
-        setUser(null);
-        setToken(null);
-    }, []);
-
     useEffect(() => {
         const storedUser = localStorage.getItem('user');
         const storedToken = localStorage.getItem('token');
-        const lastActivity = localStorage.getItem(LAST_ACTIVITY_KEY);
-
         if (storedUser && storedToken) {
-            const now = Date.now();
-            const elapsed = lastActivity ? (now - Number(lastActivity)) : Infinity;
-            if (elapsed >= INACTIVITY_TIMEOUT_MS) {
-                logout();
-            } else {
-                try {
-                    const parsed = JSON.parse(storedUser);
-                    let modified = false;
-                    ['passcode', 'password', 'pin', 'password_hash', 'passcode_hash'].forEach(field => {
-                        if (field in parsed) {
-                            delete parsed[field];
-                            modified = true;
-                        }
-                    });
-                    if (modified) {
-                        localStorage.setItem('user', JSON.stringify(parsed));
+            try {
+                const parsed = JSON.parse(storedUser);
+                let modified = false;
+                ['passcode', 'password', 'pin', 'password_hash', 'passcode_hash'].forEach(field => {
+                    if (field in parsed) {
+                        delete parsed[field];
+                        modified = true;
                     }
-                    setUser(parsed);
-                    setToken(storedToken);
-                } catch (e) {
-                    setUser(null);
+                });
+                if (modified) {
+                    localStorage.setItem('user', JSON.stringify(parsed));
                 }
+                setUser(parsed);
+                setToken(storedToken);
+            } catch (e) {
+                setUser(null);
             }
         }
 
@@ -82,73 +50,7 @@ export const AuthProvider = ({ children }) => {
             } catch (e) {}
         }
         setLoading(false);
-    }, [logout]);
-
-    // Inactivity / Idle Timeout Engine
-    useEffect(() => {
-        if (!user) return;
-
-        let timerId = null;
-
-        const scheduleLogout = (delayMs) => {
-            if (timerId) clearTimeout(timerId);
-            timerId = setTimeout(() => {
-                const lastActivity = Number(localStorage.getItem(LAST_ACTIVITY_KEY) || '0');
-                const elapsed = Date.now() - lastActivity;
-                if (elapsed >= INACTIVITY_TIMEOUT_MS) {
-                    logout();
-                } else {
-                    scheduleLogout(INACTIVITY_TIMEOUT_MS - elapsed);
-                }
-            }, Math.max(delayMs, 1000));
-        };
-
-        const initialLastActivity = Number(localStorage.getItem(LAST_ACTIVITY_KEY) || Date.now());
-        const initialElapsed = Date.now() - initialLastActivity;
-        if (initialElapsed >= INACTIVITY_TIMEOUT_MS) {
-            logout();
-            return;
-        }
-        scheduleLogout(INACTIVITY_TIMEOUT_MS - initialElapsed);
-
-        let lastWrittenTime = initialLastActivity;
-        const handleUserActivity = () => {
-            const now = Date.now();
-            if (now - lastWrittenTime >= ACTIVITY_THROTTLE_MS) {
-                lastWrittenTime = now;
-                localStorage.setItem(LAST_ACTIVITY_KEY, now.toString());
-                scheduleLogout(INACTIVITY_TIMEOUT_MS);
-            }
-        };
-
-        const handleStorageChange = (e) => {
-            if (e.key === LAST_ACTIVITY_KEY && e.newValue) {
-                const updatedActivity = Number(e.newValue);
-                lastWrittenTime = updatedActivity;
-                const elapsed = Date.now() - updatedActivity;
-                if (elapsed >= INACTIVITY_TIMEOUT_MS) {
-                    logout();
-                } else {
-                    scheduleLogout(INACTIVITY_TIMEOUT_MS - elapsed);
-                }
-            } else if ((e.key === 'user' || e.key === 'token') && !e.newValue) {
-                logout();
-            }
-        };
-
-        ACTIVITY_EVENTS.forEach((eventName) => {
-            window.addEventListener(eventName, handleUserActivity, { passive: true });
-        });
-        window.addEventListener('storage', handleStorageChange);
-
-        return () => {
-            if (timerId) clearTimeout(timerId);
-            ACTIVITY_EVENTS.forEach((eventName) => {
-                window.removeEventListener(eventName, handleUserActivity);
-            });
-            window.removeEventListener('storage', handleStorageChange);
-        };
-    }, [user, logout]);
+    }, []);
 
     const login = (userData, token) => {
         // Strictly sanitize incoming user data to prevent persisting any credential material
@@ -163,8 +65,6 @@ export const AuthProvider = ({ children }) => {
 
         sessionStorage.removeItem('hasSeenRetireesPrompt');
 
-        const now = Date.now();
-        localStorage.setItem(LAST_ACTIVITY_KEY, now.toString());
         localStorage.setItem('token', token);
         localStorage.setItem('user', JSON.stringify(sanitized));
 
@@ -179,40 +79,33 @@ export const AuthProvider = ({ children }) => {
         setToken(token);
     };
 
-    const loginWithCredentials = async (email, password, isCO, portal) => {
+    const loginWithCredentials = async (email, password, isCO) => {
         const targetUrl = apiUrl('/api/auth/login');
         try {
             const response = await fetch(targetUrl, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email, password, isCO, portal })
+                body: JSON.stringify({ email, password, isCO })
             });
 
             if (!response.ok) {
                 const errorText = await response.text();
                 console.error(`❌ Server Error Detail:`, errorText);
-                let parsedJson = null;
+                let parsedError = null;
                 try {
-                    parsedJson = JSON.parse(errorText);
+                    parsedError = JSON.parse(errorText)?.error;
                 } catch {
-                    parsedJson = null;
+                    parsedError = null;
                 }
-                return {
-                    success: false,
-                    ...(parsedJson || {}),
-                    error: parsedJson?.error || `Server returned ${response.status}: ${response.statusText}`
-                };
+                return { success: false, error: parsedError || `Server returned ${response.status}: ${response.statusText}` };
             }
 
             const data = await response.json();
             if (data.success) {
-                if (portal === 'vacancies' || data.user?.role === 'Vacancy Applicant') {
-                    sessionStorage.setItem('active_portal', 'vacancies');
-                }
                 login(data.user, data.token);
                 return { success: true, user: data.user };
             } else {
-                return { success: false, ...(data || {}), error: data.error };
+                return { success: false, error: data.error };
             }
         } catch (err) {
             console.error(`🚨 Network/Connection Error:`, err);
@@ -229,30 +122,24 @@ export const AuthProvider = ({ children }) => {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email, passcode, isCO })
             });
-            if (!response.ok) {
-                const errorText = await response.text();
-                let parsedJson = null;
-                try {
-                    parsedJson = JSON.parse(errorText);
-                } catch {
-                    parsedJson = null;
-                }
-                return {
-                    success: false,
-                    ...(parsedJson || {}),
-                    error: parsedJson?.error || 'PIN verification failed'
-                };
-            }
             const data = await response.json();
             if (data.success) {
                 login(data.user, data.token);
                 return { success: true, user: data.user };
             } else {
-                return { success: false, ...(data || {}), error: data.error };
+                return { success: false, error: data.error };
             }
         } catch (err) {
             return { success: false, error: 'PIN verification failed' };
         }
+    };
+
+    const logout = () => {
+        localStorage.removeItem('user');
+        localStorage.removeItem('token');
+        sessionStorage.removeItem('hasSeenRetireesPrompt');
+        setUser(null);
+        setToken(null);
     };
 
     return (
@@ -263,4 +150,3 @@ export const AuthProvider = ({ children }) => {
 };
 
 export const useAuth = () => useContext(AuthContext);
-

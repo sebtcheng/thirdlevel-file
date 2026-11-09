@@ -1,152 +1,26 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { createPortal } from 'react-dom';
+import React from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
-import {
-    FiUsers, FiSearch, FiFilter, FiExternalLink, FiChevronRight, FiChevronDown, FiChevronUp,
-    FiMoreVertical, FiDownload, FiPlus, FiGrid, FiList,
-    FiCheckCircle, FiAlertCircle, FiClock, FiActivity, FiArrowRight,
-    FiLogOut, FiUser, FiInfo, FiLayers, FiX, FiTrash2, FiRefreshCw, FiCalendar, FiEye,
-    FiLink, FiUserCheck, FiAlertTriangle
-} from 'react-icons/fi';
-import { GoArrowUpRight } from "react-icons/go";
-import { FaIdBadge, FaVial } from "react-icons/fa";
-import { LuChefHat } from "react-icons/lu";
-import { MdOutlineToggleOff } from "react-icons/md";
+import { motion, AnimatePresence } from '../utils/staticElements.jsx';
+import { Users as FiUsers, MagnifyingGlass as FiSearch, CaretRight as FiChevronRight, Info as FiInfo } from '@phosphor-icons/react';
 import { useAuth } from '../context/AuthContext';
 import PageTransition from '../components/PageTransition';
-import LoadingScreen from '../components/LoadingScreen';
-import AdminSidebar from '../components/AdminSidebar';
 import Swal from 'sweetalert2';
 import { apiUrl } from '../utils/api';
-import { expandAcronym, formatPositionTitle, isThirdLevelPosition } from '../utils/officialsUtils';
-import ModernDatePicker from '../components/ModernDatePicker';
+import { formatPositionTitle } from '../utils/officialsUtils';
 import sgMap from '../utils/sgMap.json';
-import newLogo from '../assets/tlo_logo.png';
 import ReassignOfficialModal from '../components/ReassignOfficialModal';
-const JustificationInput = ({ value, onChange, placeholder }) => {
-    const [local, setLocal] = useState(value);
-
-    useEffect(() => {
-        setLocal(value);
-    }, [value]);
-
-    return (
-        <textarea
-            value={local}
-            onChange={(e) => setLocal(e.target.value)}
-            onBlur={() => onChange(local)}
-            placeholder={placeholder}
-            rows={4}
-            className="w-full bg-slate-50 border-2 border-slate-200 focus:border-[#08315F]/20 rounded-2xl py-4 px-5 text-[21px] font-bold text-slate-700 outline-none transition-all resize-none"
-        />
-    );
+import { DataControls, ApprovalTabs, StatsCards, ContentArea, IncumbencyModal, ActionModal, ApplicantSubmissionsTable, THIRD_LEVEL_POSITIONS } from '../components/officials-registry';
+import FloatingLabelInput from '../components/forms/FloatingLabelInput.jsx';
+import PageHeaderCard from '../components/PageHeaderCard.jsx';
+import AdminLayout from '../components/layout/AdminLayout.jsx';
+// Hero header text follows the active registry tab.
+const REGISTRY_HEADERS = {
+    default: { title: "Personnel Registry", subtitle: "Official leadership management • Third level officials command dashboard" },
+    "For Approval": { title: "Pending Approvals", subtitle: "Personnel registrations waiting for review and approval" },
+    Rejected: { title: "Rejected Registrations", subtitle: "Personnel registrations that were declined" },
+    Applications: { title: "TIMON Applications", subtitle: "Executive designation applications submitted through the TIMON portal" },
 };
-
-const AddNewPersonnelForm = ({ onCancel, onSuccess, token }) => {
-    const [newPersonnelData, setNewPersonnelData] = useState({ first_name: '', last_name: '', email: '', employee_number: '' });
-    const [addPersonnelLoading, setAddPersonnelLoading] = useState(false);
-
-    const handleAddPersonnel = async () => {
-        setAddPersonnelLoading(true);
-        try {
-            const res = await fetch(apiUrl('/api/third-level/add-unassigned-personnel'), {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token || localStorage.getItem('token')}`
-                },
-                body: JSON.stringify(newPersonnelData)
-            });
-            const data = await res.json();
-            if (data.success) {
-                onSuccess(data.newPersonnel.TLOid);
-            } else {
-                Swal.fire('Error', data.error || 'Failed to add personnel', 'error');
-            }
-        } catch (err) {
-            Swal.fire('Error', 'Failed to add personnel: ' + err.message, 'error');
-        } finally {
-            setAddPersonnelLoading(false);
-        }
-    };
-
-    return (
-        <div className="space-y-4 bg-slate-50 p-6 rounded-[2rem] border-2 border-[#08315F]/10">
-            <div className="flex justify-between items-center mb-2">
-                <h3 className="text-[21px] font-black text-[#08315F] uppercase tracking-widest">Add New Personnel</h3>
-                <button onClick={onCancel} className="text-[15px] font-bold text-slate-400 hover:text-red-500 uppercase tracking-widest transition-colors">Cancel</button>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-                <div>
-                    <label className="text-[15px] font-black text-slate-400 uppercase tracking-widest mb-2 block">First Name <span className="text-red-500">*</span></label>
-                    <input type="text" autoComplete="off" value={newPersonnelData.first_name} onChange={(e) => setNewPersonnelData({ ...newPersonnelData, first_name: e.target.value })} className="w-full bg-white border-2 border-slate-200 focus:border-[#08315F]/20 rounded-xl py-3 px-4 text-[18px] font-bold text-slate-700 outline-none transition-all" />
-                </div>
-                <div>
-                    <label className="text-[15px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Last Name <span className="text-red-500">*</span></label>
-                    <input type="text" autoComplete="off" value={newPersonnelData.last_name} onChange={(e) => setNewPersonnelData({ ...newPersonnelData, last_name: e.target.value })} className="w-full bg-white border-2 border-slate-200 focus:border-[#08315F]/20 rounded-xl py-3 px-4 text-[18px] font-bold text-slate-700 outline-none transition-all" />
-                </div>
-            </div>
-            <div>
-                <label className="text-[15px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Email Address <span className="text-red-500">*</span></label>
-                <input type="email" autoComplete="off" value={newPersonnelData.email} onChange={(e) => setNewPersonnelData({ ...newPersonnelData, email: e.target.value })} className="w-full bg-white border-2 border-slate-200 focus:border-[#08315F]/20 rounded-xl py-3 px-4 text-[18px] font-bold text-slate-700 outline-none transition-all" />
-            </div>
-            <div>
-                <label className="text-[15px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Employee Number</label>
-                <input type="text" autoComplete="off" value={newPersonnelData.employee_number} onChange={(e) => setNewPersonnelData({ ...newPersonnelData, employee_number: e.target.value })} className="w-full bg-white border-2 border-slate-200 focus:border-[#08315F]/20 rounded-xl py-3 px-4 text-[18px] font-bold text-slate-700 outline-none transition-all" />
-            </div>
-            <button
-                onClick={handleAddPersonnel}
-                disabled={addPersonnelLoading || !newPersonnelData.first_name || !newPersonnelData.last_name || !newPersonnelData.email}
-                className="w-full mt-2 bg-[#08315F] hover:bg-[#004A99] text-white py-3 rounded-xl text-[18px] font-black uppercase tracking-widest transition-all disabled:opacity-50 flex justify-center items-center gap-2 border-2 border-transparent"
-            >
-                {addPersonnelLoading && <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin" />}
-                Save Personnel
-            </button>
-        </div>
-    );
-};
-
-const DebouncedSearchInput = ({ value, onChange, placeholder }) => {
-    const [local, setLocal] = useState(value);
-
-    useEffect(() => {
-        setLocal(value);
-    }, [value]);
-
-    useEffect(() => {
-        const timer = setTimeout(() => {
-            onChange(local);
-        }, 300);
-        return () => clearTimeout(timer);
-    }, [local, onChange]);
-
-    return (
-        <input
-            value={local}
-            onChange={(e) => setLocal(e.target.value)}
-            placeholder={placeholder}
-            autoComplete="off"
-            className="w-full bg-slate-50 border-2 border-slate-200 focus:border-[#08315F]/20 rounded-2xl py-4 pl-11 pr-5 text-[21px] font-bold text-slate-700 outline-none transition-all"
-        />
-    );
-};
-
-const THIRD_LEVEL_POSITIONS = [
-    'Secretary',
-    'Undersecretary',
-    'Assistant Secretary',
-    'Director IV',
-    'Director III',
-    'Regional Director',
-    'Assistant Regional Director',
-    'Schools Division Superintendent',
-    'Assistant Schools Division Superintendent',
-    'RD',
-    'ARD',
-    'SDS',
-    'ASDS'
-];
 
 const OfficialsRegistry = () => {
     const navigate = useNavigate();
@@ -172,7 +46,7 @@ const OfficialsRegistry = () => {
 
                 <div
                     onClick={() => setIsOpen(!isOpen)}
-                    className="w-full bg-slate-50 border-2 border-slate-200 hover:border-[#08315F]/20 cursor-pointer rounded-2xl py-4 px-5 flex justify-between items-center transition-all group"
+                    className="w-full bg-slate-50 border-2 border-slate-200 hover:border-brand-800/20 cursor-pointer rounded-2xl py-4 px-5 flex justify-between items-center transition-all group"
                 >
                     <div className="flex flex-col">
                         <span className={`text-[21px] font-bold ${selectedOption ? 'text-slate-900' : 'text-slate-400'}`}>
@@ -182,7 +56,7 @@ const OfficialsRegistry = () => {
                             <span className="text-[15px] text-slate-400 font-bold">{selectedOption.sublabel}</span>
                         )}
                     </div>
-                    <FiChevronRight className={`transition-transform duration-300 ${isOpen ? 'rotate-90 text-[#075985]' : 'text-slate-300'}`} size={18} />
+                    <FiChevronRight className={`transition-transform duration-300 ${isOpen ? 'rotate-90 text-brand-700' : 'text-slate-300'}`} size={18} />
                 </div>
 
                 <AnimatePresence>
@@ -193,21 +67,10 @@ const OfficialsRegistry = () => {
                                 initial={{ opacity: 0, y: 10, scale: 0.95 }}
                                 animate={{ opacity: 1, y: 0, scale: 1 }}
                                 exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                                className="absolute left-0 right-0 top-full mt-2 bg-white rounded-3xl shadow-2xl border-2 border-slate-200 z-[130] overflow-hidden flex flex-col max-h-[450px]"
+                                className="absolute left-0 right-0 top-full mt-2 bg-white rounded-card shadow-2xl border-2 border-slate-200 z-[130] overflow-hidden flex flex-col max-h-[450px]"
                             >
                                 <div className="p-4 border-b-2 border-slate-100 bg-slate-50/50">
-                                    <div className="relative">
-                                        <FiSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
-                                        <input
-                                            autoFocus
-                                            type="text"
-                                            value={search}
-                                            onChange={(e) => setSearch(e.target.value)}
-                                            placeholder="Search options..."
-                                            autoComplete="off"
-                                            className="w-full bg-white border-2 border-slate-200 focus:border-[#08315F]/20 rounded-xl py-3 pl-10 pr-4 text-[18px] font-bold text-slate-700 outline-none transition-all"
-                                        />
-                                    </div>
+                                    <FloatingLabelInput label="Search options" icon={<FiSearch size={16} />} className="w-full" autoFocus type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search options..." autoComplete="off" />
                                 </div>
                                 <div className="overflow-y-auto py-2 custom-scrollbar">
                                     {filteredOptions.length > 0 ? (
@@ -219,7 +82,7 @@ const OfficialsRegistry = () => {
                                                     setIsOpen(false);
                                                     setSearch('');
                                                 }}
-                                                className={`px-5 py-4 cursor-pointer flex flex-col hover:bg-blue-50 transition-colors ${value === opt.value ? 'bg-blue-50/50 border-l-4 border-[#08315F]' : 'border-l-4 border-transparent'}`}
+                                                className={`px-5 py-4 cursor-pointer flex flex-col hover:bg-blue-50 transition-colors ${value === opt.value ? 'bg-blue-50/50 border-l-4 border-brand-800' : 'border-l-4 border-transparent'}`}
                                             >
                                                 <span className={`text-[18px] font-black uppercase tracking-tight ${value === opt.value ? 'text-blue-700' : 'text-slate-700'}`}>
                                                     {opt.label}
@@ -248,16 +111,7 @@ const OfficialsRegistry = () => {
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
     const [isAddingPersonnel, setIsAddingPersonnel] = useState(false);
-
-    // --- RECONCILIATION MODAL STATE ---
-    const [reconcileModalOpen, setReconcileModalOpen] = useState(false);
-    const [reconcileTargetItem, setReconcileTargetItem] = useState(null);
-    const [selectedCandidate, setSelectedCandidate] = useState(null);
-    const [reconcileApprovedTarget, setReconcileApprovedTarget] = useState('registration'); // 'registration' or 'candidate'
-    const [reconcileConfirmed, setReconcileConfirmed] = useState(false);
-    const [reconcileRemarks, setReconcileRemarks] = useState('');
-    const [reconcileLoading, setReconcileLoading] = useState(false);
-
+    
     const [statusTab, setStatusTab] = useState(() => {
         const params = new URLSearchParams(location.search);
         return params.get('status') || 'All';
@@ -277,37 +131,7 @@ const OfficialsRegistry = () => {
     const [levelFilter, setLevelFilter] = useState('All');
     const [regionFilter, setRegionFilter] = useState('All');
     const [strandFilter, setStrandFilter] = useState('All');
-
-    const handleViewRejectionReason = (item) => {
-        const officialName = item.first_name ? `${item.first_name} ${item.last_name}` : item.email || item.TLOid;
-        Swal.fire({
-            title: `<div class="text-[20px] font-black text-[#08315F] uppercase tracking-wide">Rejection Details</div>`,
-            html: `
-                <div class="text-left py-2 space-y-3">
-                    <div class="p-3 bg-slate-50 rounded-xl border border-slate-200">
-                        <div class="text-[12px] font-bold text-slate-400 uppercase tracking-widest">Official</div>
-                        <div class="text-[16px] font-black text-[#08315F]">${officialName}</div>
-                        ${item.position_title ? `<div class="text-[13px] text-slate-600 font-semibold mt-0.5">${item.position_title}</div>` : ''}
-                    </div>
-                    <div class="p-4 bg-rose-50/70 rounded-xl border border-rose-200">
-                        <div class="text-[12px] font-black text-rose-600 uppercase tracking-widest mb-1.5 flex items-center gap-1">
-                            <span>Reason for Rejection</span>
-                        </div>
-                        <div class="text-[15px] font-medium text-slate-700 leading-relaxed break-words whitespace-pre-wrap">
-                            ${item.rejection_reason || 'No rejection reason recorded.'}
-                        </div>
-                    </div>
-                </div>
-            `,
-            icon: 'info',
-            confirmButtonColor: '#08315F',
-            confirmButtonText: 'Close',
-            customClass: {
-                popup: 'rounded-2xl border-2 border-slate-200 shadow-2xl'
-            }
-        });
-    };
-
+    
     const handleRegistrationAction = async (TLOid, action) => {
         let denial_reason = '';
         if (action === 'reject') {
@@ -322,8 +146,8 @@ const OfficialsRegistry = () => {
                     }
                 },
                 showCancelButton: true,
-                confirmButtonColor: '#ef4444',
-                cancelButtonColor: '#08315F',
+                confirmButtonColor: 'var(--color-danger-600)',
+                cancelButtonColor: 'var(--color-brand-800)',
                 confirmButtonText: 'Confirm Reject'
             });
             if (!isConfirmed) return;
@@ -334,8 +158,8 @@ const OfficialsRegistry = () => {
                 text: 'Are you sure you want to approve this official registration? An official approval notification email will be sent to the official.',
                 icon: 'question',
                 showCancelButton: true,
-                confirmButtonColor: '#08315F',
-                cancelButtonColor: '#ef4444',
+                confirmButtonColor: 'var(--color-brand-800)',
+                cancelButtonColor: 'var(--color-danger-600)',
                 confirmButtonText: 'Yes, Approve!'
             });
             if (!result.isConfirmed) return;
@@ -345,15 +169,15 @@ const OfficialsRegistry = () => {
                 text: `Are you sure you want to ${action} this registration?`,
                 icon: 'warning',
                 showCancelButton: true,
-                confirmButtonColor: '#08315F',
-                cancelButtonColor: '#ef4444',
+                confirmButtonColor: 'var(--color-brand-800)',
+                cancelButtonColor: 'var(--color-danger-600)',
                 confirmButtonText: 'Yes, proceed!'
             });
             if (!result.isConfirmed) return;
         }
 
         try {
-            const res = await fetch(apiUrl('/api/third-level/process-registration'), {
+            const res = await fetch(apiUrl('/api/third-level/officials-registry/process-registration'), {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -366,75 +190,12 @@ const OfficialsRegistry = () => {
                 const actionLabel = action === 'approve' ? 'approved' : action === 'reject' ? 'rejected' : `${action}d`;
                 Swal.fire('Success', `Registration ${actionLabel} successfully and notification email dispatched to official.`, 'success');
                 fetchOfficials();
-                fetchKpiSummary();
             } else {
                 Swal.fire('Error', data.error || 'Failed to process registration', 'error');
             }
         } catch (err) {
             console.error(err);
             Swal.fire('Error', 'An error occurred while processing', 'error');
-        }
-    };
-
-    const handleOpenReconcileModal = (item, candidate = null) => {
-        setReconcileTargetItem(item);
-        const defaultCandidate = candidate || (item.potential_matches && item.potential_matches[0]) || null;
-        setSelectedCandidate(defaultCandidate);
-        setReconcileApprovedTarget('registration');
-        setReconcileConfirmed(false);
-        setReconcileRemarks('');
-        setReconcileModalOpen(true);
-    };
-
-    const handleExecuteReconciliation = async () => {
-        if (!reconcileTargetItem || !selectedCandidate) return;
-        if (!reconcileConfirmed) {
-            Swal.fire('Confirmation Required', 'You must verify and check "Yes, I have verified that these records belong to the same person" to proceed.', 'warning');
-            return;
-        }
-        if (!reconcileRemarks || !reconcileRemarks.trim()) {
-            Swal.fire('Remarks Required', 'Please provide an administrative justification/remark for this reconciliation.', 'warning');
-            return;
-        }
-
-        setReconcileLoading(true);
-        try {
-            const res = await fetch(apiUrl('/api/third-level/process-registration'), {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token || localStorage.getItem('token')}`
-                },
-                body: JSON.stringify({
-                    TLOid: reconcileTargetItem.TLOid,
-                    action: 'reconcile',
-                    target_TLOid: selectedCandidate.TLOid,
-                    approved_record: reconcileApprovedTarget,
-                    approved_TLOid: reconcileApprovedTarget === 'candidate' ? selectedCandidate.TLOid : reconcileTargetItem.TLOid,
-                    confirmed_same_person: true,
-                    remarks: reconcileRemarks.trim()
-                })
-            });
-            const data = await res.json();
-            if (data.success) {
-                const successMsg = reconcileApprovedTarget === 'candidate'
-                    ? `Official record ${selectedCandidate.TLOid} was successfully approved and retained as Active, linked with registration credentials ${reconcileTargetItem.email}. Record ${reconcileTargetItem.TLOid} has been marked as Inactive.`
-                    : `Official registration ${reconcileTargetItem.TLOid} was successfully activated with official details from ${selectedCandidate.TLOid}, and ${selectedCandidate.TLOid} has been marked as Inactive.`;
-                Swal.fire('Reconciliation Complete', successMsg, 'success');
-                setReconcileModalOpen(false);
-                setReconcileTargetItem(null);
-                setSelectedCandidate(null);
-                setReconcileApprovedTarget('registration');
-                fetchOfficials();
-                fetchKpiSummary();
-            } else {
-                Swal.fire('Reconciliation Failed', data.error || 'Unable to process reconciliation', 'error');
-            }
-        } catch (err) {
-            console.error(err);
-            Swal.fire('Error', 'An error occurred while submitting reconciliation request.', 'error');
-        } finally {
-            setReconcileLoading(false);
         }
     };
 
@@ -450,15 +211,15 @@ const OfficialsRegistry = () => {
             text: confirmText,
             icon: 'question',
             showCancelButton: true,
-            confirmButtonColor: '#7c3aed',
-            cancelButtonColor: '#64748b',
+            confirmButtonColor: 'var(--color-brand-700)',
+            cancelButtonColor: 'var(--color-secondary)',
             confirmButtonText: targetStatus ? 'Yes, Mark as Test' : 'Yes, Remove Flag'
         });
 
         if (!confirmRes.isConfirmed) return;
 
         try {
-            const res = await fetch(apiUrl('/api/third-level/toggle-test-account'), {
+            const res = await fetch(apiUrl('/api/third-level/officials-registry/toggle-test-account'), {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -477,7 +238,6 @@ const OfficialsRegistry = () => {
                     timer: 2000
                 });
                 fetchOfficials();
-                fetchKpiSummary();
             } else {
                 Swal.fire('Error', data.error || 'Failed to update test account status', 'error');
             }
@@ -506,23 +266,23 @@ const OfficialsRegistry = () => {
     });
     const [totalRecords, setTotalRecords] = useState(0);
 
-    const isThirdLevel = (o) => isThirdLevelPosition(o?.position_title) || isThirdLevelPosition(o?.designation) || (o?.designation && String(o.designation).toUpperCase().includes('OIC'));
-    const isOIC = (o) => Boolean(o?.is_oic) || Boolean(o?.designation && String(o.designation).toUpperCase().includes('OIC'));
+    const isThirdLevel = (o) => THIRD_LEVEL_POSITIONS.includes(o.position_title) || THIRD_LEVEL_POSITIONS.includes(o.designation) || (o.designation && o.designation.toUpperCase().includes('OIC'));
+    const isOIC = (o) => o.is_oic || (o.designation && o.designation.toUpperCase().includes('OIC'));
 
     const thirdLevelOfficials = useMemo(() => {
-        return kpiSummary.filter(o => o.status !== 'For Approval' && o.status !== 'Rejected' && isThirdLevelPosition(o?.position_title));
+        return kpiSummary.filter(o => !isOIC(o) && THIRD_LEVEL_POSITIONS.includes(o.position_title));
     }, [kpiSummary]);
 
     const thirdLevelOic = useMemo(() => {
-        return kpiSummary.filter(o => o.status !== 'For Approval' && o.status !== 'Rejected' && isOIC(o) && isThirdLevel(o));
+        return kpiSummary.filter(o => isOIC(o) && isThirdLevel(o));
     }, [kpiSummary]);
 
     const divisionChiefsOic = useMemo(() => {
-        return kpiSummary.filter(o => o.status !== 'For Approval' && o.status !== 'Rejected' && isOIC(o) && !isThirdLevel(o));
+        return kpiSummary.filter(o => isOIC(o) && !isThirdLevel(o));
     }, [kpiSummary]);
 
     const divisionChiefs = useMemo(() => {
-        return kpiSummary.filter(o => o.status !== 'For Approval' && o.status !== 'Rejected' && !isOIC(o) && !isThirdLevelPosition(o?.position_title));
+        return kpiSummary.filter(o => !isOIC(o) && !THIRD_LEVEL_POSITIONS.includes(o.position_title));
     }, [kpiSummary]);
 
     // Active counts for KPI cards (to match Home page logic which only counts Active)
@@ -631,18 +391,18 @@ const OfficialsRegistry = () => {
             }
             queryParams.append('category', backendCategory);
             queryParams.append('status', 'Active');
-            const res = await fetch(apiUrl(`/api/third-level/officials?${queryParams.toString()}`), {
+            const res = await fetch(apiUrl(`/api/third-level/officials-registry/officials?${queryParams.toString()}`), {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             const data = await res.json();
             if (data.success) {
                 let filteredData = data.data;
                 if (activeTab === 'Officer in Charge') {
-                    filteredData = data.data.filter(o => isThirdLevel(o));
+                    filteredData = data.data.filter(o => THIRD_LEVEL_POSITIONS.includes(o.position_title) || THIRD_LEVEL_POSITIONS.includes(o.designation) || (o.designation && o.designation.toUpperCase().includes('OIC')));
                 } else if (activeTab === 'Division Chiefs (OIC)') {
-                    filteredData = data.data.filter(o => !isThirdLevel(o));
+                    filteredData = data.data.filter(o => !(THIRD_LEVEL_POSITIONS.includes(o.position_title) || THIRD_LEVEL_POSITIONS.includes(o.designation) || (o.designation && o.designation.toUpperCase().includes('OIC'))));
                 } else if (activeTab === 'Division Chiefs') {
-                    filteredData = data.data.filter(o => !isThirdLevelPosition(o?.position_title));
+                    filteredData = data.data.filter(o => !THIRD_LEVEL_POSITIONS.includes(o.position_title));
                 }
                 let formattedPositions = filteredData
                     .map(o => formatPositionTitle(o.position_title))
@@ -741,7 +501,7 @@ const OfficialsRegistry = () => {
     const fetchStrands = async () => {
         try {
             // Simplified fetch for strands - we can also hardcode or fetch distinct from masterlist
-            const res = await fetch(apiUrl('/api/third-level/officials?status=All'), {
+            const res = await fetch(apiUrl('/api/third-level/officials-registry/officials?status=All'), {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             const data = await res.json();
@@ -781,11 +541,8 @@ const OfficialsRegistry = () => {
             if (levelFilter !== 'All') queryParams.append('level', levelFilter);
             if (regionFilter !== 'All') queryParams.append('region', regionFilter);
             if (oicOnly) queryParams.append('is_oic', 'true');
-            if (statusTab && statusTab !== 'All') {
-                queryParams.append('status', statusTab === 'Vacant' ? 'Vacated' : statusTab);
-            }
 
-            const res = await fetch(apiUrl(`/api/third-level/officials-kpi-summary?${queryParams.toString()}`), {
+            const res = await fetch(apiUrl(`/api/third-level/officials-registry/officials-kpi-summary?${queryParams.toString()}`), {
                 headers: { 'Authorization': `Bearer ${token || localStorage.getItem('token')}` }
             });
             const data = await res.json();
@@ -840,7 +597,7 @@ const OfficialsRegistry = () => {
                 queryParams.append('limit', pageSize);
             }
 
-            const res = await fetch(apiUrl(`/api/third-level/officials?${queryParams.toString()}`), {
+            const res = await fetch(apiUrl(`/api/third-level/officials-registry/officials?${queryParams.toString()}`), {
                 headers: {
                     'Authorization': `Bearer ${token || localStorage.getItem('token')}`
                 }
@@ -867,7 +624,7 @@ const OfficialsRegistry = () => {
         setIncumbentsLoading(true);
         setIncumbents([]);
         try {
-            const res = await fetch(apiUrl(`/api/third-level/position-incumbents?position_title=${encodeURIComponent(position)}&office=${encodeURIComponent(office || '')}`), {
+            const res = await fetch(apiUrl(`/api/third-level/officials-registry/position-incumbents?position_title=${encodeURIComponent(position)}&office=${encodeURIComponent(office || '')}`), {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             const data = await res.json();
@@ -896,44 +653,15 @@ const OfficialsRegistry = () => {
             case 'succeeded': return 'bg-cyan-50 text-cyan-600 border-cyan-100';
             case 'vacated':
             case 'vacant': return 'bg-rose-50 text-rose-600 border-rose-100';
-            default: return 'bg-blue-50 text-[#075985] border-blue-100';
+            default: return 'bg-blue-50 text-brand-700 border-blue-100';
         }
     };
 
-    const StatusBadge = ({ status, rejectionReason, onShowReason }) => {
+    const StatusBadge = ({ status }) => {
         const displayStatus = status === 'Vacated' ? 'Vacant' : status;
-        const isRejected = status === 'Rejected';
-
         return (
-            <span
-                onClick={(e) => {
-                    if (isRejected && onShowReason) {
-                        e.stopPropagation();
-                        onShowReason();
-                    }
-                }}
-                className={`px-3 py-1 rounded-full text-[15px] font-black uppercase tracking-widest border-2 relative inline-flex items-center gap-1.5 ${getStatusColor(displayStatus)} ${isRejected ? 'group/rej cursor-pointer hover:border-rose-400 transition-colors' : ''}`}
-                title={isRejected ? "Click to view rejection reason" : undefined}
-            >
-                <span>{displayStatus || 'Unknown'}</span>
-                {isRejected && (
-                    <>
-                        <FiInfo size={13} className="text-rose-500 shrink-0" />
-                        <div className="hidden group-hover/rej:flex flex-col absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-50 pointer-events-none w-64 p-3 bg-slate-900/95 backdrop-blur-md text-white border border-rose-500/40 rounded-xl shadow-2xl normal-case tracking-normal text-left">
-                            <div className="flex items-center gap-1 text-[11px] font-black uppercase tracking-wider text-rose-400 mb-1">
-                                <FiAlertCircle size={12} className="shrink-0" />
-                                <span>Rejection Reason</span>
-                            </div>
-                            <div className="text-[13px] font-medium text-slate-200 leading-snug break-words">
-                                {rejectionReason || 'No rejection reason recorded.'}
-                            </div>
-                            <div className="text-[10px] text-rose-300/80 mt-1 font-semibold">
-                                Click icon or badge to view full details
-                            </div>
-                            <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-[5px] w-2.5 h-2.5 bg-slate-900 border-r border-b border-rose-500/40 rotate-45"></div>
-                        </div>
-                    </>
-                )}
+            <span className={`px-3 py-1 rounded-full text-[15px] font-black uppercase tracking-widest border-2 ${getStatusColor(displayStatus)}`}>
+                {displayStatus || 'Unknown'}
             </span>
         );
     };
@@ -946,7 +674,7 @@ const OfficialsRegistry = () => {
             if (strandFilter !== 'All') queryParams.append('strand', strandFilter);
             if (positionFilter !== 'All') queryParams.append('position', positionFilter);
 
-            const res = await fetch(apiUrl(`/api/third-level/applications?${queryParams.toString()}`), {
+            const res = await fetch(apiUrl(`/api/third-level/officials-registry/applications?${queryParams.toString()}`), {
                 headers: { 'Authorization': `Bearer ${token || localStorage.getItem('token')}` }
             });
             const data = await res.json();
@@ -976,7 +704,7 @@ const OfficialsRegistry = () => {
             const queryParams = new URLSearchParams();
             queryParams.append('limit', normalizedSearch ? '75' : '50');
             if (normalizedSearch) queryParams.append('search', normalizedSearch);
-            const res = await fetch(apiUrl(`/api/third-level/unassigned-personnel?${queryParams.toString()}`), {
+            const res = await fetch(apiUrl(`/api/third-level/officials-registry/unassigned-personnel?${queryParams.toString()}`), {
                 headers: { 'Authorization': `Bearer ${token || localStorage.getItem('token')}` },
                 signal: controller.signal
             });
@@ -1018,7 +746,7 @@ const OfficialsRegistry = () => {
             const personName = `${actionOfficial?.first_name || ''} ${actionOfficial?.last_name || ''}`.trim();
             const positionName = actionOfficial?.position_title || 'position';
 
-            const res = await fetch(apiUrl('/api/third-level/admin-action'), {
+            const res = await fetch(apiUrl('/api/third-level/officials-registry/admin-action'), {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -1046,9 +774,6 @@ const OfficialsRegistry = () => {
                 Swal.fire('Notice', message, 'info');
                 setShowActionModal(false);
                 fetchOfficials();
-                fetchKpiSummary();
-                fetchStrands();
-                fetchTabPositions();
             } else {
                 Swal.fire('Notice', data.error || 'Action failed.', 'info');
             }
@@ -1065,14 +790,14 @@ const OfficialsRegistry = () => {
             text: 'Are you sure you want to cancel this scheduled action and restore the official to Active status?',
             icon: 'warning',
             showCancelButton: true,
-            confirmButtonColor: '#08315F',
-            cancelButtonColor: '#ef4444',
+            confirmButtonColor: 'var(--color-brand-800)',
+            cancelButtonColor: 'var(--color-danger-600)',
             confirmButtonText: 'Yes, cancel it!'
         });
         if (!result.isConfirmed) return;
         setActionLoading(true);
         try {
-            const res = await fetch(apiUrl('/api/third-level/admin-action'), {
+            const res = await fetch(apiUrl('/api/third-level/officials-registry/admin-action'), {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -1089,9 +814,6 @@ const OfficialsRegistry = () => {
                 Swal.fire('Notice', 'Action cancelled successfully. Official is now Active.', 'info');
                 setShowActionModal(false);
                 fetchOfficials();
-                fetchKpiSummary();
-                fetchStrands();
-                fetchTabPositions();
             } else {
                 Swal.fire('Notice', data.error || 'Action failed.', 'info');
             }
@@ -1118,7 +840,7 @@ const OfficialsRegistry = () => {
                 setEffectivityDate(localDate.toISOString().split('T')[0]);
             }
             try {
-                const res = await fetch(apiUrl(`/api/third-level/officials/${official.TLOid}/last-vacate-update`), {
+                const res = await fetch(apiUrl(`/api/third-level/officials-registry/officials/${official.TLOid}/last-vacate-update`), {
                     headers: { 'Authorization': `Bearer ${token || localStorage.getItem('token')}` }
                 });
                 const data = await res.json();
@@ -1162,7 +884,7 @@ const OfficialsRegistry = () => {
                 setUnassignedPersonnel(unassignedCacheRef.current.get('') || []);
             } else {
                 try {
-                    const res = await fetch(apiUrl('/api/third-level/vacancies'), {
+                    const res = await fetch(apiUrl('/api/third-level/official-profiling/vacancies'), {
                         headers: { 'Authorization': `Bearer ${token || localStorage.getItem('token')}` }
                     });
                     const data = await res.json();
@@ -1183,7 +905,7 @@ const OfficialsRegistry = () => {
         }
         if (action === 'succeed') {
             try {
-                const res = await fetch(apiUrl(`/api/third-level/active-officials?exclude_TLOid=${official.TLOid}`), {
+                const res = await fetch(apiUrl(`/api/third-level/officials-registry/active-officials?exclude_TLOid=${official.TLOid}`), {
                     headers: { 'Authorization': `Bearer ${token || localStorage.getItem('token')}` }
                 });
                 const data = await res.json();
@@ -1264,66 +986,65 @@ const OfficialsRegistry = () => {
     };
 
     const isCentralOfficeView = levelFilter === 'Central Office' || regionFilter === 'Central Office' || tableFilters['region'] === 'Central Office';
-    const isForApproval = statusTab === 'For Approval';
 
     const tableColumns = useMemo(() => ([
         {
             key: 'region',
             label: 'Region',
-            width: isForApproval ? 'w-[8%]' : 'w-[9%] min-w-[105px]',
+            width: 'w-[9%]',
             value: (item) => getOfficialRegion(item),
             filterValue: (item) => getOfficialRegion(item)
         },
         {
             key: 'division',
             label: isCentralOfficeView ? 'Strand' : 'Division',
-            width: isForApproval ? 'w-[11%]' : 'w-[13%] min-w-[135px]',
+            width: 'w-[13%]',
             value: (item) => (item.region || getOfficialRegion(item)) === 'Central Office' ? (item.strand || item.division || item.office || '') : (item.division || item.office || ''),
             filterValue: (item) => (item.region || getOfficialRegion(item)) === 'Central Office' ? (item.strand || item.division || item.office || 'No Division') : (item.division || item.office || 'No Division')
         },
         {
             key: 'name',
             label: 'Official Profile',
-            width: isForApproval ? 'w-[27%]' : 'w-[22%] min-w-[260px]',
+            width: 'w-[22%]',
             value: (item) => `${item.first_name || 'VACANT POSITION'} ${item.last_name || ''}`,
             filterValue: (item) => item.first_name ? `${item.first_name} ${item.last_name || ''}`.trim() : 'VACANT POSITION'
         },
         {
             key: 'profile_completion',
             label: 'Profile Completion',
-            width: isForApproval ? 'w-[13%]' : 'w-[14%] min-w-[140px]',
-            value: (item) => item.profile_completion != null ? `${Math.round(item.profile_completion)}%` : '—',
-            filterValue: (item) => item.profile_completion != null ? `${Math.round(item.profile_completion)}%` : '—'
+            width: 'w-[14%]',
+            value: (item) => item.profile_completion != null ? `${item.profile_completion}%` : '—',
+            filterValue: (item) => item.profile_completion != null ? `${item.profile_completion}%` : '—'
         },
         {
             key: 'position_title',
             label: 'Position',
-            width: isForApproval ? 'w-[13%]' : 'w-[16%] min-w-[160px]',
+            width: 'w-[16%]',
             value: (item) => (item.position_title || '').replace(/^(OIC\s*-\s*|OIC\s+)/i, '').replace(/\s*\(?OIC\)?\s*$/i, '').trim() || '',
             filterValue: (item) => (item.position_title || 'Unassigned').replace(/^(OIC\s*-\s*|OIC\s+)/i, '').replace(/\s*\(?OIC\)?\s*$/i, '').trim() || 'Unassigned'
         },
         {
             key: 'designation',
             label: 'Designation',
-            width: isForApproval ? 'w-[11%]' : 'w-[11%] min-w-[130px]',
+            width: 'w-[11%]',
             value: (item) => (item.designation || '').replace(/^(OIC\s*-\s*|OIC\s+)/i, '').replace(/\s*\(?OIC\)?\s*$/i, '').trim() || '',
             filterValue: (item) => (item.designation || 'No Designation').replace(/^(OIC\s*-\s*|OIC\s+)/i, '').replace(/\s*\(?OIC\)?\s*$/i, '').trim() || 'No Designation'
         },
         {
             key: 'is_oic',
             label: 'OIC',
-            width: isForApproval ? 'w-[5%]' : 'w-[5%] min-w-[70px]',
+            width: 'w-[5%]',
             value: (item) => (item.is_oic || (item.designation && item.designation.toUpperCase().includes('OIC'))) ? 'Yes' : 'No',
             filterValue: (item) => (item.is_oic || (item.designation && item.designation.toUpperCase().includes('OIC'))) ? 'Yes' : 'No'
         },
         {
             key: 'status',
             label: 'Status',
-            width: isForApproval ? 'w-[12%]' : 'w-[10%] min-w-[160px]',
+            width: 'w-[10%]',
             value: (item) => item.status === 'Vacated' ? 'Vacant' : (item.status || ''),
             filterValue: (item) => item.status === 'Vacated' ? 'Vacant' : (item.status || 'Unknown')
         }
-    ]), [levelFilter, regionFilter, tableFilters, isCentralOfficeView, isForApproval]);
+    ]), [levelFilter, regionFilter, tableFilters]);
 
     const tableFilterOptions = useMemo(() => {
         return tableColumns.reduce((options, column) => {
@@ -1348,32 +1069,21 @@ const OfficialsRegistry = () => {
                 dataForColumn = dataForColumn.filter(item => item.position_title === positionFilter);
             }
             if (statusTab !== 'All') {
-                if (statusTab === 'Vacant') {
-                    dataForColumn = dataForColumn.filter(item =>
-                        item.status === 'Vacated' ||
-                        item.status === 'Vacant' ||
-                        !item.first_name ||
-                        item.first_name === 'VACANT' ||
-                        item.first_name?.toUpperCase().includes('VACANT')
-                    );
-                } else {
-                    dataForColumn = dataForColumn.filter(item => item.status === statusTab);
-                }
-            } else {
-                dataForColumn = dataForColumn.filter(item => item.status !== 'For Approval' && item.status !== 'Rejected');
+                const targetStatus = statusTab === 'Vacant' ? 'Vacated' : statusTab;
+                dataForColumn = dataForColumn.filter(item => item.status === targetStatus);
             }
             if (oicOnly) {
                 dataForColumn = dataForColumn.filter(item => item.is_oic);
             }
             if (activeTab !== 'All') {
                 if (activeTab === 'Third Level Officials') {
-                    dataForColumn = dataForColumn.filter(item => isThirdLevelPosition(item?.position_title));
+                    dataForColumn = dataForColumn.filter(item => !item.is_oic && THIRD_LEVEL_POSITIONS.includes(item.position_title));
                 } else if (activeTab === 'Officer in Charge') {
-                    dataForColumn = dataForColumn.filter(item => isOIC(item) && isThirdLevel(item));
+                    dataForColumn = dataForColumn.filter(item => item.is_oic && THIRD_LEVEL_POSITIONS.includes(item.position_title));
                 } else if (activeTab === 'Division Chiefs (OIC)') {
-                    dataForColumn = dataForColumn.filter(item => isOIC(item) && !isThirdLevel(item));
+                    dataForColumn = dataForColumn.filter(item => item.is_oic && !THIRD_LEVEL_POSITIONS.includes(item.position_title));
                 } else if (activeTab === 'Division Chiefs') {
-                    dataForColumn = dataForColumn.filter(item => !isOIC(item) && !isThirdLevelPosition(item?.position_title));
+                    dataForColumn = dataForColumn.filter(item => !item.is_oic && !THIRD_LEVEL_POSITIONS.includes(item.position_title));
                 }
             }
 
@@ -1393,15 +1103,7 @@ const OfficialsRegistry = () => {
                 .map(item => (column.filterValue ? column.filterValue(item) : column.value(item))?.trim())
                 .filter(Boolean);
 
-            if (column.key === 'profile_completion') {
-                options[column.key] = [...new Set(values)].sort((a, b) => {
-                    const numA = parseInt(a, 10);
-                    const numB = parseInt(b, 10);
-                    if (isNaN(numA)) return 1;
-                    if (isNaN(numB)) return -1;
-                    return numA - numB;
-                });
-            } else if (column.key === 'division' && isCentralOfficeView) {
+            if (column.key === 'division' && isCentralOfficeView) {
                 // Ensure all strands are always visible in the dropdown, even if currently empty
                 options[column.key] = [...new Set([...values, ...strands])].sort((a, b) => a.localeCompare(b));
             } else {
@@ -1414,41 +1116,12 @@ const OfficialsRegistry = () => {
 
     const dependentOffices = useMemo(() => {
         let data = kpiSummary;
-        if (statusTab !== 'All') {
-            data = data.filter(item => item.status === statusTab);
-        } else {
-            data = data.filter(item => item.status !== 'For Approval' && item.status !== 'Rejected');
-        }
         if (regionFilter !== 'All') {
             data = data.filter(item => getOfficialRegion(item) === regionFilter);
         }
         const availableOffices = data.map(item => item.office).filter(Boolean);
         return [...new Set(availableOffices)].sort((a, b) => a.localeCompare(b));
-    }, [kpiSummary, regionFilter, statusTab]);
-
-    const availableDesignations = useMemo(() => {
-        if (statusTab === 'For Approval' || statusTab === 'Rejected') {
-            let data = kpiSummary.filter(item => item.status === statusTab);
-            if (regionFilter !== 'All') {
-                data = data.filter(item => getOfficialRegion(item) === regionFilter);
-            }
-            const desigs = data.map(item => item.designation).filter(Boolean);
-            return [...new Set(desigs)].sort((a, b) => a.localeCompare(b));
-        }
-        return designations;
-    }, [statusTab, kpiSummary, regionFilter, designations]);
-
-    const availablePositions = useMemo(() => {
-        if (statusTab === 'For Approval' || statusTab === 'Rejected') {
-            let data = kpiSummary.filter(item => item.status === statusTab);
-            if (regionFilter !== 'All') {
-                data = data.filter(item => getOfficialRegion(item) === regionFilter);
-            }
-            const pos = data.map(item => (item.position_title || '').replace(/^(OIC\s*-\s*|OIC\s+)/i, '').replace(/\s*\(?OIC\)?\s*$/i, '').trim()).filter(Boolean);
-            return [...new Set(pos)].sort((a, b) => a.localeCompare(b));
-        }
-        return tabPositions;
-    }, [statusTab, kpiSummary, regionFilter, tabPositions]);
+    }, [kpiSummary, regionFilter]);
 
     useEffect(() => {
         setOfficeFilter('All');
@@ -1525,8 +1198,8 @@ const OfficialsRegistry = () => {
                     }
                 },
                 showCancelButton: true,
-                confirmButtonColor: '#ef4444',
-                cancelButtonColor: '#08315F',
+                confirmButtonColor: 'var(--color-danger-600)',
+                cancelButtonColor: 'var(--color-brand-800)',
                 confirmButtonText: 'Confirm Disapprove'
             });
             if (!isConfirmed) return;
@@ -1537,8 +1210,8 @@ const OfficialsRegistry = () => {
                 text: 'Are you sure you want to approve this application? An approval notification email will be sent to the official.',
                 icon: 'question',
                 showCancelButton: true,
-                confirmButtonColor: '#08315F',
-                cancelButtonColor: '#ef4444',
+                confirmButtonColor: 'var(--color-brand-800)',
+                cancelButtonColor: 'var(--color-danger-600)',
                 confirmButtonText: 'Yes, Approve Application!'
             });
             if (!result.isConfirmed) return;
@@ -1546,7 +1219,7 @@ const OfficialsRegistry = () => {
 
         setProcessingId(app_TLOid);
         try {
-            const res = await fetch(apiUrl('/api/third-level/process-application'), {
+            const res = await fetch(apiUrl('/api/third-level/officials-registry/process-application'), {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -1571,1211 +1244,48 @@ const OfficialsRegistry = () => {
 
     return (
         <PageTransition>
-            <div className="flex h-screen bg-transparent font-sans overflow-hidden">
-                <AdminSidebar />
-                <div className="flex-1 flex flex-col min-w-0 h-screen overflow-y-auto relative bg-transparent">
+            <AdminLayout>
+                
+                <div className="flex-1 flex flex-col min-w-0 relative bg-transparent">
                     {/* TOP NAVIGATION BAR */}
-                    <header className="sticky top-0 z-50 bg-[#08315F] backdrop-blur-md border-b border-blue-900 px-4 sm:px-8 py-4 flex items-center justify-between shadow-lg shadow-blue-900/20 shrink-0 w-full">
-                        <div className="flex items-center gap-4 text-white">
-                            <div className="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center text-white shadow-inner">
-                                <FiUsers size={20} />
-                            </div>
-                            <div>
-                                <h1 className="text-lg font-['Plus_Jakarta_Sans'] font-black text-white tracking-tight leading-none italic uppercase">
-                                    Personnel <span className="text-blue-300 not-italic">Registry</span>
-                                </h1>
-                                <p className="text-[9px] font-bold text-blue-200 uppercase tracking-widest mt-1">
-                                    Official Leadership Management • TIMON (Third Level Incumbent and Management Operations Network)
-                                </p>
-                            </div>
-                        </div>
-
-                        <div className="flex items-center gap-6">
+                    <PageHeaderCard title={REGISTRY_HEADERS[statusTab]?.title ?? REGISTRY_HEADERS.default.title} subtitle={REGISTRY_HEADERS[statusTab]?.subtitle ?? REGISTRY_HEADERS.default.subtitle}>
+<div className="flex items-center gap-6">
                             <div className="hidden md:flex flex-col items-end">
-                                <span className="text-xs font-['Plus_Jakarta_Sans'] font-black text-white leading-none">
+                                <span className="text-[15px] font-medium text-heading leading-tight">
                                     {user?.first_name ? `${user.first_name} ${user.last_name || ''}` : 'System Admin'}
                                 </span>
-                                <span className="text-[9px] font-bold text-[#FBBF24] uppercase tracking-widest mt-1">
+                                <span className="text-[13px] text-secondary">
                                     {user?.role || 'Central Office'}
                                 </span>
                             </div>
                         </div>
-                    </header>
+</PageHeaderCard>
 
-                    <main className="flex-1 px-3 sm:px-6 lg:px-8 pb-8 pt-6 max-w-[1600px] mx-auto w-full dashboard-theme !bg-transparent">
-                        {/* UNIFIED DATA CONTROLS TAB */}
-                        <div className="bg-white border-2 border-[#08315F] rounded-[24px] p-3 shadow-sm mb-6 flex flex-col gap-2.5">
-                            {/* TOP ROW: FILTERS */}
-                            <div className="flex flex-col xl:flex-row items-stretch xl:items-center gap-2 w-full">
-                                {/* DROPDOWNS */}
-                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 xl:flex xl:flex-[4] gap-2">
-                                    {/* Level Dropdown */}
-                                    <div className="relative w-full xl:flex-1 h-[44px] bg-[#F0F9FF] border-2 border-[#BAE6FD] rounded-full focus-within:border-sky-400 transition-colors">
-                                        <select value={levelFilter} onChange={(e) => setLevelFilter(e.target.value)} title={levelFilter} className="w-full h-full bg-transparent pl-4 pr-7 text-[16.5px] font-bold text-[#08315F] outline-none appearance-none cursor-pointer text-ellipsis">
-                                            <option value="All">All CO / RO / SDO</option>
-                                            <option value="Central Office">Central Office</option>
-                                            <option value="Regional Office">Regional Office</option>
-                                            <option value="Schools Division Office">Schools Division Office</option>
-                                        </select>
-                                        <FiChevronRight className="absolute right-3 top-1/2 -translate-y-1/2 text-sky-500 pointer-events-none" size={16} />
-                                    </div>
+                    <main className="flex-1 px-8 pb-8 pt-6 w-full dashboard-theme !bg-transparent">
+                        {/* APPROVAL / REJECTED / APPLICATIONS TABS */}
+                        <ApprovalTabs navigate={navigate} officials={officials} statusTab={statusTab} />
 
-                                    {/* Region Dropdown */}
-                                    <div className="relative w-full xl:flex-1 h-[44px] bg-[#F0F9FF] border-2 border-[#BAE6FD] rounded-full focus-within:border-sky-400 transition-colors">
-                                        <select value={regionFilter} onChange={(e) => setRegionFilter(e.target.value)} title={regionFilter} className="w-full h-full bg-transparent pl-4 pr-7 text-[16.5px] font-bold text-[#08315F] outline-none appearance-none cursor-pointer text-ellipsis">
-                                            <option value="All">All Regions</option>
-                                            <option value="Central Office">Central Office</option>
-                                            <option value="Region I">Region I</option>
-                                            <option value="Region II">Region II</option>
-                                            <option value="Region III">Region III</option>
-                                            <option value="Region IV-A">Region IV-A</option>
-                                            <option value="Region IV-B">Region IV-B</option>
-                                            <option value="Region V">Region V</option>
-                                            <option value="Region VI">Region VI</option>
-                                            <option value="Region VII">Region VII</option>
-                                            <option value="Region VIII">Region VIII</option>
-                                            <option value="Region IX">Region IX</option>
-                                            <option value="Region X">Region X</option>
-                                            <option value="Region XI">Region XI</option>
-                                            <option value="Region XII">Region XII</option>
-                                            <option value="CARAGA">CARAGA</option>
-                                            <option value="NCR">NCR</option>
-                                            <option value="CAR">CAR</option>
-                                            <option value="NIR">NIR</option>
-                                            <option value="BARMM">BARMM</option>
-                                        </select>
-                                        <FiChevronRight className="absolute right-3 top-1/2 -translate-y-1/2 text-sky-500 pointer-events-none" size={16} />
-                                    </div>
+                        {statusTab === 'Applications' ? (
+                            <ApplicantSubmissionsTable token={token} isCentralOffice={isCentralOfficeView} />
+                        ) : (
+                            <>
+                                {/* UNIFIED DATA CONTROLS TAB */}
+                                <DataControls dependentOffices={dependentOffices} designationFilter={designationFilter} designations={designations} levelFilter={levelFilter} officeFilter={officeFilter} oicOnly={oicOnly} positionFilter={positionFilter} regionFilter={regionFilter} searchTerm={searchTerm} setActiveTab={setActiveTab} setDesignationFilter={setDesignationFilter} setLevelFilter={setLevelFilter} setOfficeFilter={setOfficeFilter} setOicOnly={setOicOnly} setPositionFilter={setPositionFilter} setRegionFilter={setRegionFilter} setSearchTerm={setSearchTerm} setStatusTab={setStatusTab} setStrandFilter={setStrandFilter} setTableFilters={setTableFilters} setViewMode={setViewMode} strandFilter={strandFilter} strands={strands} tabPositions={tabPositions} viewMode={viewMode} />
 
-                                    {/* Strand / Division Dropdown */}
-                                    {levelFilter === 'Central Office' || regionFilter === 'Central Office' ? (
-                                        <div className="relative w-full xl:flex-1 h-[44px] bg-[#F0F9FF] border-2 border-[#BAE6FD] rounded-full focus-within:border-sky-400 transition-colors">
-                                            <select value={strandFilter} onChange={(e) => setStrandFilter(e.target.value)} title={strandFilter === 'All' ? 'All Strands' : strandFilter} className="w-full h-full bg-transparent pl-4 pr-7 text-[16.5px] font-bold text-[#08315F] outline-none appearance-none cursor-pointer text-ellipsis">
-                                                <option value="All">All Strands</option>
-                                                {strands.map(s => (
-                                                    <option key={s} value={s}>{s}</option>
-                                                ))}
-                                            </select>
-                                            <FiChevronRight className="absolute right-3 top-1/2 -translate-y-1/2 text-sky-500 pointer-events-none" size={16} />
-                                        </div>
-                                    ) : (
-                                        <div className="relative w-full xl:flex-1 h-[44px] bg-[#F0F9FF] border-2 border-[#BAE6FD] rounded-full focus-within:border-sky-400 transition-colors">
-                                            <select value={officeFilter} onChange={(e) => setOfficeFilter(e.target.value)} title={officeFilter === 'All' ? 'All Divisions' : officeFilter} className="w-full h-full bg-transparent pl-4 pr-7 text-[16.5px] font-bold text-[#08315F] outline-none appearance-none cursor-pointer text-ellipsis">
-                                                <option value="All">All Divisions</option>
-                                                {dependentOffices.map(o => (
-                                                    <option key={o} value={o}>{o}</option>
-                                                ))}
-                                            </select>
-                                            <FiChevronRight className="absolute right-3 top-1/2 -translate-y-1/2 text-sky-500 pointer-events-none" size={16} />
-                                        </div>
-                                    )}
+                                {/* STATS CARDS */}
+                                <StatsCards activeTab={activeTab} kpiCounts={kpiCounts} setActiveTab={setActiveTab} setLevelFilter={setLevelFilter} setOfficeFilter={setOfficeFilter} setPositionFilter={setPositionFilter} setRegionFilter={setRegionFilter} setStatusTab={setStatusTab} setStrandFilter={setStrandFilter} statusTab={statusTab} />
 
-                                    {/* Designation Dropdown */}
-                                    <div className="relative w-full xl:flex-1 h-[44px] bg-[#F0F9FF] border-2 border-[#BAE6FD] rounded-full focus-within:border-sky-400 transition-colors">
-                                        <select value={designationFilter} onChange={(e) => setDesignationFilter(e.target.value)} title={designationFilter === 'All' ? 'All Designations' : expandAcronym(designationFilter)} className="w-full h-full bg-transparent pl-4 pr-7 text-[16.5px] font-bold text-[#08315F] outline-none appearance-none cursor-pointer text-ellipsis">
-                                            <option value="All">All Designations</option>
-                                            {availableDesignations.map(d => (
-                                                <option key={d} value={d}>{expandAcronym(d)}</option>
-                                            ))}
-                                        </select>
-                                        <FiChevronRight className="absolute right-3 top-1/2 -translate-y-1/2 text-sky-500 pointer-events-none" size={16} />
-                                    </div>
-
-                                    {/* Position Dropdown */}
-                                    <div className="relative w-full xl:flex-1 h-[44px] bg-[#F0F9FF] border-2 border-[#BAE6FD] rounded-full focus-within:border-sky-400 transition-colors">
-                                        <select value={positionFilter} onChange={(e) => setPositionFilter(e.target.value)} title={positionFilter} className="w-full h-full bg-transparent pl-4 pr-7 text-[16.5px] font-bold text-[#08315F] outline-none appearance-none cursor-pointer text-ellipsis">
-                                            <option value="All">All Positions</option>
-                                            {availablePositions.map(p => (
-                                                <option key={p} value={p}>{p}</option>
-                                            ))}
-                                        </select>
-                                        <FiChevronRight className="absolute right-3 top-1/2 -translate-y-1/2 text-sky-500 pointer-events-none" size={16} />
-                                    </div>
-                                </div>
-
-                                {/* BUTTONS */}
-                                <div className="flex items-center gap-2 w-full xl:w-auto">
-                                    {/* OIC Toggle */}
-                                    <button
-                                        onClick={() => setOicOnly(!oicOnly)}
-                                        className={`h-[44px] px-4 flex-1 xl:flex-none rounded-full transition-colors flex items-center justify-center gap-2 whitespace-nowrap shrink-0 border-2 ${oicOnly ? 'bg-[#08315F] border-[#08315F]' : 'bg-[#F0F9FF] border-[#BAE6FD] hover:bg-sky-100'}`}
-                                        title="Toggle OIC only"
-                                    >
-                                        <span className={`text-[15px] font-black uppercase tracking-widest ${oicOnly ? 'text-white' : 'text-[#08315F]'}`}>OIC ONLY</span>
-                                        <div className={`w-8 h-4 rounded-full relative transition-colors shrink-0 ${oicOnly ? 'bg-amber-400' : 'bg-slate-300'}`}>
-                                            <div className={`absolute top-[2px] left-[2px] w-3 h-3 rounded-full bg-white shadow-sm transition-transform duration-300 ${oicOnly ? 'translate-x-[16px]' : 'translate-x-0'}`} />
-                                        </div>
-                                    </button>
-
-                                    {/* Reset Filters */}
-                                    <button
-                                        onClick={() => {
-                                            setSearchTerm('');
-                                            setTableFilters({});
-                                            setStatusTab('All');
-                                            setActiveTab('All');
-                                            setLevelFilter('All');
-                                            setRegionFilter('All');
-                                            setStrandFilter('All');
-                                            setOfficeFilter('All');
-                                            setPositionFilter('All');
-                                            setDesignationFilter('All');
-                                            setOicOnly(false);
-                                        }}
-                                        className="h-[44px] px-5 flex-1 xl:flex-none bg-transparent text-rose-500 rounded-full border-2 border-rose-200 font-black text-[15px] tracking-widest uppercase hover:bg-rose-50 hover:text-rose-600 transition-colors flex items-center justify-center whitespace-nowrap shrink-0"
-                                        title="Reset all filters"
-                                    >
-                                        Reset
-                                    </button>
-                                </div>
-                            </div>
-
-                            {/* BOTTOM ROW: SEARCH BAR & VIEW TOGGLES */}
-                            <div className="flex items-center gap-2 w-full">
-                                <div className="relative flex-1 h-[44px]">
-                                    <FiSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-[#08315F]/50" size={16} />
-                                    <input
-                                        type="text"
-                                        value={searchTerm}
-                                        onChange={(e) => setSearchTerm(e.target.value)}
-                                        placeholder="Search by name, position, or office..."
-                                        className="w-full h-full bg-[#F0F9FF] border-2 border-[#BAE6FD] rounded-full py-0 pl-11 pr-4 text-[16.5px] font-bold text-[#08315F] outline-none focus:border-sky-400 placeholder:text-[#08315F]/50 transition-colors"
-                                    />
-                                </div>
-                                {/* VIEW TOGGLES */}
-                                <div className="flex items-center gap-2 shrink-0 px-1">
-                                    <button
-                                        onClick={() => setViewMode('table')}
-                                        className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all ${viewMode === 'table' ? 'bg-[#08315F] text-white border-b-[3px] border-[#FBBF24] shadow-sm transform -translate-y-[1px]' : 'bg-[#E0F2FE] text-[#08315F] hover:bg-[#BAE6FD]'}`}
-                                        title="Table view"
-                                    >
-                                        <FiList size={16} />
-                                    </button>
-                                    <button
-                                        onClick={() => setViewMode('grid')}
-                                        className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all ${viewMode === 'grid' ? 'bg-[#08315F] text-white border-b-[3px] border-[#FBBF24] shadow-sm transform -translate-y-[1px]' : 'bg-[#E0F2FE] text-[#08315F] hover:bg-[#BAE6FD]'}`}
-                                        title="Grid view"
-                                    >
-                                        <FiGrid size={16} />
-                                    </button>
-                                    <button
-                                        onClick={() => setViewMode('directory')}
-                                        className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all ${viewMode === 'directory' ? 'bg-[#08315F] text-white border-b-[3px] border-[#FBBF24] shadow-sm transform -translate-y-[1px]' : 'bg-[#E0F2FE] text-[#08315F] hover:bg-[#BAE6FD]'}`}
-                                        title="Organizational Directory"
-                                    >
-                                        <FiLayers size={16} />
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* APPROVAL / REJECTED TABS */}
-                        {(statusTab === 'For Approval' || statusTab === 'Rejected') && (
-                            <div className="flex items-center gap-4 mb-6">
-                                <button
-                                    onClick={() => navigate('/officials-registry?status=For%20Approval')}
-                                    className={`px-6 py-3 rounded-xl font-black uppercase tracking-widest text-[18px] transition-all border-2 ${statusTab === 'For Approval' ? 'bg-[#08315F] text-white border-[#08315F] shadow-md' : 'bg-white text-slate-400 border-slate-200 hover:bg-slate-50'}`}
-                                >
-                                    Pending Approvals
-                                </button>
-                                <button
-                                    onClick={() => navigate('/officials-registry?status=Rejected')}
-                                    className={`px-6 py-3 rounded-xl font-black uppercase tracking-widest text-[18px] transition-all border-2 ${statusTab === 'Rejected' ? 'bg-rose-600 text-white border-rose-600 shadow-md' : 'bg-white text-slate-400 border-slate-200 hover:bg-slate-50'}`}
-                                >
-                                    Rejected
-                                </button>
-                            </div>
+                                {/* MAIN CONTENT AREA */}
+                                <ContentArea StatusBadge={StatusBadge} currentPage={currentPage} directoryGroups={directoryGroups} getOfficialRegion={getOfficialRegion} handleOpenReassignModal={handleOpenReassignModal} handlePositionClick={handlePositionClick} handleRegistrationAction={handleRegistrationAction} handleSort={handleSort} handleToggleTestAccount={handleToggleTestAccount} loading={loading} navigate={navigate} officials={officials} openActionModal={openActionModal} pageButtons={pageButtons} pageCount={pageCount} pageSize={pageSize} pagedRecords={pagedRecords} setCurrentPage={setCurrentPage} setTableFilters={setTableFilters} sortConfig={sortConfig} tableColumns={tableColumns} tableFilterOptions={tableFilterOptions} tableFilters={tableFilters} totalRecords={totalRecords} user={user} viewMode={viewMode} />
+                            </>
                         )}
-
-                        {/* STATS CARDS */}
-                        {statusTab !== 'For Approval' && statusTab !== 'Rejected' && (
-                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8 w-full">
-                                {/* Card 1: Total Third Level Officials */}
-                                <div
-                                    onClick={() => {
-                                        setActiveTab(prev => prev === 'Third Level Officials' ? 'All' : 'Third Level Officials');
-                                        setStatusTab('Active');
-                                        setPositionFilter('All');
-                                        setStrandFilter('All');
-                                        setOfficeFilter('All');
-                                        setLevelFilter('All');
-                                        setRegionFilter('All');
-                                    }}
-                                    className={`min-h-[100px] p-5 bg-white rounded-[16px] border-2 border-[#BAE6FD] border-l-[6px] overflow-hidden cursor-pointer transition-all flex flex-col justify-between ${activeTab === 'Third Level Officials' && statusTab !== 'Vacant' ? 'border-l-sky-400 shadow-md ring-1 ring-sky-200' : 'border-l-sky-300 hover:shadow-sm'}`}
-                                >
-                                    <div className="text-[15px] text-slate-500 uppercase tracking-widest font-bold mb-3">Total Third Level Officials</div>
-                                    <div className="text-[48px] text-[#08315F] font-normal leading-none mb-3">{kpiCounts.totalThirdLevel}</div>
-                                    <div className="text-[13.5px] text-slate-400 uppercase tracking-widest font-bold leading-none">Sum of active in view</div>
-                                </div>
-
-                                {/* Card 2: Total Vacant Positions */}
-                                <div
-                                    onClick={() => {
-                                        setStatusTab(prev => prev === 'Vacant' ? 'Active' : 'Vacant');
-                                        setActiveTab('All');
-                                        setPositionFilter('All');
-                                        setStrandFilter('All');
-                                        setOfficeFilter('All');
-                                        setLevelFilter('All');
-                                        setRegionFilter('All');
-                                    }}
-                                    className={`min-h-[100px] p-5 bg-white rounded-[16px] border-2 border-[#BAE6FD] border-l-[6px] overflow-hidden cursor-pointer transition-all flex flex-col justify-between ${statusTab === 'Vacant' ? 'border-l-rose-500 shadow-md ring-1 ring-rose-200' : 'border-l-rose-400 hover:shadow-sm'}`}
-                                >
-                                    <div className="text-[15px] text-slate-500 uppercase tracking-widest font-bold mb-3">Total Vacant Positions</div>
-                                    <div className="text-[48px] text-[#08315F] font-normal leading-none mb-3">{kpiCounts.totalVacant}</div>
-                                    <div className="text-[13.5px] text-slate-400 uppercase tracking-widest font-bold leading-none">Sum of vacant in view</div>
-                                </div>
-
-                                {/* Card 3: Total Officers-in-Charge */}
-                                <div
-                                    onClick={() => {
-                                        setActiveTab(prev => prev === 'Officer in Charge' ? 'All' : 'Officer in Charge');
-                                        setStatusTab('Active');
-                                        setPositionFilter('All');
-                                        setStrandFilter('All');
-                                        setOfficeFilter('All');
-                                        setLevelFilter('All');
-                                        setRegionFilter('All');
-                                    }}
-                                    className={`min-h-[100px] p-5 bg-white rounded-[16px] border-2 border-[#BAE6FD] border-l-[6px] overflow-hidden cursor-pointer transition-all flex flex-col justify-between ${activeTab === 'Officer in Charge' && statusTab !== 'Vacant' ? 'border-l-amber-500 shadow-md ring-1 ring-amber-200' : 'border-l-amber-400 hover:shadow-sm'}`}
-                                >
-                                    <div className="text-[15px] text-slate-500 uppercase tracking-widest font-bold mb-3">Total Officers-in-Charge</div>
-                                    <div className="text-[48px] text-[#08315F] font-normal leading-none mb-3">{kpiCounts.totalOic}</div>
-                                    <div className="text-[13.5px] text-slate-400 uppercase tracking-widest font-bold leading-none">Sum of active in view</div>
-                                </div>
-
-                                {/* Card 4: Total Concurrent Position Holders */}
-                                <div
-                                    onClick={() => {
-                                        setActiveTab(prev => prev === 'Concurrent Positions' ? 'All' : 'Concurrent Positions');
-                                        setStatusTab('Active');
-                                        setPositionFilter('All');
-                                        setStrandFilter('All');
-                                        setOfficeFilter('All');
-                                        setLevelFilter('All');
-                                        setRegionFilter('All');
-                                    }}
-                                    className={`min-h-[100px] p-5 bg-white rounded-[16px] border-2 border-[#BAE6FD] border-l-[6px] overflow-hidden cursor-pointer transition-all flex flex-col justify-between ${activeTab === 'Concurrent Positions' && statusTab !== 'Vacant' ? 'border-l-indigo-500 shadow-md ring-1 ring-indigo-200' : 'border-l-indigo-400 hover:shadow-sm'}`}
-                                >
-                                    <div className="text-[15px] text-slate-500 uppercase tracking-widest font-bold mb-3">Total Concurrent Position Holders</div>
-                                    <div className="text-[48px] text-[#08315F] font-normal leading-none mb-3">{kpiCounts.totalConcurrent}</div>
-                                    <div className="text-[13.5px] text-slate-400 uppercase tracking-widest font-bold leading-none">Sum of active in view</div>
-                                </div>
-                            </div>
-                        )}
-
-                        {/* MAIN CONTENT AREA */}
-
-                        <AnimatePresence mode="wait">
-                            {loading ? (
-                                <div className="h-96 flex items-center justify-center">
-                                    <div className="w-12 h-12 border-4 border-[var(--navy)]/10 border-t-[var(--navy)] rounded-full animate-spin"></div>
-                                </div>
-                            ) : viewMode === 'table' ? (
-                                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="card !rounded-[30px] !border-2 !border-[#08315F] overflow-hidden">
-                                    <div className={`w-full ${isForApproval ? 'overflow-hidden' : 'overflow-x-auto scrollbar-thin scrollbar-thumb-slate-300 scrollbar-track-slate-100'}`}>
-                                        <table className={`hidden md:table w-full ${isForApproval ? '' : 'min-w-[1190px]'} text-left border-collapse table-fixed`}>
-                                            <thead>
-                                                <tr className="bg-white border-b-2 border-slate-200">
-                                                    {tableColumns.map((column, index) => (
-                                                        <th key={column.key} className={`${isForApproval ? 'px-2 py-3' : 'px-2.5 py-3.5'} text-left align-top relative ${column.width || ''}`}>
-                                                            <div className={`flex flex-col gap-2 mt-0.5 ${column.key === 'is_oic' ? 'pr-0.5' : 'pr-1'}`}>
-                                                                <button
-                                                                    onClick={() => handleSort(column.key)}
-                                                                    className={`flex items-center justify-between h-5 ${isForApproval ? 'text-[11.5px]' : 'text-[12.5px]'} font-black text-slate-400 uppercase tracking-wider hover:text-slate-600 transition-colors w-full text-left group`}
-                                                                >
-                                                                    <span className="truncate">{column.label}</span>
-                                                                    <span className={`text-sm leading-none flex items-center w-3 justify-end shrink-0 transition-colors ${sortConfig.key === column.key ? 'text-[#08315F]' : 'text-slate-200 group-hover:text-slate-400'}`}>
-                                                                        {sortConfig.key === column.key
-                                                                            ? (sortConfig.direction === 'asc' ? '↑' : '↓')
-                                                                            : '↓'}
-                                                                    </span>
-                                                                </button>
-                                                                <select
-                                                                    value={tableFilters[column.key] || ''}
-                                                                    onChange={(e) => setTableFilters(current => ({ ...current, [column.key]: e.target.value }))}
-                                                                    className={`w-full bg-white border-2 border-sky-200 rounded-lg ${isForApproval ? 'h-[30px] px-1 text-[12px]' : 'h-[34px] px-2 text-[13.5px]'} font-bold text-[#08315F] outline-none focus:border-sky-400 transition-colors text-ellipsis ${column.key === 'is_oic' ? 'text-center' : ''}`}
-                                                                >
-                                                                    <option value="">All</option>
-                                                                    {(tableFilterOptions[column.key] || []).map(option => (
-                                                                        <option key={option} value={option}>{option}</option>
-                                                                    ))}
-                                                                </select>
-                                                            </div>
-                                                        </th>
-                                                    ))}
-
-                                                </tr>
-                                            </thead>
-                                            <tbody className="divide-y-2 divide-slate-200/60 bg-white">
-                                                {pagedRecords.length === 0 ? (
-                                                    <tr>
-                                                        <td colSpan={tableColumns.length} className="p-20 text-center">
-                                                            <div className="w-20 h-20 bg-slate-50 text-slate-300 rounded-full flex items-center justify-center mx-auto mb-6"><FiSearch size={40} /></div>
-                                                            <h3 className="text-xl font-[var(--font-heading)] font-black text-[var(--navy)] uppercase italic tracking-tight">No Records Found</h3>
-                                                            <p className="text-slate-400 font-medium mt-2">Adjust your filters or try a different search term.</p>
-                                                        </td>
-                                                    </tr>
-                                                ) : (
-                                                    pagedRecords.map((item) => (
-                                                    <React.Fragment key={item.TLOid}>
-                                                    <tr className="group transition-colors relative hover:bg-slate-50/80">
-                                                        <td className="px-2.5 py-3.5 align-middle">
-                                                            <div className="font-black text-[#08315F] text-[14.5px] uppercase tracking-tight truncate" title={item.status === 'Inactive' ? 'N/A' : (item.region || 'N/A')}>
-                                                                <span>{item.status === 'Inactive' ? 'N/A' : (item.region || 'N/A')}</span>
-                                                            </div>
-                                                        </td>
-                                                        <td className="px-2.5 py-3.5 align-middle">
-                                                            <div className="text-[14.5px] font-bold text-slate-700 uppercase tracking-wider truncate" title={item.status === 'Inactive' ? 'N/A' : ((item.region || getOfficialRegion(item)) === 'Central Office' ? (item.strand || item.division || 'N/A') : (item.division || 'N/A'))}>
-                                                                {item.status === 'Inactive' ? 'N/A' : ((item.region || getOfficialRegion(item)) === 'Central Office' ? (item.strand || item.division || 'N/A') : (item.division || 'N/A'))}
-                                                            </div>
-                                                        </td>
-                                                        <td className="px-2.5 py-3.5 align-middle">
-                                                            <div className="flex items-center gap-3">
-                                                                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-50 to-indigo-50 flex items-center justify-center text-blue-400 font-black text-sm border-2 border-white shadow-sm overflow-hidden shrink-0">
-                                                                    {item.photo_binary_id ? (
-                                                                        <img src={apiUrl(`/api/binary/${item.photo_binary_id}`)} alt="" className="w-full h-full object-cover" />
-                                                                    ) : <FiUser size={18} />}
-                                                                </div>
-                                                                <div className="min-w-0">
-                                                                    <div className="flex items-center gap-2 flex-wrap">
-                                                                        <div
-                                                                            onClick={() => item.email && navigate(`/official-profiling?email=${encodeURIComponent(item.email)}&tloid=${encodeURIComponent(item.TLOid)}`)}
-                                                                            className={`font-['Plus_Jakarta_Sans'] font-black text-[#08315F] ${isForApproval ? 'text-[16px] xl:text-[18px]' : 'text-[18px] sm:text-[19px]'} leading-tight transition-colors truncate ${item.email ? 'cursor-pointer hover:text-blue-600 hover:underline' : ''}`}
-                                                                            title={item.email ? "View Official Profile" : ""}
-                                                                        >
-                                                                            {(!item.first_name || item.first_name === 'VACANT') ? <span className="text-rose-500 italic tracking-widest text-[14px]">VACANT POSITION</span> : `${item.first_name} ${item.last_name || ''}`}
-                                                                        </div>
-                                                                        {item.is_testaccount && (
-                                                                            <span title="Test Account" className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-purple-100/90 border-2 border-purple-300 text-purple-700 text-[12px] font-black uppercase tracking-wider shrink-0 shadow-sm">
-                                                                                <FaVial size={11} className="text-purple-600 shrink-0" />
-                                                                                <span>TEST ACCOUNT</span>
-                                                                            </span>
-                                                                        )}
-                                                                    </div>
-                                                                    <div className="text-[12.5px] font-bold text-slate-400 uppercase tracking-widest mt-0.5 flex items-center gap-1.5 truncate">
-                                                                        <FiArrowRight className="text-[#075985] shrink-0" size={10} />
-                                                                        <span className="truncate">{item.email}</span>
-                                                                        {item.plantilla_item_no && (
-                                                                            <>
-                                                                                <span className="mx-0.5">•</span>
-                                                                                <span className="text-[#075985] font-black tracking-normal" title="Plantilla Item No.">{item.plantilla_item_no}</span>
-                                                                            </>
-                                                                        )}
-                                                                        {item.status !== 'Inactive' && item.effectivity_date && (
-                                                                            <>
-                                                                                <span className="mx-0.5">•</span>
-                                                                                <FiCalendar className="text-slate-300 shrink-0" size={10} />
-                                                                                {(() => {
-                                                                                    const effDate = new Date(item.effectivity_date);
-                                                                                    if (isNaN(effDate.getTime())) return <span className="text-slate-400">Invalid</span>;
-
-                                                                                    const today = new Date();
-                                                                                    effDate.setHours(0, 0, 0, 0);
-                                                                                    today.setHours(0, 0, 0, 0);
-
-                                                                                    const diffTime = today.getTime() - effDate.getTime();
-                                                                                    const days = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-
-                                                                                    if (item.status === 'Resigning' || item.status === 'Vacated') {
-                                                                                        return <span className="text-rose-500">Vacated {days >= 0 ? `${days}d ago` : `in ${Math.abs(days)}d`}</span>;
-                                                                                    }
-                                                                                    return <span className={days >= 0 ? 'text-emerald-600' : 'text-blue-500'}>
-                                                                                        {days >= 0 ? `${days}d in Pos` : `Starts in ${Math.abs(days)}d`}
-                                                                                    </span>;
-                                                                                })()}
-                                                                            </>
-                                                                        )}
-                                                                    </div>
-                                                                </div>
-                                                            </div>
-                                                        </td>
-                                                        <td className="px-2.5 py-3.5 align-middle">
-                                                            {(!item.first_name || item.first_name === 'VACANT' || item.status === 'Vacated' || item.profile_completion == null) ? (
-                                                                <span className="text-slate-300 font-bold text-[16px]">—</span>
-                                                            ) : (() => {
-                                                                const pct = Math.min(100, Math.max(0, Math.round(item.profile_completion)));
-                                                                const colorClass = pct >= 100 ? 'text-emerald-600' : pct >= 70 ? 'text-[#08315F]' : 'text-amber-600';
-                                                                const barClass = pct >= 100 ? 'bg-emerald-500' : pct >= 70 ? 'bg-[#08315F]' : 'bg-amber-500';
-                                                                return (
-                                                                    <div className="flex flex-col gap-1.5 w-full pr-2" title={`${pct}% Completed`}>
-                                                                        <div className="flex items-center justify-between">
-                                                                            <span className={`text-[15px] font-bold ${colorClass} leading-none`}>
-                                                                                {pct}%
-                                                                            </span>
-                                                                            {pct >= 100 && (
-                                                                                <span className="text-[10px] font-black uppercase tracking-wider text-emerald-700 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded-full leading-none">
-                                                                                    Complete
-                                                                                </span>
-                                                                            )}
-                                                                        </div>
-                                                                        <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden border border-slate-200">
-                                                                            <div
-                                                                                className={`h-full ${barClass} rounded-full transition-all duration-300`}
-                                                                                style={{ width: `${pct}%` }}
-                                                                            />
-                                                                        </div>
-                                                                    </div>
-                                                                );
-                                                            })()}
-                                                        </td>
-                                                        <td className="px-2 py-3.5 align-middle">
-                                                            <div
-                                                                onClick={() => handlePositionClick(item)}
-                                                                title={item.status === 'Inactive' ? 'N/A' : ((item.position_title || '').replace(/^(OIC\s*-\s*|OIC\s+)/i, '').replace(/\s*\(?OIC\)?\s*$/i, '').trim() || 'Unassigned')}
-                                                                className="flex w-fit max-w-full items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-50/80 border-2 border-amber-300 text-amber-600 text-[12.5px] font-black uppercase tracking-wider shadow-xs cursor-pointer hover:bg-amber-100 hover:border-amber-400 transition-colors"
-                                                            >
-                                                                <span className="truncate">{item.status === 'Inactive' ? 'N/A' : ((item.position_title || '').replace(/^(OIC\s*-\s*|OIC\s+)/i, '').replace(/\s*\(?OIC\)?\s*$/i, '').trim() || 'Unassigned')}</span>
-                                                            </div>
-                                                        </td>
-                                                        <td className="px-2 py-3.5 align-middle">
-                                                            <div
-                                                                onClick={() => handlePositionClick(item)}
-                                                                title={item.status === 'Inactive' ? 'N/A' : ((expandAcronym(item.designation) || '').replace(/^(OIC\s*-\s*|OIC\s+)/i, '').replace(/\s*\(?OIC\)?\s*$/i, '').trim() || 'No Designation')}
-                                                                className="text-[13.5px] font-black text-[#08315F] uppercase tracking-wider truncate cursor-pointer hover:text-blue-600 hover:underline transition-colors w-full"
-                                                            >
-                                                                {item.status === 'Inactive' ? 'N/A' : ((expandAcronym(item.designation) || '').replace(/^(OIC\s*-\s*|OIC\s+)/i, '').replace(/\s*\(?OIC\)?\s*$/i, '').trim() || 'No Designation')}
-                                                            </div>
-                                                        </td>
-                                                        <td className="px-1.5 py-3.5 align-middle text-center">
-                                                            <div className="flex justify-center items-center">
-                                                                {(item.is_oic || (item.designation && item.designation.toUpperCase().includes('OIC'))) ? (
-                                                                    <span className="px-2 py-0.5 rounded-full bg-[#FCD116]/20 border-2 border-[#FCD116] text-[#0038A8] text-[12px] font-black uppercase tracking-wider shadow-xs">Yes</span>
-                                                                ) : (
-                                                                    <span className="px-2 py-0.5 rounded-full bg-slate-100 border-2 border-slate-200 text-slate-400 text-[12px] font-black uppercase tracking-wider shadow-xs">No</span>
-                                                                )}
-                                                            </div>
-                                                        </td>
-                                                        <td className="px-2.5 py-3.5 align-middle static md:relative">
-                                                            <StatusBadge status={item.status} rejectionReason={item.rejection_reason} onShowReason={() => handleViewRejectionReason(item)} />
-
-                                                            <div className="absolute right-4 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1.5 z-10 bg-white/90 backdrop-blur-md p-1.5 rounded-xl shadow-sm border-2 border-slate-200 pointer-events-none group-hover:pointer-events-auto">
-                                                                {item.status === 'For Approval' && user?.role === 'Central Office' && (
-                                                                    <>
-                                                                        {item.potential_matches && item.potential_matches.length > 0 ? (
-                                                                            <button onClick={(e) => { e.stopPropagation(); handleOpenReconcileModal(item); }} title="Reconcile with Discovered Canonical Match" className="flex items-center justify-center gap-1.5 px-3 py-1.5 bg-amber-50 text-amber-700 rounded-lg text-[13.5px] font-black uppercase tracking-widest hover:bg-amber-500 hover:text-white transition-all border-2 border-amber-200 shadow-sm shrink-0">
-                                                                                <FiLink size={14} />
-                                                                                <span>Match ({item.potential_matches.length})</span>
-                                                                            </button>
-                                                                        ) : (
-                                                                            <button onClick={(e) => { e.stopPropagation(); handleRegistrationAction(item.TLOid, 'approve'); }} title="Approve" className="flex items-center justify-center gap-1 px-2 py-1.5 bg-emerald-50 text-emerald-600 rounded-lg text-[15px] font-black uppercase tracking-widest hover:bg-emerald-500 hover:text-white transition-all border-2 border-emerald-100 shadow-sm shrink-0">
-                                                                                <FiCheckCircle size={14} />
-                                                                            </button>
-                                                                        )}
-                                                                        <button onClick={(e) => { e.stopPropagation(); handleRegistrationAction(item.TLOid, 'reject'); }} title="Reject" className="flex items-center justify-center gap-1 px-2 py-1.5 bg-rose-50 text-rose-600 rounded-lg text-[15px] font-black uppercase tracking-widest hover:bg-rose-500 hover:text-white transition-all border-2 border-rose-100 shadow-sm shrink-0">
-                                                                            <FiX size={14} />
-                                                                        </button>
-                                                                    </>
-                                                                )}
-                                                                {item.status === 'Rejected' && (
-                                                                    <>
-                                                                        <button onClick={(e) => { e.stopPropagation(); handleViewRejectionReason(item); }} title="View Rejection Reason" className="flex items-center justify-center gap-1 px-2 py-1.5 bg-rose-50 text-rose-600 rounded-lg text-[15px] font-black uppercase tracking-widest hover:bg-rose-500 hover:text-white transition-all border-2 border-rose-100 shadow-sm shrink-0">
-                                                                            <FiEye size={14} />
-                                                                        </button>
-                                                                        {user?.role === 'Central Office' && (
-                                                                            <button onClick={(e) => { e.stopPropagation(); handleRegistrationAction(item.TLOid, 'retrieve'); }} title="Retrieve" className="flex items-center justify-center gap-1 px-2 py-1.5 bg-sky-50 text-sky-600 rounded-lg text-[15px] font-black uppercase tracking-widest hover:bg-sky-500 hover:text-white transition-all border-2 border-sky-100 shadow-sm shrink-0">
-                                                                                <FiRefreshCw size={14} />
-                                                                            </button>
-                                                                        )}
-                                                                    </>
-                                                                )}
-                                                                {item.status !== 'Inactive' && item.status !== 'For Approval' && item.status !== 'Rejected' && user?.role === 'Central Office' && (
-                                                                    <button onClick={() => handleOpenReassignModal(item)} title="Reassign" className="flex items-center justify-center gap-1 px-2 py-1.5 bg-amber-50 text-amber-600 rounded-lg text-[15px] font-black uppercase tracking-widest hover:bg-amber-500 hover:text-white transition-all border-2 border-amber-100 shadow-sm shrink-0">
-                                                                        <FiLayers size={14} />
-                                                                    </button>
-                                                                )}
-                                                                {item.first_name && item.status !== 'Reassigning' && item.status !== 'Pending Assignment' && item.status !== 'For Approval' && item.status !== 'Rejected' && user?.role === 'Central Office' && (
-                                                                    <button onClick={() => openActionModal(item, 'vacate')} title="Vacate" className="flex items-center justify-center gap-1 px-2 py-1.5 bg-rose-50 text-rose-600 rounded-lg text-[15px] font-black uppercase tracking-widest hover:bg-rose-500 hover:text-white transition-all border-2 border-rose-100 shadow-sm shrink-0">
-                                                                        <FiTrash2 size={14} />
-                                                                    </button>
-                                                                )}
-                                                            </div>
-                                                        </td>
-                                                    </tr>
-                                                </React.Fragment>
-                                                )))}
-                                            </tbody>
-                                        </table>
-
-                                        {/* MOBILE CARD VIEW */}
-                                        <div className="md:hidden flex flex-col divide-y-2 divide-slate-100">
-                                            {pagedRecords.length === 0 ? (
-                                                <div className="p-12 text-center">
-                                                    <div className="w-16 h-16 bg-slate-50 text-slate-300 rounded-full flex items-center justify-center mx-auto mb-4"><FiSearch size={32} /></div>
-                                                    <h3 className="text-lg font-[var(--font-heading)] font-black text-[var(--navy)] uppercase italic tracking-tight">No Records Found</h3>
-                                                    <p className="text-slate-400 font-medium mt-2 text-sm">Adjust your filters or try a different search term.</p>
-                                                </div>
-                                            ) : (
-                                                pagedRecords.map((item) => (
-                                                <div key={item.TLOid} className="p-4 bg-white hover:bg-slate-50/50 transition-colors flex flex-col gap-3">
-                                                    <div className="flex items-start justify-between gap-2">
-                                                        <div className="flex items-center gap-3 min-w-0">
-                                                            <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-50 to-indigo-50 flex items-center justify-center text-blue-400 font-black text-sm border-2 border-white shadow-sm overflow-hidden shrink-0">
-                                                                {item.photo_binary_id ? (
-                                                                    <img src={apiUrl(`/api/binary/${item.photo_binary_id}`)} alt="" className="w-full h-full object-cover" />
-                                                                ) : <FiUser size={18} />}
-                                                            </div>
-                                                            <div className="min-w-0">
-                                                                <div className="flex items-center gap-1.5">
-                                                                    <div onClick={() => item.email && navigate(`/official-profiling?email=${encodeURIComponent(item.email)}&tloid=${encodeURIComponent(item.TLOid)}`)} className="font-['Plus_Jakarta_Sans'] font-black text-[#08315F] text-[21px] leading-none transition-colors truncate">
-                                                                        {item.first_name ? `${item.first_name} ${item.last_name || ''}` : <span className="text-rose-500 italic tracking-widest text-[15px]">VACANT POSITION</span>}
-                                                                    </div>
-                                                                    {item.is_testaccount && (
-                                                                        <span title="Test Account" className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-purple-100/90 border-2 border-purple-300 text-purple-700 text-[12px] font-black uppercase tracking-wider shrink-0 shadow-sm">
-                                                                            <FaVial size={10} className="text-purple-600 shrink-0" />
-                                                                            <span>TEST</span>
-                                                                        </span>
-                                                                    )}
-                                                                </div>
-                                                                <div className="text-[15px] font-bold text-slate-400 mt-1 truncate">{item.email || 'No Email'}</div>
-                                                            </div>
-                                                        </div>
-                                                        <div className="shrink-0"><StatusBadge status={item.status} rejectionReason={item.rejection_reason} onShowReason={() => handleViewRejectionReason(item)} /></div>
-                                                    </div>
-
-                                                    <div className="flex flex-col gap-2 mt-1 bg-slate-50/50 rounded-xl p-3 border-2 border-slate-200">
-                                                        <div className="flex justify-between items-center text-[15px] gap-2">
-                                                            <span className="font-black text-slate-400 uppercase tracking-widest shrink-0">{((item.region || getOfficialRegion(item)) === 'Central Office') ? 'Strand' : 'Office'}</span>
-                                                            <span className="font-black text-[#08315F] text-right truncate max-w-[65%]">
-                                                                {(item.region) ? `${item.region} • ` : 'N/A • '}{((item.region || getOfficialRegion(item)) === 'Central Office' ? item.strand : item.division) || 'N/A'}
-                                                            </span>
-                                                        </div>
-                                                        <div className="flex justify-between items-center text-[15px] gap-2">
-                                                            <span className="font-black text-slate-400 uppercase tracking-widest shrink-0">Position</span>
-                                                            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-amber-50/80 border-2 border-amber-300 text-amber-600 font-black uppercase tracking-widest shrink-0 max-w-[65%] truncate">
-                                                                <span className="truncate">{item.status === 'Inactive' ? 'N/A' : (item.position_title || 'Unassigned')}</span>
-                                                            </span>
-                                                        </div>
-                                                        <div className="flex justify-between items-center text-[15px] gap-2">
-                                                            <span className="font-black text-slate-400 uppercase tracking-widest shrink-0">Designation</span>
-                                                            <span className="font-black text-[#08315F] text-right truncate max-w-[65%]">{expandAcronym(item.designation) || 'No Designation'}</span>
-                                                        </div>
-                                                        {item.plantilla_item_no && (
-                                                            <div className="flex justify-between items-center text-[15px] gap-2">
-                                                                <span className="font-black text-slate-400 uppercase tracking-widest shrink-0">Plantilla</span>
-                                                                <span className="font-black text-[#075985] text-right font-mono text-xs truncate max-w-[65%]">{item.plantilla_item_no}</span>
-                                                            </div>
-                                                        )}
-                                                        {(!item.first_name || item.first_name === 'VACANT' || item.status === 'Vacated' || item.profile_completion == null) ? null : (() => {
-                                                            const pct = Math.min(100, Math.max(0, Math.round(item.profile_completion)));
-                                                            return (
-                                                                <div className="flex justify-between items-center text-[15px] gap-2 pt-1.5 border-t border-slate-200/60">
-                                                                    <span className="font-black text-slate-400 uppercase tracking-widest shrink-0">Profile Completion</span>
-                                                                    <div className="flex items-center gap-2 max-w-[55%] w-full justify-end">
-                                                                        <div className="w-20 h-2 bg-slate-200 rounded-full overflow-hidden shrink-0 border border-slate-300/40">
-                                                                            <div
-                                                                                className={`h-full rounded-full transition-all duration-300 ${
-                                                                                    pct >= 100
-                                                                                        ? 'bg-emerald-500'
-                                                                                        : pct >= 70
-                                                                                            ? 'bg-[#08315F]'
-                                                                                            : 'bg-amber-500'
-                                                                                }`}
-                                                                                style={{ width: `${pct}%` }}
-                                                                            />
-                                                                        </div>
-                                                                        <span className={`font-black text-xs ${
-                                                                            pct >= 100
-                                                                                ? 'text-emerald-600'
-                                                                                : pct >= 70
-                                                                                    ? 'text-[#08315F]'
-                                                                                    : 'text-amber-600'
-                                                                        }`}>
-                                                                            {pct}%
-                                                                        </span>
-                                                                    </div>
-                                                                </div>
-                                                            );
-                                                        })()}
-                                                    </div>
-
-
-
-                                                    {item.status === 'For Approval' && user?.role === 'Central Office' && (
-                                                        <div className="flex flex-col gap-2 mt-1">
-                                                            {item.potential_matches && item.potential_matches.length > 0 ? (
-                                                                <>
-                                                                    <button onClick={(e) => { e.stopPropagation(); handleOpenReconcileModal(item); }} className="w-full flex items-center justify-center gap-1.5 px-3 py-2 bg-amber-50 text-amber-700 rounded-lg text-[13.5px] font-black uppercase tracking-widest border-2 border-amber-200 hover:bg-amber-500 hover:text-white transition-all">
-                                                                        <FiLink size={14} /> Reconcile Match ({item.potential_matches.length})
-                                                                    </button>
-                                                                    <button onClick={(e) => { e.stopPropagation(); handleRegistrationAction(item.TLOid, 'reject'); }} className="w-full flex items-center justify-center gap-1.5 px-3 py-2 bg-rose-50 text-rose-600 rounded-lg text-[15px] font-black uppercase tracking-widest border-2 border-rose-100 hover:bg-rose-500 hover:text-white transition-all">
-                                                                        <FiX size={14} /> Reject
-                                                                    </button>
-                                                                </>
-                                                            ) : (
-                                                                <div className="flex items-center gap-2">
-                                                                    <button onClick={(e) => { e.stopPropagation(); handleRegistrationAction(item.TLOid, 'approve'); }} className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 bg-emerald-50 text-emerald-600 rounded-lg text-[15px] font-black uppercase tracking-widest border-2 border-emerald-100 hover:bg-emerald-500 hover:text-white transition-all">
-                                                                        <FiCheckCircle size={14} /> Approve
-                                                                    </button>
-                                                                    <button onClick={(e) => { e.stopPropagation(); handleRegistrationAction(item.TLOid, 'reject'); }} className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 bg-rose-50 text-rose-600 rounded-lg text-[15px] font-black uppercase tracking-widest border-2 border-rose-100 hover:bg-rose-500 hover:text-white transition-all">
-                                                                        <FiX size={14} /> Reject
-                                                                    </button>
-                                                                </div>
-                                                            )}
-                                                        </div>
-                                                    )}
-                                                    {item.status === 'Rejected' && (
-                                                        <div className="flex items-center gap-2 mt-1">
-                                                            <button onClick={(e) => { e.stopPropagation(); handleViewRejectionReason(item); }} className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 bg-rose-50 text-rose-600 rounded-lg text-[15px] font-black uppercase tracking-widest border-2 border-rose-100 hover:bg-rose-500 hover:text-white transition-all" title="View Rejection Reason">
-                                                                <FiEye size={14} /> Reason
-                                                            </button>
-                                                            {user?.role === 'Central Office' && (
-                                                                <button onClick={(e) => { e.stopPropagation(); handleRegistrationAction(item.TLOid, 'retrieve'); }} className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 bg-sky-50 text-sky-600 rounded-lg text-[15px] font-black uppercase tracking-widest border-2 border-sky-100 hover:bg-sky-500 hover:text-white transition-all">
-                                                                    <FiRefreshCw size={14} /> Retrieve
-                                                                </button>
-                                                            )}
-                                                        </div>
-                                                    )}
-                                                    {item.status !== 'Inactive' && item.status !== 'For Approval' && item.status !== 'Rejected' && user?.role === 'Central Office' && (
-                                                        <div className="flex items-center gap-2 mt-1">
-                                                            <button onClick={(e) => { e.stopPropagation(); handleOpenReassignModal(item); }} className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 bg-amber-50 text-amber-600 rounded-lg text-[15px] font-black uppercase tracking-widest border-2 border-amber-100 hover:bg-amber-500 hover:text-white transition-all">
-                                                                <FiLayers size={14} /> Reassign
-                                                            </button>
-                                                            {item.first_name && item.status !== 'Reassigning' && item.status !== 'Pending Assignment' && (
-                                                                <button onClick={(e) => { e.stopPropagation(); openActionModal(item, 'vacate'); }} className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 bg-rose-50 text-rose-600 rounded-lg text-[15px] font-black uppercase tracking-widest border-2 border-rose-100 hover:bg-rose-500 hover:text-white transition-all">
-                                                                    <FiTrash2 size={14} /> Vacate
-                                                                </button>
-                                                            )}
-                                                            <button
-                                                                onClick={(e) => { e.stopPropagation(); handleToggleTestAccount(item); }}
-                                                                className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-[15px] font-black uppercase tracking-widest border-2 transition-all ${item.is_testaccount
-                                                                        ? 'bg-purple-600 text-white border-purple-600 hover:bg-purple-700'
-                                                                        : 'bg-purple-50 text-purple-600 border-purple-200 hover:bg-purple-600 hover:text-white'
-                                                                    }`}
-                                                            >
-                                                                <FaVial size={14} /> {item.is_testaccount ? 'Untest' : 'Test'}
-                                                            </button>
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            )))}
-                                        </div>
-
-                                        {/* TABLE FOOTER / PAGINATION */}
-                                        <div className="px-8 py-5 bg-white border-t-2 border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-4">
-                                            <span className="text-[15px] font-black text-slate-400 uppercase tracking-widest">
-                                                Showing {totalRecords === 0 ? 0 : ((currentPage - 1) * pageSize) + 1}-{Math.min(currentPage * pageSize, totalRecords)} of {totalRecords} records
-                                            </span>
-                                            <div className="flex items-center gap-2">
-                                                <button disabled={currentPage === 1} onClick={() => setCurrentPage(p => Math.max(1, p - 1))} className="px-4 py-2 bg-white border-2 border-slate-200 text-slate-500 rounded-xl text-[15px] font-black uppercase tracking-widest disabled:opacity-40">Previous</button>
-                                                {pageButtons.map(page => typeof page === 'number' ? (
-                                                    <button
-                                                        key={page}
-                                                        onClick={() => setCurrentPage(page)}
-                                                        className={`w-10 h-10 rounded-xl text-[15px] font-black border-2 transition-all ${currentPage === page ? 'bg-[#08315F] text-white border-[#004A99]' : 'bg-white text-slate-500 border-slate-200 hover:border-blue-200'}`}
-                                                    >
-                                                        {page}
-                                                    </button>
-                                                ) : (
-                                                    <span key={page} className="px-1 text-[15px] font-black text-slate-300">...</span>
-                                                ))}
-                                                <span className="px-2 py-2 text-[15px] font-black text-slate-400 uppercase tracking-widest">Page {currentPage} of {pageCount}</span>
-                                                <button disabled={currentPage === pageCount} onClick={() => setCurrentPage(p => Math.min(pageCount, p + 1))} className="px-4 py-2 bg-white border-2 border-slate-200 text-slate-500 rounded-xl text-[15px] font-black uppercase tracking-widest disabled:opacity-40">Next</button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </motion.div>
-                            ) : viewMode === 'grid' ? (
-                                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-8">
-                                    {pagedRecords.length === 0 ? (
-                                        <div className="card p-20 text-center bg-white rounded-[30px] border-2 border-[#08315F]">
-                                            <div className="w-20 h-20 bg-slate-50 text-slate-300 rounded-full flex items-center justify-center mx-auto mb-6"><FiSearch size={40} /></div>
-                                            <h3 className="text-xl font-[var(--font-heading)] font-black text-[var(--navy)] uppercase italic tracking-tight">No Records Found</h3>
-                                            <p className="text-slate-400 font-medium mt-2">Adjust your filters or try a different search term.</p>
-                                        </div>
-                                    ) : (
-                                        <>
-                                            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-                                                {pagedRecords.map((item) => (
-                                            <motion.div
-                                                key={item.TLOid}
-                                                whileHover={{ y: -4 }}
-                                                onClick={() => item.email && navigate(`/official-profiling?email=${encodeURIComponent(item.email)}&tloid=${encodeURIComponent(item.TLOid)}`)}
-                                                className={`bg-white rounded-[1.5rem] p-5 border-2 border-[#08315F] shadow-lg shadow-slate-200/40 group flex flex-col justify-between h-full relative overflow-hidden ${item.email ? 'cursor-pointer' : 'cursor-default'}`}
-                                            >
-                                                <div className="absolute top-0 right-0 w-24 h-24 bg-blue-50/30 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2"></div>
-                                                <div>
-                                                    <div className="flex justify-between items-start mb-4 relative z-10">
-                                                        <div className="w-12 h-12 rounded-[1rem] bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center text-blue-300 font-black text-xl border-2 border-white shadow-md overflow-hidden shrink-0">
-                                                            {item.photo_binary_id ? (
-                                                                <img src={apiUrl(`/api/binary/${item.photo_binary_id}`)} alt="" className="w-full h-full object-cover" />
-                                                            ) : <FiUser size={20} />}
-                                                        </div>
-                                                        <div className="flex items-center gap-1">
-                                                            {item.is_oic && <span className="px-2 py-0.5 bg-[#FCD116] text-[#0038A8] border-2 border-yellow-200 rounded-full text-[10.5px] font-black uppercase tracking-widest">OIC</span>}
-                                                            <div className="scale-75 origin-top-right">
-                                                                <StatusBadge status={item.status} rejectionReason={item.rejection_reason} onShowReason={() => handleViewRejectionReason(item)} />
-                                                            </div>
-                                                        </div>
-                                                    </div>
-
-                                                    <div className="space-y-1 relative z-10">
-                                                        <h3 className="text-[21px] font-['Plus_Jakarta_Sans'] font-black text-[#08315F] tracking-tighter leading-tight uppercase italic line-clamp-2">
-                                                            {item.first_name ? <>{item.first_name} {item.last_name}</> : <span className="text-rose-500">VACANT POSITION</span>}
-                                                        </h3>
-                                                        {item.status !== 'Inactive' && (
-                                                            <button
-                                                                onClick={(e) => { e.stopPropagation(); handlePositionClick(item); }}
-                                                                className="text-[12px] font-black text-[#08315F] uppercase tracking-[0.2em] hover:text-[#075985] transition-colors text-left flex items-center gap-1 w-full"
-                                                                title="Positional History"
-                                                            >
-                                                                <span className="truncate">{item.position_title || 'Candidate'}</span>
-                                                                <FiClock className="text-slate-400 shrink-0" size={10} />
-                                                            </button>
-                                                        )}
-
-                                                        {item.concurrent_positions && (
-                                                            <div className="mt-2 bg-emerald-50 rounded-xl p-2.5 border-2 border-emerald-100 shadow-sm">
-                                                                <div className="text-[9px] font-black text-emerald-600 uppercase tracking-[0.2em] mb-1 flex items-center gap-1">
-                                                                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></div>
-                                                                    Concurrent Role
-                                                                </div>
-                                                                <div className="text-[12px] font-bold text-emerald-800 leading-snug line-clamp-2">
-                                                                    {item.concurrent_positions.split(' | ').map((pos, idx) => (
-                                                                        <div key={idx} className="mb-0.5 last:mb-0 truncate">
-                                                                            {pos}
-                                                                        </div>
-                                                                    ))}
-                                                                </div>
-                                                            </div>
-                                                        )}
-                                                    </div>
-
-                                                    <div className="mt-4 pt-3 border-t-2 border-slate-100 space-y-2">
-                                                        <div className="flex items-center justify-between">
-                                                            <span className="text-[10.5px] font-black text-slate-400 uppercase tracking-widest">Strand</span>
-                                                            <span className="text-[12px] font-bold text-slate-700 truncate max-w-[60%] text-right">{item.status === 'Inactive' ? 'N/A' : (item.strand || 'N/A')}</span>
-                                                        </div>
-                                                        <div className="flex items-center justify-between">
-                                                            <span className="text-[10.5px] font-black text-slate-400 uppercase tracking-widest">Office</span>
-                                                            <span className="text-[12px] font-bold text-slate-700 truncate ml-2 text-right">{item.status === 'Inactive' ? 'N/A' : (item.office || 'Main Office')}</span>
-                                                        </div>
-                                                        {item.updated_at && (
-                                                            <div className="flex items-center justify-between">
-                                                                <span className="text-[10.5px] font-black text-slate-400 uppercase tracking-widest">Updated</span>
-                                                                <span className="text-[12px] font-bold text-slate-700 truncate ml-2 text-right">
-                                                                    {new Date(item.updated_at).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' })}
-                                                                </span>
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                </div>
-
-                                                <div className="mt-4 pt-3 border-t-2 border-slate-100 flex flex-col gap-3 relative z-20" onClick={e => e.stopPropagation()}>
-                                                    <div className="flex flex-wrap justify-center gap-1.5">
-                                                        {item.status === 'For Approval' && user?.role === 'Central Office' && (
-                                                            <>
-                                                                <button onClick={(e) => { e.stopPropagation(); handleRegistrationAction(item.TLOid, 'approve'); }} className="flex items-center gap-1 px-2 py-1.5 bg-emerald-50 text-emerald-600 rounded-md text-[10.5px] font-black uppercase tracking-widest hover:bg-emerald-500 hover:text-white transition-all border-2 border-emerald-100 shadow-sm">
-                                                                    <FiCheckCircle size={12} /> Approve
-                                                                </button>
-                                                                <button onClick={(e) => { e.stopPropagation(); handleRegistrationAction(item.TLOid, 'reject'); }} className="flex items-center gap-1 px-2 py-1.5 bg-rose-50 text-rose-600 rounded-md text-[10.5px] font-black uppercase tracking-widest hover:bg-rose-500 hover:text-white transition-all border-2 border-rose-100 shadow-sm">
-                                                                    <FiX size={12} /> Reject
-                                                                </button>
-                                                            </>
-                                                        )}
-                                                        {item.status === 'Rejected' && (
-                                                            <button onClick={(e) => { e.stopPropagation(); handleViewRejectionReason(item); }} className="flex items-center gap-1 px-2 py-1.5 bg-rose-50 text-rose-600 rounded-md text-[10.5px] font-black uppercase tracking-widest hover:bg-rose-500 hover:text-white transition-all border-2 border-rose-100 shadow-sm" title="View Rejection Reason">
-                                                                <FiEye size={12} /> Reason
-                                                            </button>
-                                                        )}
-                                                        {item.status === 'Rejected' && user?.role === 'Central Office' && (
-                                                            <button onClick={(e) => { e.stopPropagation(); handleRegistrationAction(item.TLOid, 'retrieve'); }} className="flex items-center gap-1 px-2 py-1.5 bg-sky-50 text-sky-600 rounded-md text-[10.5px] font-black uppercase tracking-widest hover:bg-sky-500 hover:text-white transition-all border-2 border-sky-100 shadow-sm">
-                                                                <FiRefreshCw size={12} /> Retrieve
-                                                            </button>
-                                                        )}
-                                                        {item.status !== 'Inactive' && item.status !== 'For Approval' && item.status !== 'Rejected' && user?.role === 'Central Office' && (
-                                                            <button onClick={(e) => { e.stopPropagation(); handleOpenReassignModal(item); }} className="flex items-center gap-1 px-2 py-1.5 bg-amber-50 text-amber-600 rounded-md text-[10.5px] font-black uppercase tracking-widest hover:bg-amber-500 hover:text-white transition-all border-2 border-amber-100 shadow-sm">
-                                                                <FiLayers size={12} /> Reassign
-                                                            </button>
-                                                        )}
-                                                        {item.first_name && item.status !== 'Reassigning' && item.status !== 'Pending Assignment' && item.status !== 'For Approval' && item.status !== 'Rejected' && user?.role === 'Central Office' && (
-                                                            <button onClick={(e) => { e.stopPropagation(); openActionModal(item, 'vacate'); }} className="flex items-center gap-1 px-2 py-1.5 bg-rose-50 text-rose-600 rounded-md text-[10.5px] font-black uppercase tracking-widest hover:bg-rose-500 hover:text-white transition-all border-2 border-rose-100 shadow-sm">
-                                                                <FiTrash2 size={12} /> Vacate
-                                                            </button>
-                                                        )}
-                                                    </div>
-                                                    {item.status !== 'Inactive' && (
-                                                        <div className="flex items-center justify-between">
-                                                            <div className="text-[10.5px] font-black text-slate-300 uppercase tracking-widest italic flex items-center gap-1 group-hover:text-[#075985] transition-colors">
-                                                                Full Profile <FiArrowRight size={12} />
-                                                            </div>
-                                                            <button onClick={() => handlePositionClick(item)} className="p-2 bg-slate-50 text-slate-400 rounded-lg hover:bg-[#08315F] hover:text-white transition-all border-2 border-slate-200" title="Positional History">
-                                                                <FiClock size={14} />
-                                                            </button>
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            </motion.div>
-                                        ))}
-                                    </div>
-                                    <div className="px-8 py-5 bg-white rounded-[2.5rem] border-2 border-slate-200 shadow-xl shadow-slate-200/40 flex flex-col md:flex-row md:items-center justify-between gap-4">
-                                        <span className="text-[15px] font-black text-slate-400 uppercase tracking-widest">
-                                            Showing {totalRecords === 0 ? 0 : ((currentPage - 1) * pageSize) + 1}-{Math.min(currentPage * pageSize, totalRecords)} of {totalRecords} records
-                                        </span>
-                                        <div className="flex items-center gap-2">
-                                            <button disabled={currentPage === 1} onClick={() => setCurrentPage(p => Math.max(1, p - 1))} className="px-4 py-2 bg-slate-50 border-2 border-slate-200 text-slate-500 rounded-xl text-[15px] font-black uppercase tracking-widest disabled:opacity-40">Previous</button>
-                                            {pageButtons.map(page => typeof page === 'number' ? (
-                                                <button
-                                                    key={page}
-                                                    onClick={() => setCurrentPage(page)}
-                                                    className={`w-10 h-10 rounded-xl text-[15px] font-black border-2 transition-all ${currentPage === page ? 'bg-[#08315F] text-white border-[#004A99]' : 'bg-white text-slate-500 border-slate-200 hover:border-blue-200'}`}
-                                                >
-                                                    {page}
-                                                </button>
-                                            ) : (
-                                                <span key={page} className="px-1 text-[15px] font-black text-slate-300">...</span>
-                                            ))}
-                                            <span className="px-2 py-2 text-[15px] font-black text-slate-400 uppercase tracking-widest">Page {currentPage} of {pageCount}</span>
-                                            <button disabled={currentPage === pageCount} onClick={() => setCurrentPage(p => Math.min(pageCount, p + 1))} className="px-4 py-2 bg-slate-50 border-2 border-slate-200 text-slate-500 rounded-xl text-[15px] font-black uppercase tracking-widest disabled:opacity-40">Next</button>
-                                        </div>
-                                    </div>
-                                    </>
-                                    )}
-                                </motion.div>
-                            ) : (
-                                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-12">
-                                    {Object.entries(directoryGroups).map(([groupName, members]) => (
-                                        <div key={groupName} className="bg-slate-50/50 p-8 rounded-[3rem] border-2 border-slate-200">
-                                            <h3 className="text-center font-black text-[36px] text-[#08315F] tracking-tighter mb-8 uppercase">{groupName}</h3>
-
-                                            <div className="flex flex-wrap justify-center gap-6">
-                                                {members.map(item => (
-                                                    <div key={item.TLOid} className="bg-white border-2 border-slate-200 rounded-3xl p-6 w-[280px] flex flex-col items-center text-center relative shadow-xl shadow-slate-200/50 hover:border-[#075985] transition-colors cursor-pointer" onClick={() => item.email && navigate(`/official-profiling?email=${encodeURIComponent(item.email)}&tloid=${encodeURIComponent(item.TLOid)}`)}>
-                                                        <div className="absolute -top-4 bg-[#075985] text-white text-[15px] font-black uppercase tracking-widest px-4 py-1.5 rounded-full shadow-md w-[90%] truncate border-2 border-sky-600">
-                                                            {item.position_title || 'Position Unknown'}
-                                                        </div>
-                                                        <div className="mt-4 font-black text-[27px] text-slate-800 leading-tight uppercase italic min-h-[50px] flex items-center justify-center">
-                                                            {item.first_name ? `${item.first_name} ${item.last_name}` : <span className="text-rose-500 not-italic">VACANT</span>}
-                                                        </div>
-                                                        <div className="text-[15px] font-bold text-slate-500 mt-2 min-h-[30px] flex items-center justify-center">{item.designation || 'No Designation'}</div>
-                                                        <div className="w-full h-0.5 bg-slate-200 my-4"></div>
-                                                        <div className="text-[13.5px] font-black text-slate-400 uppercase tracking-widest">
-                                                            Appointed: <span className="text-[#075985] ml-1">{item.appointment_date ? new Date(item.appointment_date).toLocaleDateString() : item.effectivity_date ? new Date(item.effectivity_date).toLocaleDateString() : 'N/A'}</span>
-                                                        </div>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        </div>
-                                    ))}
-                                    {Object.keys(directoryGroups).length === 0 && (
-                                        <div className="py-20 text-center">
-                                            <FiLayers className="mx-auto text-slate-200 mb-6" size={64} />
-                                            <h2 className="text-2xl font-['Plus_Jakarta_Sans'] font-black text-[#08315F] uppercase tracking-tighter mb-2">No Directory Data</h2>
-                                            <p className="text-slate-500 font-bold max-w-md mx-auto">No records found matching the current filters.</p>
-                                        </div>
-                                    )}
-                                </motion.div>
-                            )}
-                        </AnimatePresence>
                     </main>
 
                     {/* INCUMBENCY HISTORY MODAL */}
-                    {createPortal(
-                        <AnimatePresence>
-                            {showIncumbencyModal && (
-                                <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-slate-900/40 backdrop-blur-md">
-                                    <motion.div
-                                        initial={{ opacity: 0, scale: 0.9, y: 20 }}
-                                        animate={{ opacity: 1, scale: 1, y: 0 }}
-                                        exit={{ opacity: 0, scale: 0.9, y: 20 }}
-                                        className="bg-white rounded-[3rem] w-full max-w-2xl shadow-[0_32px_64px_-12px_rgba(0,0,0,0.14)] border-2 border-white/50 overflow-hidden relative"
-                                    >
-                                        <div className="absolute top-0 left-0 w-full h-32 bg-gradient-to-b from-blue-50 to-transparent"></div>
-
-                                        <div className="p-10 relative z-10">
-                                            <div className="flex justify-between items-start mb-8">
-                                                <div className="space-y-1">
-                                                    <div className="flex items-center gap-2 text-[#075985] font-black text-[15px] uppercase tracking-[0.2em] mb-2">
-                                                        <FiClock /> Positional History
-                                                    </div>
-                                                    <h2 className="text-[45px] font-['Plus_Jakarta_Sans'] font-black text-[#08315F] tracking-tighter uppercase italic leading-none">{selectedPosition?.title}</h2>
-                                                    <p className="text-slate-400 font-medium text-[21px]">{selectedPosition?.office || 'Department of Education'}</p>
-                                                </div>
-                                                <button onClick={() => setShowIncumbencyModal(false)} className="p-3 rounded-2xl bg-white text-slate-400 hover:text-red-600 shadow-sm border-2 border-slate-200 transition-all">
-                                                    <FiX size={24} />
-                                                </button>
-                                            </div>
-
-                                            <div className="space-y-4">
-                                                <h4 className="text-[15px] font-black text-slate-400 uppercase tracking-widest border-b-2 border-slate-200 pb-3">Last Known Incumbents</h4>
-                                                {incumbentsLoading ? (
-                                                    <div className="h-48 flex items-center justify-center">
-                                                        <div className="w-8 h-8 border-3 border-blue-100 border-t-blue-600 rounded-full animate-spin"></div>
-                                                    </div>
-                                                ) : incumbents.length === 0 ? (
-                                                    <div className="py-12 text-center bg-slate-50 rounded-3xl border-2 border-dashed border-slate-200">
-                                                        <FiClock className="mx-auto text-slate-200 mb-4" size={32} />
-                                                        <p className="text-slate-400 font-bold uppercase text-[15px] tracking-widest">No historical data recorded</p>
-                                                    </div>
-                                                ) : (
-                                                    <div className="relative border-l-2 border-slate-200 ml-4 pl-6 space-y-5 max-h-[400px] overflow-y-auto pr-4 custom-scrollbar">
-                                                        {incumbents.map((inc, i) => {
-                                                            const startYear = inc.appointment_date ? new Date(inc.appointment_date).getFullYear() : 'Unknown';
-                                                            const endYear = inc.is_current == 1 ? 'Present' : new Date(inc.tenure_date).getFullYear();
-                                                            const yearDisplay = startYear === endYear ? startYear : `${startYear} - ${endYear}`;
-
-                                                            return (
-                                                                <div key={i} className="relative group">
-                                                                    <div className={`absolute -left-[31px] top-5 w-4 h-4 rounded-full border-4 border-white shadow-sm ${inc.is_current == 1 ? 'bg-emerald-400' : 'bg-slate-300 group-hover:bg-blue-400'} transition-colors z-10`}></div>
-
-                                                                    <div className={`flex flex-col md:flex-row md:items-center justify-between p-5 rounded-2xl border-2 transition-all ${inc.is_current == 1 ? 'bg-emerald-50/50 border-emerald-200 shadow-sm' : 'bg-white border-slate-200 hover:shadow-lg hover:shadow-blue-900/5 hover:border-blue-200'}`}>
-                                                                        <div className="flex items-center gap-4">
-                                                                            <div className={`w-12 h-12 rounded-xl flex items-center justify-center font-black text-lg shadow-sm ${inc.is_current == 1 ? 'bg-emerald-500 text-white' : 'bg-[#08315F] text-white group-hover:bg-[#075985]'} transition-colors`}>
-                                                                                {inc.first_name ? inc.first_name[0] : 'V'}{inc.last_name ? inc.last_name[0] : ''}
-                                                                            </div>
-                                                                            <div>
-                                                                                <div className="flex items-center gap-2 mb-1">
-                                                                                    <h4 className="font-['Plus_Jakarta_Sans'] font-black text-[#08315F] text-[24px] italic uppercase leading-none">
-                                                                                        {inc.first_name || 'VACANT'} {inc.last_name || ''}
-                                                                                    </h4>
-                                                                                    {inc.is_current == 1 && <span className="px-2 py-0.5 bg-emerald-100 text-emerald-700 rounded-md text-[12px] font-black uppercase tracking-widest border-2 border-emerald-200">Active</span>}
-                                                                                </div>
-                                                                                <div className="text-[15px] font-bold text-slate-400 uppercase tracking-widest">ID: {inc.TLOid}</div>
-                                                                            </div>
-                                                                        </div>
-
-                                                                        <div className="mt-4 md:mt-0 text-left md:text-right bg-slate-50 md:bg-transparent p-3 md:p-0 rounded-xl">
-                                                                            <div className="text-[13.5px] font-black text-slate-400 uppercase tracking-widest mb-1 flex items-center gap-1 md:justify-end">
-                                                                                <FiCalendar size={12} /> Tenure Period
-                                                                            </div>
-                                                                            <div className={`font-black uppercase tracking-tight ${inc.is_current == 1 ? 'text-emerald-600 text-[21px]' : 'text-slate-600 text-[21px]'}`}>
-                                                                                {yearDisplay}
-                                                                            </div>
-                                                                            <div className="text-[12px] font-bold text-slate-400 uppercase mt-1">
-                                                                                Updated: {new Date(inc.tenure_date).toLocaleDateString()}
-                                                                            </div>
-                                                                        </div>
-                                                                    </div>
-                                                                </div>
-                                                            );
-                                                        })}
-                                                    </div>
-                                                )}
-                                            </div>
-
-                                            <div className="mt-10 bg-[#08315F] rounded-2xl p-6 text-white flex items-center justify-between border-2 border-white/10">
-                                                <div className="flex items-center gap-4">
-                                                    <FiInfo size={24} className="opacity-50" />
-                                                    <p className="text-[15px] font-bold uppercase tracking-wide leading-relaxed">This ledger tracks movements based on administrative updates. Promoting or reassigning an official will append a new entry to this history.</p>
-                                                </div>
-                                                <button
-                                                    onClick={() => setShowIncumbencyModal(false)}
-                                                    className="px-6 py-3 bg-white/20 hover:bg-white/30 rounded-xl text-[15px] font-black uppercase tracking-widest transition-all border-2 border-white/20"
-                                                >
-                                                    Dismiss
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </motion.div>
-                                </div>
-                            )}
-                        </AnimatePresence>,
-                        document.body
-                    )}
+                    <IncumbencyModal incumbents={incumbents} incumbentsLoading={incumbentsLoading} selectedPosition={selectedPosition} setShowIncumbencyModal={setShowIncumbencyModal} showIncumbencyModal={showIncumbencyModal} />
 
                     {/* ADMIN ACTION MODAL */}
-                    {createPortal(
-                        <AnimatePresence>
-                            {showActionModal && (
-                                <div className="fixed inset-0 z-[110] flex items-center justify-center p-6 bg-slate-900/60 backdrop-blur-md">
-                                    <motion.div
-                                        initial={{ opacity: 0, scale: 0.95, y: 30 }}
-                                        animate={{ opacity: 1, scale: 1, y: 0 }}
-                                        exit={{ opacity: 0, scale: 0.95, y: 30 }}
-                                        className="bg-white rounded-[3rem] w-full max-w-xl shadow-2xl border-2 border-white/50 overflow-hidden flex flex-col max-h-[90vh]"
-                                    >
-                                        <div className="overflow-y-auto custom-scrollbar w-full h-full">
-                                            <div className="p-10">
-                                                <div className="flex justify-between items-start mb-8">
-                                                    <div>
-                                                        <span className="text-[15px] font-black text-[#075985] uppercase tracking-widest mb-2 block">Administrative Action</span>
-                                                        <h2 className="text-[45px] font-['Plus_Jakarta_Sans'] font-black text-[#08315F] tracking-tighter uppercase italic leading-none">
-                                                            {adminAction === 'reassign'
-                                                                ? ((!actionOfficial?.first_name || actionOfficial?.first_name === 'VACANT') ? 'ASSIGN PERSONNEL' : 'REASSIGN OFFICIAL')
-                                                                : `${adminAction === 'vacate' ? 'VACATING' : `${adminAction.toUpperCase()}ING`} OFFICIAL`}
-                                                        </h2>
-                                                        <p className="text-slate-400 font-bold text-[21px] mt-2">
-                                                            {adminAction === 'reassign'
-                                                                ? ((!actionOfficial?.first_name || actionOfficial?.first_name === 'VACANT') ? actionOfficial?.position_title : `${actionOfficial?.first_name || ''} ${actionOfficial?.last_name || ''}`)
-                                                                : `${actionOfficial?.first_name || ''} ${actionOfficial?.last_name || ''}`}
-                                                        </p>
-                                                    </div>
-                                                    <button onClick={() => setShowActionModal(false)} className="p-3 rounded-2xl bg-slate-50 text-slate-400 hover:text-red-600 transition-all border-2 border-slate-200">
-                                                        <FiX size={20} />
-                                                    </button>
-                                                </div>
-
-                                                <div className="space-y-6">
-                                                    {adminAction === 'reassign' && (
-                                                        <div className="space-y-4">
-                                                            {(!actionOfficial?.first_name || actionOfficial?.first_name === 'VACANT') ? (
-                                                                isAddingPersonnel ? (
-                                                                    <AddNewPersonnelForm
-                                                                        token={token || localStorage.getItem('token')}
-                                                                        onCancel={() => setIsAddingPersonnel(false)}
-                                                                        onSuccess={async (newId) => {
-                                                                            unassignedCacheRef.current.clear();
-                                                                            await fetchUnassignedPersonnel();
-                                                                            setAssigneeSlot(newId);
-                                                                            setIsAddingPersonnel(false);
-                                                                        }}
-                                                                    />
-                                                                ) : (
-                                                                    <>
-                                                                        <div>
-                                                                            <div className="flex justify-between items-end mb-3">
-                                                                                <label className="text-[15px] font-black text-slate-400 uppercase tracking-widest block mb-0">Search Personnel Without Position</label>
-                                                                                {user?.role === 'Central Office' && (
-                                                                                    <button onClick={() => setIsAddingPersonnel(true)} className="text-[15px] font-black text-[#08315F] hover:text-[#004A99] uppercase tracking-widest transition-colors">+ Add New</button>
-                                                                                )}
-                                                                            </div>
-                                                                            <div className="relative">
-                                                                                <FiSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
-                                                                                <DebouncedSearchInput
-                                                                                    value={unassignedSearch}
-                                                                                    onChange={setUnassignedSearch}
-                                                                                    placeholder="Search by name or employee number..."
-                                                                                />
-                                                                            </div>
-                                                                        </div>
-                                                                        <SearchableSelect
-                                                                            label="Reassign To"
-                                                                            info={unassignedLoading ? 'Loading available personnel...' : 'Showing personnel without an active position. Search to narrow the list.'}
-                                                                            placeholder={unassignedLoading ? 'Loading personnel...' : 'Choose personnel...'}
-                                                                            value={assigneeSlot}
-                                                                            onChange={setAssigneeSlot}
-                                                                            options={unassignedPersonnel.map(p => ({
-                                                                                value: p.TLOid,
-                                                                                label: `${p.first_name} ${p.last_name || ''}`.trim(),
-                                                                                sublabel: [p.employee_number || p.TLOid, p.email].filter(Boolean).join(' - ')
-                                                                            }))}
-                                                                        />
-                                                                        {!unassignedLoading && unassignedPersonnel.length === 0 && (
-                                                                            <div className="p-4 bg-slate-50 rounded-2xl border-2 border-dashed border-slate-200 text-center">
-                                                                                <p className="text-[15px] font-black text-slate-400 uppercase tracking-widest">No unassigned personnel found</p>
-                                                                            </div>
-                                                                        )}
-                                                                    </>
-                                                                )
-                                                            ) : (
-                                                                <>
-                                                                    <SearchableSelect
-                                                                        label="Select Target Office"
-                                                                        placeholder="Choose Office..."
-                                                                        value={selectedOffice}
-                                                                        onChange={(val) => {
-                                                                            setSelectedOffice(val);
-                                                                            setTargetSlot('');
-                                                                        }}
-                                                                        options={uniqueOffices.map(o => ({ value: o, label: o }))}
-                                                                    />
-
-                                                                    {selectedOffice ? (
-                                                                        <SearchableSelect
-                                                                            label="Select Vacant Position"
-                                                                            placeholder="Choose vacant position..."
-                                                                            value={targetSlot}
-                                                                            onChange={setTargetSlot}
-                                                                            options={filteredVacantSlots.map(slot => ({
-                                                                                value: slot.TLOid,
-                                                                                label: slot.is_oic ? `${slot.position_title} (OIC)` : slot.position_title,
-                                                                                sublabel: slot.strand ? `Strand: ${slot.strand}` : 'No Strand'
-                                                                            }))}
-                                                                        />
-                                                                    ) : (
-                                                                        <div className="p-4 bg-slate-50 rounded-2xl border-2 border-dashed border-slate-200 text-center">
-                                                                            <p className="text-[15px] font-black text-slate-400 uppercase tracking-widest">Please select an office first to view vacant positions</p>
-                                                                        </div>
-                                                                    )}
-                                                                </>
-                                                            )}
-                                                        </div>
-                                                    )}
-
-                                                    {adminAction === 'succeed' && (
-                                                        <SearchableSelect
-                                                            label="Select Successor"
-                                                            info="If selected, the successor will take this position and their old slot becomes vacant."
-                                                            placeholder="No successor (leave vacant)..."
-                                                            value={successorSlot}
-                                                            onChange={setSuccessorSlot}
-                                                            options={[
-                                                                { value: '', label: 'No successor', sublabel: 'Position will stay vacant' },
-                                                                ...activeOfficials.map(o => ({
-                                                                    value: o.TLOid,
-                                                                    label: `${o.first_name} ${o.last_name}`,
-                                                                    sublabel: `${o.position_title} — ${o.office}`
-                                                                }))
-                                                            ]}
-                                                        />
-                                                    )}
-
-                                                    {(adminAction === 'reassign' || adminAction === 'vacate') && (
-                                                        <div className="mb-4">
-                                                            <label className="text-[15px] font-black text-slate-400 uppercase tracking-widest mb-3 block">Date of Effectivity</label>
-                                                            <ModernDatePicker
-                                                                value={effectivityDate}
-                                                                onChange={(val) => setEffectivityDate(val)}
-                                                                className="w-full bg-slate-50 border-2 border-slate-200 focus:border-[#08315F]/20 rounded-2xl py-4 px-5 text-[21px] font-bold text-slate-700 outline-none transition-all"
-                                                            />
-                                                        </div>
-                                                    )}
-
-                                                    {adminAction === 'vacate' && (
-                                                        <div className="mb-4">
-                                                            <label className="text-[15px] font-black text-slate-400 uppercase tracking-widest mb-3 block">Reason for Vacating</label>
-                                                            <select
-                                                                value={vacateReason}
-                                                                onChange={(e) => setVacateReason(e.target.value)}
-                                                                className="w-full bg-slate-50 border-2 border-slate-200 focus:border-[#08315F]/20 rounded-2xl py-4 px-5 text-[21px] font-bold text-slate-700 outline-none transition-all"
-                                                            >
-                                                                <option value="">Select a reason...</option>
-                                                                <option value="Resignation">Resignation</option>
-                                                                <option value="Retirement">Retirement</option>
-                                                                <option value="Promotion">Promotion</option>
-                                                                <option value="Demotion">Demotion</option>
-                                                                <option value="Dismissal">Dismissal</option>
-                                                                <option value="Other">Other</option>
-                                                            </select>
-                                                        </div>
-                                                    )}
-
-                                                    <div>
-                                                        <label className="text-[15px] font-black text-slate-400 uppercase tracking-widest mb-3 block">Justification / Remarks</label>
-                                                        <JustificationInput
-                                                            value={justification}
-                                                            onChange={setJustification}
-                                                            placeholder={adminAction === 'reassign' ? 'Optional reassignment note...' : 'Please provide additional remarks...'}
-                                                        />
-                                                    </div>
-
-                                                    <div className="flex gap-4">
-                                                        <button
-                                                            disabled={actionLoading}
-                                                            onClick={handleAdminAction}
-                                                            className="flex-1 py-5 bg-[#08315F] text-white rounded-[1.5rem] font-black text-[16.5px] uppercase tracking-[0.2em] shadow-xl shadow-blue-900/20 hover:bg-blue-700 transition-all active:scale-95 disabled:opacity-50 border-2 border-transparent"
-                                                        >
-                                                            {actionLoading ? 'Processing...' : `Confirm ${adminAction}`}
-                                                        </button>
-                                                        {['Vacating', 'Resigning', 'Inactive', 'Reassigning', 'Pending Assignment'].includes(actionOfficial?.status) && (adminAction === 'vacate' || adminAction === 'reassign') && (
-                                                            <button
-                                                                disabled={actionLoading}
-                                                                onClick={handleCancelVacate}
-                                                                className="flex-1 py-5 bg-rose-50 text-rose-600 border-2 border-rose-200 rounded-[1.5rem] font-black text-[16.5px] uppercase tracking-[0.2em] shadow-sm hover:bg-rose-100 hover:border-rose-300 transition-all active:scale-95 disabled:opacity-50"
-                                                            >
-                                                                {actionLoading ? 'Processing...' : 'Cancel Action'}
-                                                            </button>
-                                                        )}
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </motion.div>
-                                </div>
-                            )}
-                        </AnimatePresence>,
-                        document.body
-                    )}
+                    <ActionModal SearchableSelect={SearchableSelect} actionLoading={actionLoading} actionOfficial={actionOfficial} activeOfficials={activeOfficials} adminAction={adminAction} assigneeSlot={assigneeSlot} effectivityDate={effectivityDate} fetchUnassignedPersonnel={fetchUnassignedPersonnel} filteredVacantSlots={filteredVacantSlots} handleAdminAction={handleAdminAction} handleCancelVacate={handleCancelVacate} isAddingPersonnel={isAddingPersonnel} justification={justification} selectedOffice={selectedOffice} setAssigneeSlot={setAssigneeSlot} setEffectivityDate={setEffectivityDate} setIsAddingPersonnel={setIsAddingPersonnel} setJustification={setJustification} setSelectedOffice={setSelectedOffice} setShowActionModal={setShowActionModal} setSuccessorSlot={setSuccessorSlot} setTargetSlot={setTargetSlot} setUnassignedSearch={setUnassignedSearch} setVacateReason={setVacateReason} showActionModal={showActionModal} successorSlot={successorSlot} targetSlot={targetSlot} token={token} unassignedCacheRef={unassignedCacheRef} unassignedLoading={unassignedLoading} unassignedPersonnel={unassignedPersonnel} unassignedSearch={unassignedSearch} uniqueOffices={uniqueOffices} user={user} vacateReason={vacateReason} />
 
                     <ReassignOfficialModal
                         isOpen={isReassignModalOpen}
@@ -2788,498 +1298,6 @@ const OfficialsRegistry = () => {
                         token={token}
                     />
 
-                    {/* IDENTITY RECONCILIATION CONFIRMATION MODAL */}
-                    {createPortal(
-                        <AnimatePresence>
-                            {reconcileModalOpen && reconcileTargetItem && (
-                                <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 md:p-6 bg-slate-900/60 backdrop-blur-md overflow-y-auto">
-                                    <motion.div
-                                        initial={{ opacity: 0, scale: 0.95, y: 20 }}
-                                        animate={{ opacity: 1, scale: 1, y: 0 }}
-                                        exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                                        className="bg-white rounded-2xl sm:rounded-3xl w-full max-w-5xl lg:max-w-6xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[92vh] my-auto"
-                                    >
-                                        {/* Modal Header */}
-                                        <div className="p-6 md:p-8 bg-white border-b border-slate-100 flex justify-between items-start gap-4">
-                                            <div>
-                                                <div className="flex items-center gap-2 text-amber-500 text-[12px] sm:text-[13px] font-black uppercase tracking-wider mb-1">
-                                                    <FiLink size={16} className="shrink-0 text-amber-500" />
-                                                    <span>Identity Reconciliation Verification</span>
-                                                </div>
-                                                <h2 className="text-[22px] sm:text-[28px] md:text-[32px] font-['Plus_Jakarta_Sans',sans-serif] font-black text-[#08315F] uppercase tracking-tight leading-tight">
-                                                    Reconcile & Link Registration Identity
-                                                </h2>
-                                                <p className="text-slate-500 font-medium text-[13.5px] sm:text-[15px] mt-1 leading-relaxed">
-                                                    Please review both records carefully to confirm they represent the same real person before linking.
-                                                </p>
-                                            </div>
-                                            <button
-                                                onClick={() => setReconcileModalOpen(false)}
-                                                aria-label="Close modal"
-                                                className="p-2 sm:p-2.5 rounded-xl bg-white text-slate-400 hover:text-slate-700 hover:bg-slate-50 transition-all border border-slate-200/90 shadow-xs shrink-0"
-                                            >
-                                                <FiX size={20} className="text-[#0284c7]/75 hover:text-[#0284c7]" />
-                                            </button>
-                                        </div>
-
-                                        {/* Modal Body */}
-                                        <div className="p-6 md:p-8 overflow-y-auto space-y-6">
-                                            {/* Candidate Selector (if multiple potential matches) */}
-                                            {reconcileTargetItem.potential_matches && reconcileTargetItem.potential_matches.length > 1 && (
-                                                <div className="p-4 bg-amber-50 rounded-2xl border-2 border-amber-200">
-                                                    <label className="text-[13.5px] font-black text-amber-900 uppercase tracking-widest block mb-2">
-                                                        Select Matching Canonical Official ({reconcileTargetItem.potential_matches.length} candidates found)
-                                                    </label>
-                                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                                                        {reconcileTargetItem.potential_matches.map((cand) => (
-                                                            <button
-                                                                key={cand.TLOid}
-                                                                type="button"
-                                                                onClick={() => setSelectedCandidate(cand)}
-                                                                className={`p-3 text-left rounded-xl border-2 transition-all ${selectedCandidate?.TLOid === cand.TLOid ? 'bg-[#08315F] text-white border-[#08315F] shadow-md' : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'}`}
-                                                            >
-                                                                <div className="flex items-center justify-between gap-2">
-                                                                    <div className="font-black text-[15px]">{cand.first_name} {cand.last_name}</div>
-                                                                    {cand.profile_completion != null && (
-                                                                        <span className={`text-[11px] font-black px-1.5 py-0.5 rounded ${selectedCandidate?.TLOid === cand.TLOid ? 'bg-white/20 text-white' : 'bg-slate-100 text-[#08315F]'}`}>
-                                                                            {Math.round(cand.profile_completion)}%
-                                                                        </span>
-                                                                    )}
-                                                                </div>
-                                                                <div className={`text-[12px] font-medium truncate ${selectedCandidate?.TLOid === cand.TLOid ? 'text-blue-200' : 'text-slate-500'}`}>
-                                                                    {cand.TLOid} • {cand.position_title || 'No Position'} • {cand.office || 'No Office'}
-                                                                </div>
-                                                            </button>
-                                                        ))}
-                                                    </div>
-                                                </div>
-                                            )}
-
-                                            {/* Select Who to Approve Section */}
-                                            <div className="p-4 sm:p-5 bg-gradient-to-r from-blue-50/70 via-indigo-50/40 to-slate-50 rounded-2xl border-2 border-blue-200/90 shadow-xs space-y-3">
-                                                <div className="flex items-center justify-between gap-2 flex-wrap">
-                                                    <div className="flex items-center gap-2">
-                                                        <FiCheckCircle className="text-[#08315F] shrink-0" size={18} />
-                                                        <span className="text-[13px] sm:text-[14px] font-black text-[#08315F] uppercase tracking-wider">
-                                                            Select Who to Approve & Retain as Active Official
-                                                        </span>
-                                                    </div>
-                                                    <span className="text-[11.5px] font-bold text-slate-500 uppercase tracking-wider bg-white/80 px-2.5 py-1 rounded-md border border-slate-200">
-                                                        Active Decision Required
-                                                    </span>
-                                                </div>
-                                                <p className="text-[13px] text-slate-600 font-medium leading-relaxed">
-                                                    Choose which official record will be approved and designated as the canonical <strong>Active</strong> identity in the masterlist. The other record will be deactivated and reconciled.
-                                                </p>
-                                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
-                                                    {/* Option 1: Registration Record */}
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => setReconcileApprovedTarget('registration')}
-                                                        className={`p-4 rounded-xl border-2 text-left transition-all flex items-start gap-3.5 ${
-                                                            reconcileApprovedTarget === 'registration'
-                                                                ? 'bg-emerald-50/80 border-emerald-500 shadow-md ring-2 ring-emerald-500/25'
-                                                                : 'bg-white border-slate-200 hover:bg-slate-50 text-slate-700'
-                                                        }`}
-                                                    >
-                                                        <div className={`mt-0.5 w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-all ${
-                                                            reconcileApprovedTarget === 'registration'
-                                                                ? 'border-emerald-600 bg-emerald-600 text-white'
-                                                                : 'border-slate-300 bg-white'
-                                                        }`}>
-                                                            {reconcileApprovedTarget === 'registration' && <div className="w-2 h-2 rounded-full bg-white" />}
-                                                        </div>
-                                                        <div className="min-w-0 flex-1">
-                                                            <div className="flex items-center justify-between gap-2 flex-wrap mb-1">
-                                                                <span className="font-black text-[14.5px] text-[#08315F]">
-                                                                    Approve Registration ({reconcileTargetItem.TLOid})
-                                                                </span>
-                                                                {reconcileApprovedTarget === 'registration' ? (
-                                                                    <span className="px-2 py-0.5 rounded-full bg-emerald-600 text-white text-[10.5px] font-black uppercase tracking-wider shadow-xs">
-                                                                        Will Be Active
-                                                                    </span>
-                                                                ) : (
-                                                                    <span className="px-2 py-0.5 rounded-full bg-slate-100 text-slate-500 text-[10px] font-bold uppercase tracking-wider">
-                                                                        Will Be Inactive
-                                                                    </span>
-                                                                )}
-                                                            </div>
-                                                            <div className="text-[12.5px] text-slate-700 font-semibold truncate">
-                                                                {reconcileTargetItem.first_name} {reconcileTargetItem.last_name || ''}
-                                                            </div>
-                                                            <div className="text-[11.5px] text-slate-500 truncate mt-0.5">
-                                                                {reconcileTargetItem.email || 'No email'} • {reconcileTargetItem.position_title || 'Applicant'}
-                                                            </div>
-                                                            <div className="text-[11px] text-emerald-800/80 font-medium mt-1.5 pt-1.5 border-t border-emerald-200/60 leading-snug">
-                                                                Activates {reconcileTargetItem.TLOid}, inherits canonical details from {selectedCandidate?.TLOid || 'existing official'}, and sets {selectedCandidate?.TLOid || 'existing official'} to Inactive.
-                                                            </div>
-                                                        </div>
-                                                    </button>
-
-                                                    {/* Option 2: Existing Official Record */}
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => selectedCandidate && setReconcileApprovedTarget('candidate')}
-                                                        disabled={!selectedCandidate}
-                                                        className={`p-4 rounded-xl border-2 text-left transition-all flex items-start gap-3.5 ${
-                                                            reconcileApprovedTarget === 'candidate'
-                                                                ? 'bg-emerald-50/80 border-emerald-500 shadow-md ring-2 ring-emerald-500/25'
-                                                                : 'bg-white border-slate-200 hover:bg-slate-50 text-slate-700 disabled:opacity-50'
-                                                        }`}
-                                                    >
-                                                        <div className={`mt-0.5 w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-all ${
-                                                            reconcileApprovedTarget === 'candidate'
-                                                                ? 'border-emerald-600 bg-emerald-600 text-white'
-                                                                : 'border-slate-300 bg-white'
-                                                        }`}>
-                                                            {reconcileApprovedTarget === 'candidate' && <div className="w-2 h-2 rounded-full bg-white" />}
-                                                        </div>
-                                                        <div className="min-w-0 flex-1">
-                                                            <div className="flex items-center justify-between gap-2 flex-wrap mb-1">
-                                                                <span className="font-black text-[14.5px] text-[#08315F]">
-                                                                    Approve Existing Official ({selectedCandidate?.TLOid || 'Candidate'})
-                                                                </span>
-                                                                {reconcileApprovedTarget === 'candidate' ? (
-                                                                    <span className="px-2 py-0.5 rounded-full bg-emerald-600 text-white text-[10.5px] font-black uppercase tracking-wider shadow-xs">
-                                                                        Will Be Active
-                                                                    </span>
-                                                                ) : (
-                                                                    <span className="px-2 py-0.5 rounded-full bg-slate-100 text-slate-500 text-[10px] font-bold uppercase tracking-wider">
-                                                                        Will Be Inactive
-                                                                    </span>
-                                                                )}
-                                                            </div>
-                                                            <div className="text-[12.5px] text-slate-700 font-semibold truncate">
-                                                                {selectedCandidate ? `${selectedCandidate.first_name} ${selectedCandidate.last_name || ''}` : 'No candidate selected'}
-                                                            </div>
-                                                            <div className="text-[11.5px] text-slate-500 truncate mt-0.5">
-                                                                {selectedCandidate?.email || 'No email'} • {selectedCandidate?.position_title || 'No Position'}
-                                                            </div>
-                                                            <div className="text-[11px] text-emerald-800/80 font-medium mt-1.5 pt-1.5 border-t border-emerald-200/60 leading-snug">
-                                                                Retains {selectedCandidate?.TLOid || 'existing official'} Active, links registration credentials ({reconcileTargetItem.email}), and sets {reconcileTargetItem.TLOid} to Inactive.
-                                                            </div>
-                                                        </div>
-                                                    </button>
-                                                </div>
-                                            </div>
-
-                                            {/* Side-by-Side Comparison Cards */}
-                                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 md:gap-6 items-stretch">
-                                                {/* Registration Record Card */}
-                                                <div
-                                                    onClick={() => setReconcileApprovedTarget('registration')}
-                                                    className={`p-6 sm:p-7 rounded-2xl border-2 shadow-xs flex flex-col justify-between space-y-4 cursor-pointer transition-all ${
-                                                        reconcileApprovedTarget === 'registration'
-                                                            ? 'bg-emerald-50/20 border-emerald-500 ring-2 ring-emerald-500/25 shadow-md'
-                                                            : 'bg-white border-slate-200/90 hover:border-slate-300'
-                                                    }`}
-                                                >
-                                                    <div>
-                                                        {/* Header: Title and Status Badge */}
-                                                        <div className="flex items-start justify-between gap-3 mb-4">
-                                                            <div>
-                                                                <span className="text-[12px] font-black text-slate-400 uppercase tracking-widest block leading-tight">
-                                                                    REGISTRATION RECORD
-                                                                </span>
-                                                                <span className="text-[12px] font-black text-slate-400 uppercase tracking-widest block leading-tight">
-                                                                    (PENDING)
-                                                                </span>
-                                                            </div>
-                                                            <div className="flex flex-col items-end gap-1.5 shrink-0">
-                                                                <span className="px-3.5 py-1 rounded-full bg-[#fef3c7] text-[#b45309] text-[11px] font-black uppercase tracking-wider whitespace-nowrap">
-                                                                    FOR APPROVAL
-                                                                </span>
-                                                                {reconcileApprovedTarget === 'registration' ? (
-                                                                    <span className="px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10.5px] font-black uppercase tracking-wider flex items-center gap-1 border border-emerald-200">
-                                                                        <FiCheckCircle size={11} className="text-emerald-600" /> Selected to Approve
-                                                                    </span>
-                                                                ) : (
-                                                                    <span className="px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-500 text-[10px] font-bold uppercase tracking-wider">
-                                                                        Will be Inactive
-                                                                    </span>
-                                                                )}
-                                                            </div>
-                                                        </div>
-
-                                                        {/* Fields Container */}
-                                                        <div className="space-y-3.5 text-[14px]">
-                                                            <div>
-                                                                <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block mb-0.5">FULL NAME</span>
-                                                                <span className="font-black text-[#08315F] text-[17px] sm:text-[18px] uppercase tracking-tight block">
-                                                                    {reconcileTargetItem.first_name} {reconcileTargetItem.last_name || ''}
-                                                                </span>
-                                                            </div>
-
-                                                            <div>
-                                                                <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block mb-0.5">REGISTRATION EMAIL</span>
-                                                                <span className="font-medium text-slate-800 break-all text-[14px] sm:text-[14.5px] block">
-                                                                    {reconcileTargetItem.email || '—'}
-                                                                </span>
-                                                            </div>
-
-                                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-                                                                <div>
-                                                                    <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block mb-0.5">TLOID</span>
-                                                                    <span className="font-black text-[#0284c7] text-[15px] sm:text-[16px] block tracking-wide">
-                                                                        {reconcileTargetItem.TLOid}
-                                                                    </span>
-                                                                </div>
-                                                                <div>
-                                                                    <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block mb-0.5">REGISTRATION DATE</span>
-                                                                    <span className="font-medium text-slate-800 text-[14px] sm:text-[14.5px] block">
-                                                                        {reconcileTargetItem.created_at ? new Date(reconcileTargetItem.created_at).toLocaleDateString() : '—'}
-                                                                    </span>
-                                                                </div>
-                                                            </div>
-
-                                                            <div>
-                                                                <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block mb-0.5">POSITION APPLIED / TITLE</span>
-                                                                <span className="font-medium text-slate-800 text-[14px] sm:text-[14.5px] block">
-                                                                    {reconcileTargetItem.position_title || '(Applicant)'}
-                                                                </span>
-                                                            </div>
-
-                                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-                                                                <div>
-                                                                    <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block mb-0.5">OFFICE / DIVISION</span>
-                                                                    <span className="font-medium text-slate-800 text-[14px] sm:text-[14.5px] block">
-                                                                        {[reconcileTargetItem.office, reconcileTargetItem.division].filter(Boolean).join(' / ') || '(Not Set)'}
-                                                                    </span>
-                                                                </div>
-                                                                <div>
-                                                                    <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block mb-0.5">REGION</span>
-                                                                    <span className="font-medium text-slate-800 text-[14px] sm:text-[14.5px] block">
-                                                                        {reconcileTargetItem.region || reconcileTargetItem.strand || '(Not Set)'}
-                                                                    </span>
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-
-                                                    {/* Profile Completion Bar */}
-                                                    {reconcileTargetItem.profile_completion != null && (() => {
-                                                        const pct = Math.min(100, Math.max(0, Math.round(reconcileTargetItem.profile_completion)));
-                                                        return (
-                                                            <div className="pt-2">
-                                                                <div className="flex items-center justify-between mb-1.5">
-                                                                    <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">PROFILE COMPLETION</span>
-                                                                    <span className="text-[13.5px] font-black text-[#0284c7]">{pct}%</span>
-                                                                </div>
-                                                                <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
-                                                                    <div
-                                                                        className="h-full bg-[#08315F] rounded-full transition-all duration-500"
-                                                                        style={{ width: `${pct}%` }}
-                                                                    />
-                                                                </div>
-                                                            </div>
-                                                        );
-                                                    })()}
-                                                </div>
-
-                                                {/* Canonical Candidate Record Card */}
-                                                <div
-                                                    onClick={() => selectedCandidate && setReconcileApprovedTarget('candidate')}
-                                                    className={`p-6 sm:p-7 rounded-2xl border-2 shadow-xs flex flex-col justify-between space-y-4 transition-all ${
-                                                        selectedCandidate ? 'cursor-pointer' : ''
-                                                    } ${
-                                                        reconcileApprovedTarget === 'candidate'
-                                                            ? 'bg-emerald-50/20 border-emerald-500 ring-2 ring-emerald-500/25 shadow-md'
-                                                            : 'bg-[#f0f7ff] border-[#bae6fd] hover:border-blue-300'
-                                                    }`}
-                                                >
-                                                    {selectedCandidate ? (
-                                                        <>
-                                                            <div>
-                                                                {/* Header: Title and Status Badge */}
-                                                                <div className="flex items-start justify-between gap-3 mb-4">
-                                                                    <div>
-                                                                        <span className="text-[12px] font-black text-[#0284c7] uppercase tracking-widest block leading-tight">
-                                                                            EXISTING OFFICIAL RECORD
-                                                                        </span>
-                                                                        <span className="text-[12px] font-black text-[#0284c7] uppercase tracking-widest block leading-tight">
-                                                                            (ACTIVE)
-                                                                        </span>
-                                                                    </div>
-                                                                    <div className="flex flex-col items-end gap-1.5 shrink-0">
-                                                                        <span className="px-3.5 py-1 rounded-full bg-[#dcfce7] text-[#15803d] text-[11px] font-black uppercase tracking-wider whitespace-nowrap">
-                                                                            ACTIVE MASTERLIST
-                                                                        </span>
-                                                                        {reconcileApprovedTarget === 'candidate' ? (
-                                                                            <span className="px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10.5px] font-black uppercase tracking-wider flex items-center gap-1 border border-emerald-200">
-                                                                                <FiCheckCircle size={11} className="text-emerald-600" /> Selected to Approve
-                                                                            </span>
-                                                                        ) : (
-                                                                            <span className="px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-500 text-[10px] font-bold uppercase tracking-wider">
-                                                                                Will be Inactive
-                                                                            </span>
-                                                                        )}
-                                                                    </div>
-                                                                </div>
-
-                                                                {/* Fields Container */}
-                                                                <div className="space-y-3.5 text-[14px]">
-                                                                    <div>
-                                                                        <span className="text-[11px] font-bold text-[#0284c7]/75 uppercase tracking-wider block mb-0.5">CANONICAL NAME</span>
-                                                                        <span className="font-black text-[#08315F] text-[17px] sm:text-[18px] uppercase tracking-tight block">
-                                                                            {selectedCandidate.first_name} {selectedCandidate.last_name || ''}
-                                                                        </span>
-                                                                    </div>
-
-                                                                    <div>
-                                                                        <span className="text-[11px] font-bold text-[#0284c7]/75 uppercase tracking-wider block mb-0.5">CANONICAL MASTERLIST EMAIL</span>
-                                                                        <span className="font-medium text-slate-800 break-all text-[14px] sm:text-[14.5px] block">
-                                                                            {selectedCandidate.email || '—'}
-                                                                        </span>
-                                                                    </div>
-
-                                                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-                                                                        <div>
-                                                                            <span className="text-[11px] font-bold text-[#0284c7]/75 uppercase tracking-wider block mb-0.5">CANONICAL TLOID</span>
-                                                                            <span className="font-black text-[#0284c7] text-[15px] sm:text-[16px] block tracking-wide">
-                                                                                {selectedCandidate.TLOid}
-                                                                            </span>
-                                                                        </div>
-                                                                        <div>
-                                                                            <span className="text-[11px] font-bold text-[#0284c7]/75 uppercase tracking-wider block mb-0.5">PLANTILLA ITEM NO</span>
-                                                                            <span className="font-semibold text-slate-800 text-[13px] sm:text-[14px] break-all block">
-                                                                                {selectedCandidate.plantilla_item_no || '—'}
-                                                                            </span>
-                                                                        </div>
-                                                                    </div>
-
-                                                                    <div>
-                                                                        <span className="text-[11px] font-bold text-[#0284c7]/75 uppercase tracking-wider block mb-0.5">POSITION TITLE</span>
-                                                                        <span className="font-bold text-slate-900 text-[14px] sm:text-[14.5px] uppercase block leading-snug">
-                                                                            {selectedCandidate.position_title || '—'}
-                                                                        </span>
-                                                                    </div>
-
-                                                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-                                                                        <div>
-                                                                            <span className="text-[11px] font-bold text-[#0284c7]/75 uppercase tracking-wider block mb-0.5">OFFICE / DIVISION</span>
-                                                                            <span className="font-medium text-slate-800 text-[13.5px] sm:text-[14px] block">
-                                                                                {[selectedCandidate.office, selectedCandidate.division].filter(Boolean).join(' / ') || '—'}
-                                                                            </span>
-                                                                        </div>
-                                                                        <div>
-                                                                            <span className="text-[11px] font-bold text-[#0284c7]/75 uppercase tracking-wider block mb-0.5">REGION</span>
-                                                                            <span className="font-medium text-slate-800 text-[13.5px] sm:text-[14px] block">
-                                                                                {selectedCandidate.region || selectedCandidate.strand || '—'}
-                                                                            </span>
-                                                                        </div>
-                                                                    </div>
-                                                                </div>
-                                                            </div>
-
-                                                            {/* Profile Completion Bar */}
-                                                            {(() => {
-                                                                const pct = selectedCandidate.profile_completion != null ? Math.min(100, Math.max(0, Math.round(selectedCandidate.profile_completion))) : 0;
-                                                                return (
-                                                                    <div className="pt-2">
-                                                                        <div className="flex items-center justify-between mb-1.5">
-                                                                            <span className="text-[11px] font-bold text-[#0284c7]/75 uppercase tracking-wider">PROFILE COMPLETION</span>
-                                                                            <span className="text-[13.5px] font-black text-[#0284c7]">{pct}%</span>
-                                                                        </div>
-                                                                        <div className="w-full h-2 bg-[#dbeafe]/80 rounded-full overflow-hidden border border-[#bfdbfe]/50">
-                                                                            <div
-                                                                                className="h-full bg-[#08315F] rounded-full transition-all duration-500"
-                                                                                style={{ width: `${pct}%` }}
-                                                                            />
-                                                                        </div>
-                                                                    </div>
-                                                                );
-                                                            })()}
-                                                        </>
-                                                    ) : (
-                                                        <div className="text-center py-12 text-slate-400 font-medium">
-                                                            No candidate selected.
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            </div>
-
-                                            {/* Confirmation Statement & Declaration Checkbox Box */}
-                                            <div className="p-5 bg-amber-50 rounded-2xl border-2 border-amber-300 space-y-3">
-                                                <div className="flex items-center gap-2 text-amber-900 font-black text-[17px] uppercase tracking-wide">
-                                                    <FiAlertTriangle className="text-amber-600 shrink-0" size={20} />
-                                                    <span>Is this the same person?</span>
-                                                </div>
-                                                <p className="text-[14px] text-amber-950/80 font-medium leading-relaxed">
-                                                    {reconcileApprovedTarget === 'candidate' ? (
-                                                        <>
-                                                            Please verify that the registration record and the existing official record belong to the same person before proceeding. This action will retain existing official record <strong>{selectedCandidate?.TLOid || 'the existing official'}</strong> as <strong>Active</strong>, link login credentials for <strong>{reconcileTargetItem.email}</strong>, and mark registration record <strong>{reconcileTargetItem.TLOid}</strong> as Inactive.
-                                                        </>
-                                                    ) : (
-                                                        <>
-                                                            Please verify that the registration record and the existing official record belong to the same person before proceeding. This action will activate registration record <strong>{reconcileTargetItem.TLOid}</strong>, inherit official position, plantilla item no., and profile details from <strong>{selectedCandidate?.TLOid || 'the existing official'}</strong>, and mark <strong>{selectedCandidate?.TLOid || 'the existing official record'}</strong> as Inactive.
-                                                        </>
-                                                    )}
-                                                </p>
-                                                <label className="flex items-start gap-3 pt-2 cursor-pointer select-none">
-                                                    <input
-                                                        type="checkbox"
-                                                        checked={reconcileConfirmed}
-                                                        onChange={(e) => setReconcileConfirmed(e.target.checked)}
-                                                        className="mt-1 w-5 h-5 rounded border-2 border-amber-400 text-[#08315F] focus:ring-[#08315F] cursor-pointer"
-                                                    />
-                                                    <span className="text-[14px] font-black text-amber-950 uppercase tracking-wide">
-                                                        Yes, I have verified that these records belong to the same person and approve {reconcileApprovedTarget === 'candidate' ? (selectedCandidate?.TLOid || 'existing official') : reconcileTargetItem.TLOid}.
-                                                    </span>
-                                                </label>
-                                            </div>
-
-                                            {/* Administrative Remarks */}
-                                            <div className="space-y-2">
-                                                <label className="text-[13.5px] font-black text-slate-500 uppercase tracking-widest block">
-                                                    Administrative Remarks / Justification <span className="text-rose-500">*</span>
-                                                </label>
-                                                <textarea
-                                                    rows={3}
-                                                    value={reconcileRemarks}
-                                                    onChange={(e) => setReconcileRemarks(e.target.value)}
-                                                    placeholder="Provide detailed justification for this reconciliation (e.g. Verified with Division HRMO, verified GovMail credentials)..."
-                                                    className="w-full bg-slate-50 border-2 border-slate-200 focus:border-[#08315F] rounded-2xl p-4 text-[15px] font-medium text-slate-800 outline-none transition-all resize-none"
-                                                />
-                                            </div>
-                                        </div>
-
-                                        {/* Modal Footer */}
-                                        <div className="p-3 sm:px-6 sm:py-3 bg-slate-50 border-t-2 border-slate-200 flex flex-col sm:flex-row items-center justify-end gap-3 shrink-0">
-                                            <button
-                                                type="button"
-                                                onClick={() => setReconcileModalOpen(false)}
-                                                disabled={reconcileLoading}
-                                                className="w-full sm:w-auto px-5 py-2.5 rounded-xl border-2 border-slate-200 bg-white hover:bg-slate-100 text-slate-700 font-bold text-[14px] uppercase tracking-wider transition-all"
-                                            >
-                                                Cancel
-                                            </button>
-                                            <button
-                                                type="button"
-                                                onClick={handleExecuteReconciliation}
-                                                disabled={!reconcileConfirmed || !reconcileRemarks.trim() || !selectedCandidate || reconcileLoading}
-                                                className="w-full sm:w-auto px-6 py-2.5 rounded-xl bg-[#08315F] hover:bg-blue-800 text-white font-black text-[14px] uppercase tracking-wider shadow-md shadow-blue-900/20 disabled:opacity-40 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2"
-                                            >
-                                                {reconcileLoading ? (
-                                                    <span>Processing Reconciliation...</span>
-                                                ) : (
-                                                    <>
-                                                        <FiUserCheck size={18} />
-                                                        <span>
-                                                            {reconcileApprovedTarget === 'candidate'
-                                                                ? `Yes, Approve & Retain ${selectedCandidate?.TLOid || 'Official'} — Proceed`
-                                                                : `Yes, Approve ${reconcileTargetItem.TLOid} — Proceed`}
-                                                        </span>
-                                                    </>
-                                                )}
-                                            </button>
-                                        </div>
-                                    </motion.div>
-                                </div>
-                            )}
-                        </AnimatePresence>,
-                        document.body
-                    )}
-
                     <footer className="mt-auto p-12 text-center bg-white border-t-2 border-slate-100 flex flex-col items-center gap-6">
                         <div className="space-y-1">
                             <p className="text-slate-400 text-[13.5px] font-black uppercase tracking-[0.3em]">© 2026 Department of Education • InsightEd Nexus Portal</p>
@@ -3287,7 +1305,7 @@ const OfficialsRegistry = () => {
                         </div>
                     </footer>
                 </div>
-            </div>
+            </AdminLayout>
         </PageTransition>
     );
 };

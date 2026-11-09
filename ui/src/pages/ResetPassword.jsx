@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { FiLock, FiEye, FiEyeOff } from 'react-icons/fi';
+import { Lock as FiLock, Eye as FiEye, EyeSlash as FiEyeOff } from '@phosphor-icons/react';
 import Swal from 'sweetalert2';
 import PageTransition from '../components/PageTransition';
-import logo from '../assets/tlo_logo.png';
+import logo from '../assets/modern_logo.png';
+import FormErrorSummary from '../components/forms/FormErrorSummary.jsx';
+import FloatingLabelInput from '../components/forms/FloatingLabelInput.jsx';
 
 const ResetPassword = () => {
     const [searchParams] = useSearchParams();
@@ -15,22 +17,20 @@ const ResetPassword = () => {
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     const [loading, setLoading] = useState(false);
+    const [errors, setErrors] = useState([]);
+    const fieldError = (id) => errors.find((er) => er.id === id)?.message;
 
     const handleReset = async (e) => {
         e.preventDefault();
 
-        if (!token) {
-            Swal.fire('Error', 'Invalid or missing reset token.', 'error');
-            return;
-        }
-
-        if (password.length < 8) {
-            Swal.fire('Error', 'Password must be at least 8 characters long.', 'error');
-            return;
-        }
-
-        if (password !== confirmPassword) {
-            Swal.fire('Error', 'Passwords do not match.', 'error');
+        const found = [];
+        if (!token) found.push({ message: 'Invalid or missing reset token.' });
+        if (password.length < 8) found.push({ id: 'reset-password', message: 'Password must be at least 8 characters long.' });
+        if (password !== confirmPassword) found.push({ id: 'reset-confirm-password', message: 'Passwords do not match.' });
+        setErrors(found);
+        if (found.length > 0) {
+            const first = found.find((er) => er.id);
+            if (first) document.getElementById(first.id)?.focus();
             return;
         }
 
@@ -62,66 +62,39 @@ const ResetPassword = () => {
     return (
         <PageTransition>
             <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
-                <div className="bg-white rounded-[2.5rem] p-10 max-w-md w-full shadow-2xl relative border border-white/20">
+                <div className="bg-white rounded-lg p-10 max-w-md w-full shadow-2xl relative border border-white/20">
                     <div className="text-center mb-8">
                         <img src={logo} alt="DepEd Logo" className="w-20 mx-auto mb-6" />
                         <h2 className="text-2xl font-black text-slate-800 tracking-tight uppercase italic">Reset Password</h2>
                         <p className="text-slate-500 text-sm mt-2 font-medium">Enter your new password below.</p>
                     </div>
 
-                    <form onSubmit={handleReset} className="space-y-5">
-                        <div className="relative group">
-                            <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                                <FiLock className="h-5 w-5 text-slate-400 group-focus-within:text-blue-600 transition-colors" />
-                            </div>
-                            <input
-                                type={showPassword ? "text" : "password"}
-                                value={password}
-                                onChange={(e) => setPassword(e.target.value)}
-                                placeholder="New Password"
-                                className="w-full pl-12 pr-12 py-4 bg-slate-50 border-2 border-slate-100 rounded-2xl text-sm font-semibold text-slate-700 placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:bg-white transition-all"
-                            />
-                            <button
-                                type="button"
-                                onClick={() => setShowPassword(!showPassword)}
-                                className="absolute inset-y-0 right-0 pr-4 flex items-center"
-                            >
+                    <form onSubmit={handleReset} className="space-y-5" noValidate>
+                        <FormErrorSummary errors={errors} />
+                        <FloatingLabelInput label="New Password" icon={<FiLock />} trailing={<button type="button" onClick={() => setShowPassword(!showPassword)} className="flex items-center text-secondary">
                                 {showPassword ? (
                                     <FiEyeOff className="h-5 w-5 text-slate-400 hover:text-slate-600 transition-colors" />
                                 ) : (
                                     <FiEye className="h-5 w-5 text-slate-400 hover:text-slate-600 transition-colors" />
                                 )}
-                            </button>
-                        </div>
+                            </button>} className="w-full" id="reset-password" aria-invalid={fieldError('reset-password') ? 'true' : undefined} type={showPassword ? "text" : "password"} value={password} onChange={(e) => setPassword(e.target.value)} placeholder="New Password" />
 
-                        <div className="relative group">
-                            <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                                <FiLock className="h-5 w-5 text-slate-400 group-focus-within:text-blue-600 transition-colors" />
-                            </div>
-                            <input
-                                type={showConfirmPassword ? "text" : "password"}
-                                value={confirmPassword}
-                                onChange={(e) => setConfirmPassword(e.target.value)}
-                                placeholder="Confirm New Password"
-                                className="w-full pl-12 pr-12 py-4 bg-slate-50 border-2 border-slate-100 rounded-2xl text-sm font-semibold text-slate-700 placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:bg-white transition-all"
-                            />
-                            <button
-                                type="button"
-                                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                                className="absolute inset-y-0 right-0 pr-4 flex items-center"
-                            >
+                        {fieldError('reset-password') && <p className="-mt-3 text-[13px] font-medium text-danger-700">{fieldError('reset-password')}</p>}
+
+                        <FloatingLabelInput label="Confirm New Password" icon={<FiLock />} trailing={<button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} className="flex items-center text-secondary">
                                 {showConfirmPassword ? (
                                     <FiEyeOff className="h-5 w-5 text-slate-400 hover:text-slate-600 transition-colors" />
                                 ) : (
                                     <FiEye className="h-5 w-5 text-slate-400 hover:text-slate-600 transition-colors" />
                                 )}
-                            </button>
-                        </div>
+                            </button>} className="w-full" id="reset-confirm-password" aria-invalid={fieldError('reset-confirm-password') ? 'true' : undefined} type={showConfirmPassword ? "text" : "password"} value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} placeholder="Confirm New Password" />
 
-                        <button 
-                            type="submit" 
+                        {fieldError('reset-confirm-password') && <p className="-mt-3 text-[13px] font-medium text-danger-700">{fieldError('reset-confirm-password')}</p>}
+
+                        <button
+                            type="submit"
                             disabled={loading}
-                            className="w-full bg-[#08315F] text-white font-black py-4 rounded-2xl shadow-lg active:scale-95 transition-all text-sm uppercase tracking-widest disabled:opacity-70 mt-6"
+                            className="w-full bg-brand-800 text-white font-black py-4 rounded-2xl shadow-lg active:scale-95 transition-all text-sm uppercase tracking-widest disabled:opacity-70 mt-6"
                         >
                             {loading ? 'Resetting...' : 'Reset Password'}
                         </button>

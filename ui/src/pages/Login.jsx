@@ -1,24 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import {
-    FiMail,
-    FiLock,
-    FiEye,
-    FiEyeOff,
-    FiArrowRight,
-    FiArrowLeft,
-    FiAlertCircle,
-    FiSmartphone,
-    FiKey,
-    FiX
-} from 'react-icons/fi';
-import { motion, AnimatePresence } from 'framer-motion';
-import logo from '../assets/tlo_logo.png';
+import { Envelope as FiMail, Lock as FiLock, Eye as FiEye, EyeSlash as FiEyeOff, ArrowRight as FiArrowRight, ArrowLeft as FiArrowLeft, WarningCircle as FiAlertCircle, DeviceMobile as FiSmartphone, Key as FiKey, X as FiX } from '@phosphor-icons/react';
+import { motion, AnimatePresence } from '../utils/staticElements.jsx';
+import logo from '../assets/modern_logo.png';
 import PageTransition from '../components/PageTransition';
 import LoadingScreen from '../components/LoadingScreen';
 import PinLogin from '../components/PinLogin';
 import Swal from 'sweetalert2';
+import FloatingLabelInput from '../components/forms/FloatingLabelInput.jsx';
+import FormErrorSummary from '../components/forms/FormErrorSummary.jsx';
 
 const Login = () => {
     const navigate = useNavigate();
@@ -38,6 +29,8 @@ const Login = () => {
     const [showBackPrompt, setShowBackPrompt] = useState(false);
     const [showDialpadModal, setShowDialpadModal] = useState(false);
     const [forgotEmail, setForgotEmail] = useState('');
+    const [errors, setErrors] = useState([]);
+    const fieldError = (id) => errors.find((er) => er.id === id)?.message;
     const [forgotLoading, setForgotLoading] = useState(false);
 
     // UI flows & Remembered user handling
@@ -57,7 +50,7 @@ const Login = () => {
                 const roleLower = user.role?.toLowerCase() || '';
                 const isAllowed = isCOPortal
                     ? (['personnel admin', 'super user', 'central office', 'regional office', 'school division office'].includes(roleLower))
-                    : (['tlo applicant', 'vacancy applicant'].includes(roleLower));
+                    : (roleLower === 'tlo applicant');
 
                 if (isAllowed) return user;
 
@@ -87,30 +80,6 @@ const Login = () => {
         return true;
     });
 
-    // Handle keyboard input for passcode dialpad modal
-    useEffect(() => {
-        if (!showDialpadModal) return;
-
-        const handleKeyDown = (e) => {
-            if (/^[0-9]$/.test(e.key)) {
-                e.preventDefault();
-                setPasscode(prev => (prev.length < 6 ? prev + e.key : prev));
-            } else if (e.key === 'Backspace' || e.key === 'Delete') {
-                e.preventDefault();
-                setPasscode(prev => prev.slice(0, -1));
-            } else if (e.key === 'Enter') {
-                e.preventDefault();
-                setShowDialpadModal(false);
-            } else if (e.key === 'Escape') {
-                e.preventDefault();
-                setShowDialpadModal(false);
-            }
-        };
-
-        window.addEventListener('keydown', handleKeyDown);
-        return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [showDialpadModal]);
-
     // Populate login identifier from remembered user if available
     useEffect(() => {
         if (rememberedUser?.email && !loginId) {
@@ -121,6 +90,31 @@ const Login = () => {
     // ... hooks already declared above ...
 
     const { login, loginWithCredentials, verifyPin, logout } = useAuth();
+
+    const getTargetRedirect = (roleLower) => {
+        const searchParams = new URLSearchParams(location.search);
+        const targetRedirect = searchParams.get('returnUrl') || searchParams.get('redirect') || location.state?.redirectTo || location.state?.returnUrl;
+
+        if (
+            targetRedirect &&
+            typeof targetRedirect === 'string' &&
+            targetRedirect.startsWith('/') &&
+            !targetRedirect.startsWith('//') &&
+            !targetRedirect.startsWith('/login') &&
+            !targetRedirect.startsWith('/register') &&
+            !targetRedirect.startsWith('/reset-password')
+        ) {
+            return targetRedirect;
+        }
+
+        if (['personnel admin', 'super user', 'central office', 'regional office', 'school division office', 'co_pd', 'ro_hrmo', 'sdo_hrmo'].includes(roleLower)) {
+            return '/home';
+        } else if (['tlo applicant', 'third level applicant'].includes(roleLower)) {
+            return '/timon-applications';
+        } else {
+            return '/official-profiling';
+        }
+    };
 
     useEffect(() => {
         // Standalone app defaults
@@ -135,50 +129,18 @@ const Login = () => {
         // Strictly never copy password into passcode state or vice versa
     };
 
-    const showEmailChangedAlert = (emailChangedData) => {
-        const oldMail = emailChangedData.old_email || loginId;
-        const newMail = emailChangedData.new_email;
-        Swal.fire({
-            icon: 'info',
-            title: 'DepEd Email Changed',
-            text: 'The email address for this account has been changed.',
-            confirmButtonText: 'OK',
-            confirmButtonColor: '#0038A8'
-        }).then(() => {
-            if (newMail) {
-                setLoginId(newMail);
-                const storedRem = localStorage.getItem('remembered_user');
-                if (storedRem) {
-                    try {
-                        const rem = JSON.parse(storedRem);
-                        rem.email = newMail;
-                        localStorage.setItem('remembered_user', JSON.stringify(rem));
-                    } catch (e) {}
-                }
-            }
-        });
-    };
-
     const handleLogin = async (e) => {
         if (e) e.preventDefault();
-        const cleanEmail = (loginId || '').toLowerCase().trim();
-        const isVacanciesLogin = location.state?.portal === 'vacancies' || location.state?.redirectTo === '/all-vacancies';
-
-        if (!isVacanciesLogin && !cleanEmail.endsWith('@deped.gov.ph')) {
-            return Swal.fire({
-                icon: 'error',
-                title: 'Invalid Email Domain',
-                text: 'Only official @deped.gov.ph email addresses are allowed to sign in to the TIMON Portal.',
-                confirmButtonColor: '#08315F'
-            });
-        }
+        setErrors([]);
         setLoading(true);
 
         try {
             const secret = loginMode === 'password' ? password : passcode;
             if (!secret) {
                 setLoading(false);
-                return Swal.fire('Error', `Please enter your ${loginMode === 'password' ? 'password' : 'passcode'}.`, 'error');
+                setErrors([{ id: 'login-secret', message: `Please enter your ${loginMode === 'password' ? 'password' : 'passcode'}.` }]);
+                document.getElementById('login-secret')?.focus();
+                return;
             }
 
             const data = await loginWithCredentials(loginId, secret, isCO);
@@ -192,10 +154,10 @@ const Login = () => {
                         return Swal.fire('Access Denied', 'This portal is restricted to Administrative Personnel.', 'error');
                     }
                 } else {
-                    if (!['tlo applicant', 'vacancy applicant', 'third level official', 'third level applicant', 'user'].includes(roleLower)) {
+                    if (!['tlo applicant', 'third level official', 'third level applicant', 'user'].includes(roleLower)) {
                         setLoading(false);
                         logout();
-                        return Swal.fire('Access Denied', 'This portal is restricted to Third Level Personnel and Vacancy Applicants.', 'error');
+                        return Swal.fire('Access Denied', 'This portal is restricted to Third Level Personnel.', 'error');
                     }
                 }
 
@@ -207,24 +169,9 @@ const Login = () => {
                 localStorage.setItem('remembered_user', JSON.stringify(sanitizedUser));
 
                 // Role-based redirection
-                if (location.state?.redirectTo) {
-                    navigate(location.state.redirectTo);
-                } else if (!isCO && (roleLower === 'third level official' || roleLower === 'tlo applicant')) {
-                    sessionStorage.removeItem('active_portal');
-                    navigate('/official-profiling');
-                } else if (location.state?.portal === 'vacancies' || roleLower === 'vacancy applicant' || sessionStorage.getItem('active_portal') === 'vacancies') {
-                    navigate('/vacancy-dashboard');
-                } else if (['personnel admin', 'super user', 'central office', 'regional office', 'school division office', 'co_pd', 'ro_hrmo', 'sdo_hrmo'].includes(roleLower)) {
-                    navigate('/home');
-                } else {
-                    navigate('/official-profiling');
-                }
+                navigate(getTargetRedirect(roleLower), { replace: true });
             } else {
-                if (data.email_changed && data.new_email) {
-                    showEmailChangedAlert(data);
-                } else {
-                    Swal.fire('Login Failed', data.error || 'Invalid credentials', 'error');
-                }
+                Swal.fire('Login Failed', data.error || 'Invalid credentials', 'error');
             }
         } catch (err) {
             Swal.fire('Error', 'Login failed. Please check your connection.', 'error');
@@ -234,17 +181,6 @@ const Login = () => {
     };
 
     const handlePinVerify = async (completedPin) => {
-        const cleanEmail = (loginId || '').toLowerCase().trim();
-        const isVacanciesLogin = location.state?.portal === 'vacancies' || location.state?.redirectTo === '/all-vacancies';
-
-        if (!isVacanciesLogin && !cleanEmail.endsWith('@deped.gov.ph')) {
-            return Swal.fire({
-                icon: 'error',
-                title: 'Invalid Email Domain',
-                text: 'Only official @deped.gov.ph email addresses are allowed to sign in to the TIMON Portal.',
-                confirmButtonColor: '#08315F'
-            });
-        }
         setLoading(true);
         try {
             const data = await verifyPin(loginId, completedPin, isCO);
@@ -258,10 +194,10 @@ const Login = () => {
                         return Swal.fire('Access Denied', 'This portal is restricted to Administrative Personnel.', 'error');
                     }
                 } else {
-                    if (!['tlo applicant', 'vacancy applicant', 'third level official', 'third level applicant', 'user'].includes(roleLower)) {
+                    if (!['tlo applicant', 'third level official', 'third level applicant', 'user'].includes(roleLower)) {
                         setLoading(false);
                         logout();
-                        return Swal.fire('Access Denied', 'This portal is restricted to Third Level Personnel and Vacancy Applicants.', 'error');
+                        return Swal.fire('Access Denied', 'This portal is restricted to Third Level Personnel.', 'error');
                     }
                 }
 
@@ -273,24 +209,9 @@ const Login = () => {
                 localStorage.setItem('remembered_user', JSON.stringify(sanitizedUser));
 
                 // Role-based redirection
-                if (location.state?.redirectTo) {
-                    navigate(location.state.redirectTo);
-                } else if (!isCO && (roleLower === 'third level official' || roleLower === 'tlo applicant')) {
-                    sessionStorage.removeItem('active_portal');
-                    navigate('/official-profiling');
-                } else if (location.state?.portal === 'vacancies' || roleLower === 'vacancy applicant' || sessionStorage.getItem('active_portal') === 'vacancies') {
-                    navigate('/vacancy-dashboard');
-                } else if (['personnel admin', 'super user', 'central office', 'regional office', 'school division office', 'co_pd', 'ro_hrmo', 'sdo_hrmo'].includes(roleLower)) {
-                    navigate('/home');
-                } else {
-                    navigate('/official-profiling');
-                }
+                navigate(getTargetRedirect(roleLower), { replace: true });
             } else {
-                if (data.email_changed && data.new_email) {
-                    showEmailChangedAlert(data);
-                } else {
-                    Swal.fire('Login Failed', data.error || 'Invalid credentials', 'error');
-                }
+                Swal.fire('Login Failed', data.error || 'Invalid credentials', 'error');
             }
         } catch (err) {
             Swal.fire('Error', 'Login failed. Please check your connection.', 'error');
@@ -335,17 +256,17 @@ const Login = () => {
         <PageTransition>
             <div className="min-h-screen w-full flex items-center justify-center relative overflow-hidden bg-transparent">
                 {/* DECORATIVE SHAPES */}
-                <div className="absolute top-[-20%] left-[-10%] w-[500px] h-[500px] bg-[#075985]/10 rounded-full blur-[100px] animate-blob"></div>
-                <div className="absolute bottom-[-20%] right-[-10%] w-[500px] h-[500px] bg-[#FBBF24]/10 rounded-full blur-[100px] animate-blob animation-delay-2000"></div>
-                <div className="absolute top-[40%] left-[20%] w-[300px] h-[300px] bg-[#08315F]/10 rounded-full blur-[80px] animate-blob animation-delay-4000"></div>
+                <div className="absolute top-[-20%] left-[-10%] w-[500px] h-[500px] bg-brand-700/10 rounded-full blur-[100px] animate-blob"></div>
+                <div className="absolute bottom-[-20%] right-[-10%] w-[500px] h-[500px] bg-gold/10 rounded-full blur-[100px] animate-blob animation-delay-2000"></div>
+                <div className="absolute top-[40%] left-[20%] w-[300px] h-[300px] bg-brand-800/10 rounded-full blur-[80px] animate-blob animation-delay-4000"></div>
 
                 <div className="relative z-10 w-[90%] max-w-md">
-                    <div className="bg-white p-8 rounded-[22px] border-2 border-[#08315F] shadow-none transform transition-all hover:scale-[1.01] duration-500 relative">
+                    <div className="bg-white p-8 rounded-lg border-2 border-brand-800 shadow-none transform transition-all hover:scale-[1.01] duration-500 relative">
 
                         {/* BACK BUTTON */}
                         <button
                             onClick={() => navigate('/')}
-                            className="absolute top-6 left-6 p-2 rounded-xl bg-white/50 text-slate-400 hover:text-[#08315F] hover:bg-white transition-all shadow-sm border border-slate-100 group z-20"
+                            className="absolute top-6 left-6 p-2 rounded-xl bg-white/50 text-slate-400 hover:text-brand-800 hover:bg-white transition-all shadow-sm border border-slate-100 group z-20"
                         >
                             <FiArrowLeft className="w-5 h-5 group-hover:-translate-x-0.5 transition-transform" />
                         </button>
@@ -355,7 +276,7 @@ const Login = () => {
                             <div className="relative w-24 h-24 mx-auto mb-4 bg-white/50 rounded-2xl shadow-inner flex items-center justify-center p-2">
                                 <img src={logo} alt="InsightED Logo" className="w-full h-full object-contain drop-shadow-sm" />
                             </div>
-                            <h1 className="text-3xl font-['Plus_Jakarta_Sans'] font-black text-[#08315F] tracking-tight">InsightED</h1>
+                            <h1 className="page-title text-3xl text-brand-800 tracking-tight">InsightED</h1>
                             <p className="text-slate-500 text-sm mt-2 font-medium italic">Recruitment Hub</p>
                         </div>
 
@@ -374,26 +295,11 @@ const Login = () => {
                             />
                         ) : (
                             <form onSubmit={handleLogin} className="space-y-6">
+                                <FormErrorSummary errors={errors} />
                                 <div className="space-y-4">
                                     {/* IDENTIFIER */}
                                     <div className="space-y-2">
-                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Account Identity</label>
-                                        <div className={`relative group transition-all duration-300 ${focusedInput === 'id' ? 'scale-[1.02]' : ''}`}>
-                                            <div className={`absolute left-4 top-1/2 -translate-y-1/2 transition-colors duration-300 ${focusedInput === 'id' ? 'text-[#08315F]' : 'text-slate-400'}`}>
-                                                <FiMail className="w-5 h-5" />
-                                            </div>
-                                            <input
-                                                type="text"
-                                                value={loginId}
-                                                onChange={(e) => setLoginId(e.target.value)}
-                                                onFocus={() => setFocusedInput('id')}
-                                                onBlur={() => setFocusedInput(null)}
-                                                placeholder="Registered @deped.gov.ph Email"
-                                                autoComplete="username"
-                                                className="w-full bg-white border-2 border-slate-100 rounded-2xl py-4 pl-12 pr-4 text-slate-700 font-bold placeholder:text-slate-300 focus:outline-none focus:border-[#08315F] focus:ring-4 focus:ring-[#08315F]/5 transition-all shadow-sm"
-                                                required
-                                            />
-                                        </div>
+                                        <FloatingLabelInput label="Account Identity" icon={<FiMail />} className="w-full" type="text" value={loginId} onChange={(e) => setLoginId(e.target.value)} onFocus={() => setFocusedInput('id')} onBlur={() => setFocusedInput(null)} placeholder="Registered Email" autoComplete="username" required />
                                     </div>
 
                                     {/* AUTH MODE TOGGLE */}
@@ -401,14 +307,14 @@ const Login = () => {
                                         <button
                                             type="button"
                                             onClick={() => handleModeChange('password')}
-                                            className={`flex-1 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${loginMode === 'password' ? 'bg-white text-[#08315F] shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
+                                            className={`flex-1 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${loginMode === 'password' ? 'bg-white text-brand-800 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
                                         >
                                             Password
                                         </button>
                                         <button
                                             type="button"
                                             onClick={() => handleModeChange('passcode')}
-                                            className={`flex-1 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${loginMode === 'passcode' ? 'bg-white text-[#08315F] shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
+                                            className={`flex-1 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${loginMode === 'passcode' ? 'bg-white text-brand-800 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
                                         >
                                             Passcode
                                         </button>
@@ -416,63 +322,18 @@ const Login = () => {
 
                                     {/* SECRET INPUT */}
                                     <div className="space-y-2">
-                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">
-                                            {loginMode === 'password' ? 'Security Password' : '6-Digit Passcode'}
-                                        </label>
                                         <div className={`relative group transition-all duration-300 ${focusedInput === 'secret' ? 'scale-[1.02]' : ''}`}>
-                                            <div className={`absolute left-4 top-1/2 -translate-y-1/2 transition-colors duration-300 ${focusedInput === 'secret' ? 'text-[#08315F]' : 'text-slate-400'}`}>
-                                                <FiLock className="w-5 h-5" />
-                                            </div>
                                             {loginMode === 'password' ? (
-                                                <input
-                                                    type={showPassword ? 'text' : 'password'}
-                                                    value={password}
-                                                    onChange={(e) => setPassword(e.target.value)}
-                                                    onFocus={() => setFocusedInput('secret')}
-                                                    onBlur={() => setFocusedInput(null)}
-                                                    placeholder="••••••••"
-                                                    autoComplete="current-password"
-                                                    className="w-full bg-white border-2 border-slate-100 rounded-2xl py-4 pl-12 pr-12 text-slate-700 font-bold placeholder:text-slate-300 focus:outline-none focus:border-[#08315F] focus:ring-4 focus:ring-[#08315F]/5 transition-all shadow-sm"
-                                                    required
-                                                />
+                                                <FloatingLabelInput label="Security Password" icon={<FiLock className="w-5 h-5" />} trailing={<button type="button" onClick={() => setShowPassword(!showPassword)} className="flex items-center p-1 hover:text-brand-800" aria-label={showPassword ? "Hide secret" : "Show secret"}>{showPassword ? <FiEyeOff className="w-5 h-5" /> : <FiEye className="w-5 h-5" />}</button>} className="w-full" id="login-secret" aria-invalid={fieldError('login-secret') ? 'true' : undefined} type={showPassword ? 'text' : 'password'} value={password} onChange={(e) => setPassword(e.target.value)} onFocus={() => setFocusedInput('secret')} onBlur={() => setFocusedInput(null)} placeholder="••••••••" autoComplete="current-password" required />
                                             ) : (
-                                                <>
-                                                    <input
-                                                        type={showPassword ? 'text' : 'password'}
-                                                        value={passcode}
-                                                        onChange={(e) => {
-                                                            const val = e.target.value.replace(/\D/g, '').slice(0, 6);
-                                                            setPasscode(val);
-                                                        }}
-                                                        onFocus={() => setFocusedInput('secret')}
-                                                        onBlur={() => setFocusedInput(null)}
-                                                        placeholder="••••••"
-                                                        maxLength={6}
-                                                        inputMode="numeric"
-                                                        pattern="[0-9]*"
-                                                        autoComplete="off"
-                                                        className="w-full bg-white border-2 border-slate-100 rounded-2xl py-4 pl-12 pr-20 text-slate-700 font-bold placeholder:text-slate-300 focus:outline-none focus:border-[#08315F] focus:ring-4 focus:ring-[#08315F]/5 transition-all shadow-sm"
-                                                        required
-                                                    />
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => setShowDialpadModal(true)}
-                                                        className="absolute right-12 top-1/2 -translate-y-1/2 text-slate-400 hover:text-[#08315F] transition-colors p-1"
-                                                        title="Open Keypad"
-                                                        aria-label="Open Keypad"
-                                                    >
-                                                        <FiSmartphone className="w-5 h-5" />
-                                                    </button>
-                                                </>
+                                                <FloatingLabelInput label="6-Digit Passcode" icon={<FiLock className="w-5 h-5" />} trailing={<button type="button" onClick={() => setShowPassword(!showPassword)} className="flex items-center p-1 hover:text-brand-800" aria-label={showPassword ? "Hide secret" : "Show secret"}>{showPassword ? <FiEyeOff className="w-5 h-5" /> : <FiEye className="w-5 h-5" />}</button>} className="w-full" id="login-secret" aria-invalid={fieldError('login-secret') ? 'true' : undefined} type={showPassword ? 'text' : 'password'} value={passcode} onChange={(e) => {
+                                                        const val = e.target.value.replace(/\D/g, '').slice(0, 6);
+                                                        setPasscode(val);
+                                                    }} onFocus={() => {
+                                                        setFocusedInput('secret');
+                                                        setShowDialpadModal(true);
+                                                    }} onBlur={() => setFocusedInput(null)} placeholder="••••••" maxLength={6} inputMode="numeric" pattern="[0-9]*" readOnly autoComplete="off" required />
                                             )}
-                                            <button
-                                                type="button"
-                                                onClick={() => setShowPassword(!showPassword)}
-                                                className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-[#08315F] transition-colors p-1"
-                                                aria-label={showPassword ? "Hide secret" : "Show secret"}
-                                            >
-                                                {showPassword ? <FiEyeOff className="w-5 h-5" /> : <FiEye className="w-5 h-5" />}
-                                            </button>
                                         </div>
                                     </div>
                                 </div>
@@ -481,7 +342,7 @@ const Login = () => {
                                     <button
                                         type="button"
                                         onClick={() => setShowForgotModal(true)}
-                                        className="text-[10px] font-black text-[#08315F] uppercase tracking-widest hover:text-blue-800 transition-colors"
+                                        className="text-[10px] font-black text-brand-800 uppercase tracking-widest hover:text-blue-800 transition-colors"
                                     >
                                         Forgot {loginMode === 'password' ? 'Password' : 'Passcode'}?
                                     </button>
@@ -505,7 +366,7 @@ const Login = () => {
                                 <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest">OR</span>
                                 <div className="h-px bg-slate-200 flex-1"></div>
                             </div>
-                            <Link to="/register" state={{ isCO, portal: (location.state?.portal === 'vacancies' || location.state?.redirectTo === '/all-vacancies') ? 'vacancies' : undefined }} className="w-full bg-white border-2 border-blue-100 hover:border-blue-600 hover:bg-blue-50 text-blue-700 font-black py-5 rounded-2xl transition-all active:scale-[0.98] flex items-center justify-center">
+                            <Link to={`/register${location.search}`} state={{ isCO, redirectTo: location.state?.redirectTo, returnUrl: location.state?.returnUrl }} className="w-full bg-white border-2 border-blue-100 hover:border-blue-600 hover:bg-blue-50 text-blue-700 font-black py-5 rounded-2xl transition-all active:scale-[0.98] flex items-center justify-center">
                                 Create Account
                             </Link>
                         </div>
@@ -520,27 +381,13 @@ const Login = () => {
                                 initial={{ opacity: 0, scale: 0.9 }}
                                 animate={{ opacity: 1, scale: 1 }}
                                 exit={{ opacity: 0, scale: 0.9 }}
-                                className="bg-white rounded-[2.5rem] p-8 max-w-sm w-full shadow-2xl relative border border-white/20"
+                                className="bg-white rounded-lg p-8 max-w-sm w-full shadow-2xl relative border border-white/20"
                             >
                                 <div className="text-center mb-6">
                                     <h2 className="text-2xl font-black text-slate-800 tracking-tight mb-2 uppercase italic">Enter Passcode</h2>
-                                    <input
-                                        type="tel"
-                                        inputMode="numeric"
-                                        pattern="[0-9]*"
-                                        maxLength={6}
-                                        value={passcode}
-                                        onChange={(e) => {
-                                            const val = e.target.value.replace(/\D/g, '').slice(0, 6);
-                                            setPasscode(val);
-                                        }}
-                                        className="sr-only"
-                                        autoFocus
-                                        aria-label="Passcode digits"
-                                    />
                                     <div className="flex justify-center gap-3 mb-8 mt-6">
                                         {[...Array(6)].map((_, i) => (
-                                            <div key={i} className={`w-4 h-4 rounded-full border-2 transition-all duration-200 ${passcode.length > i ? 'bg-[#08315F] border-blue-600 scale-110' : 'bg-slate-200 border-transparent'}`} />
+                                            <div key={i} className={`w-4 h-4 rounded-full border-2 transition-all duration-200 ${passcode.length > i ? 'bg-brand-800 border-blue-600 scale-110' : 'bg-slate-200 border-transparent'}`} />
                                         ))}
                                     </div>
                                     <div className="grid grid-cols-3 gap-6 w-full max-w-[260px] mx-auto">
@@ -575,7 +422,7 @@ const Login = () => {
                                 <button
                                     type="button"
                                     onClick={() => setShowDialpadModal(false)}
-                                    className="w-full bg-[#08315F] text-white font-black py-5 rounded-2xl shadow-xl shadow-blue-500/20 active:scale-95 transition-all uppercase tracking-widest text-xs"
+                                    className="w-full bg-brand-800 text-white font-black py-5 rounded-2xl shadow-xl shadow-blue-500/20 active:scale-95 transition-all uppercase tracking-widest text-xs"
                                 >
                                     Done
                                 </button>
@@ -587,32 +434,21 @@ const Login = () => {
                         <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
                             <motion.div
                                 initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 20 }}
-                                className="bg-white rounded-[2.5rem] p-10 max-w-sm w-full shadow-2xl text-center"
+                                className="bg-white rounded-lg p-10 max-w-sm w-full shadow-2xl text-center"
                             >
-                                <div className="w-20 h-20 bg-blue-50 text-[#08315F] rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-inner"><FiKey className="w-10 h-10" /></div>
+                                <div className="w-20 h-20 bg-blue-50 text-brand-800 rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-inner"><FiKey className="w-10 h-10" /></div>
                                 <h2 className="text-2xl font-black text-slate-800 tracking-tight uppercase italic mb-4">Reset Password</h2>
                                 <p className="text-slate-500 text-sm font-medium leading-relaxed mb-6">Enter your email address and we'll send you a link to reset your password.</p>
                                 
                                 <div className="mb-6 text-left">
-                                    <div className="relative">
-                                        <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                                            <FiMail className="h-5 w-5 text-slate-400" />
-                                        </div>
-                                        <input
-                                            type="email"
-                                            value={forgotEmail}
-                                            onChange={(e) => setForgotEmail(e.target.value)}
-                                            placeholder="Email address"
-                                            className="w-full pl-12 pr-4 py-4 bg-slate-50 border-2 border-slate-100 rounded-2xl text-sm font-semibold text-slate-700 placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:bg-white transition-all"
-                                        />
-                                    </div>
+                                    <FloatingLabelInput label="Email address" icon={<FiMail />} className="w-full" type="email" value={forgotEmail} onChange={(e) => setForgotEmail(e.target.value)} placeholder="Email address" />
                                 </div>
 
                                 <div className="space-y-3">
                                     <button 
                                         onClick={handleForgotPassword} 
                                         disabled={forgotLoading}
-                                        className="w-full bg-[#08315F] text-white font-black py-4 rounded-2xl shadow-lg active:scale-95 transition-all text-[12px] uppercase tracking-widest disabled:opacity-70"
+                                        className="w-full bg-brand-800 text-white font-black py-4 rounded-2xl shadow-lg active:scale-95 transition-all text-[12px] uppercase tracking-widest disabled:opacity-70"
                                     >
                                         {forgotLoading ? 'Sending...' : 'Send Reset Link'}
                                     </button>

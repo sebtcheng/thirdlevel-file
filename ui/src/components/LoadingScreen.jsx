@@ -1,5 +1,5 @@
 import React from 'react';
-import logo from '../assets/tlo_logo.png';
+import logo from '../assets/modern_logo.png';
 
 const LoadingScreen = () => {
     return (

@@ -1,11 +1,6 @@
 import React, { useState } from 'react';
-import { 
-  FiHome, 
-  FiMapPin, 
-  FiGrid, 
-  FiBook, 
-  FiBarChart2 
-} from 'react-icons/fi';
+import { House as FiHome, MapPin as FiMapPin, SquaresFour as FiGrid, Book as FiBook, ChartBar as FiBarChart2 } from '@phosphor-icons/react';
+import FloatingLabelInput from '../components/forms/FloatingLabelInput.jsx';
 
 const Dashboard = () => {
   const [activeNav, setActiveNav] = useState('Overview');
@@ -19,10 +14,10 @@ const Dashboard = () => {
   ];
 
   const kpis = [
-    { label: 'Total Learners', value: '27.4M', note: 'Across all active regions', color: 'blue' },
-    { label: 'Priority Schools', value: '1,248', note: 'Marked for resource review', color: 'gold' },
-    { label: 'Teachers', value: '895K', note: 'Current staffing inventory', color: 'blue' },
-    { label: 'Critical Alerts', value: '86', note: 'Require immediate validation', color: 'red' },
+    { label: 'Total Learners', value: '27.4M', note: 'Across all active regions', accent: 'blue' },
+    { label: 'Priority Schools', value: '1,248', note: 'Marked for resource review', accent: 'gold' },
+    { label: 'Teachers', value: '895K', note: 'Current staffing inventory', accent: 'blue' },
+    { label: 'Critical Alerts', value: '86', note: 'Require immediate validation', accent: 'red' },
   ];
 
   const chartData = [
@@ -74,28 +69,24 @@ const Dashboard = () => {
         <div className="content-pad">
           <div className="filter-bar">
             <div className="filter-select-wrapper">
-              <label>Region</label>
-              <select><option>All Regions</option></select>
+              <FloatingLabelInput as="select" label="Region"><option>All Regions</option></FloatingLabelInput>
             </div>
             <div className="filter-select-wrapper">
-              <label>Division</label>
-              <select><option>All Divisions</option></select>
+              <FloatingLabelInput as="select" label="Division"><option>All Divisions</option></FloatingLabelInput>
             </div>
             <div className="filter-select-wrapper">
-              <label>Category</label>
-              <select><option>All Categories</option></select>
+              <FloatingLabelInput as="select" label="Category"><option>All Categories</option></FloatingLabelInput>
             </div>
             <div className="filter-select-wrapper">
-              <label>School Year</label>
-              <select><option>2026-2027</option></select>
+              <FloatingLabelInput as="select" label="School Year"><option>2026-2027</option></FloatingLabelInput>
             </div>
             <button className="apply-btn">Apply Filters</button>
           </div>
 
           <div className="kpi-row">
             {kpis.map((kpi, idx) => (
-              <div className={`card kpi-card border-l-${kpi.color}`} key={idx}>
-                <div className={`kpi-accent bg-${kpi.color}`}></div>
+              <div className={`card kpi-card border-l-${kpi.accent}`} key={idx}>
+                <div className={`kpi-accent bg-${kpi.accent}`}></div>
                 <div className="kpi-label">{kpi.label}</div>
                 <div className="kpi-value">{kpi.value}</div>
                 <div className="kpi-note">{kpi.note}</div>

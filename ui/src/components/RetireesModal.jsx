@@ -1,18 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { FiX, FiAward, FiLogOut, FiAlertCircle, FiCalendar, FiChevronDown, FiUser, FiUsers, FiFileText } from 'react-icons/fi';
+import { X as FiX, Medal as FiAward, SignOut as FiLogOut, WarningCircle as FiAlertCircle, Calendar as FiCalendar, CaretDown as FiChevronDown, User as FiUser, Users as FiUsers, FileText as FiFileText } from '@phosphor-icons/react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { apiUrl } from '../utils/api';
-import { motion, AnimatePresence } from 'framer-motion';
-
-const getReasonBadgeClass = (reason) => {
-  const r = (reason || '').toLowerCase();
-  if (r.includes('anticipat') || r.includes('retir')) return 'bg-amber-100 text-amber-800 border-amber-200';
-  if (r.includes('resign')) return 'bg-rose-100 text-rose-800 border-rose-200';
-  if (r.includes('promotion') || r.includes('demotion') || r.includes('dismissal')) return 'bg-purple-100 text-purple-800 border-purple-200';
-  if (r.includes('vacat')) return 'bg-blue-100 text-blue-800 border-blue-200';
-  return 'bg-slate-100 text-slate-700 border-slate-200';
-};
+import { motion, AnimatePresence } from '../utils/staticElements.jsx';
 
 const RetireesModal = ({ isOpen, onClose, retirees = [], applicationsThisMonth = [], elementsThisMonth = [] }) => {
   const navigate = useNavigate();
@@ -23,39 +14,20 @@ const RetireesModal = ({ isOpen, onClose, retirees = [], applicationsThisMonth =
   const [activeTab, setActiveTab] = useState('retirees');
 
   useEffect(() => {
-    if (selectedOfficial) {
-      if (selectedOfficial.separationReason === 'Anticipated Retirement' && !selectedOfficial.vacate_reason && !selectedOfficial.assignment_remarks) {
-        setRemarks('Mandatory retirement upon reaching the mandatory retirement age of 65 years old.');
+    if (selectedOfficial && selectedOfficial.separationReason !== 'Mandatory Retirement') {
+      setLoadingRemarks(true);
+      fetch(apiUrl(`/api/third-level/officials-registry/officials/${selectedOfficial.TLOid}/last-vacate-update`), {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.success && data.data) setRemarks(data.data.remarks || 'No remarks provided.');
+        else setRemarks('No remarks provided.');
         setLoadingRemarks(false);
-      } else {
-        setLoadingRemarks(true);
-        fetch(apiUrl(`/api/third-level/officials/${selectedOfficial.TLOid}/last-vacate-update`), {
-          headers: { Authorization: `Bearer ${token}` }
-        })
-        .then(res => res.json())
-        .then(data => {
-          if (data.success && data.data?.remarks) {
-            setRemarks(data.data.remarks);
-          } else if (selectedOfficial.assignment_remarks) {
-            setRemarks(selectedOfficial.assignment_remarks);
-          } else if (selectedOfficial.separationReason === 'Anticipated Retirement') {
-            setRemarks('Mandatory retirement upon reaching the mandatory retirement age of 65 years old.');
-          } else {
-            setRemarks('No remarks provided.');
-          }
-          setLoadingRemarks(false);
-        })
-        .catch(() => {
-          if (selectedOfficial.assignment_remarks) {
-            setRemarks(selectedOfficial.assignment_remarks);
-          } else {
-            setRemarks('No remarks provided.');
-          }
-          setLoadingRemarks(false);
-        });
-      }
+      })
+      .catch(() => { setRemarks('Error loading remarks.'); setLoadingRemarks(false); });
     } else {
-      setRemarks('');
+      setRemarks('Mandatory Retirement');
     }
   }, [selectedOfficial, token]);
 
@@ -66,14 +38,14 @@ const RetireesModal = ({ isOpen, onClose, retirees = [], applicationsThisMonth =
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4 font-['Plus_Jakarta_Sans']"
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4"
         >
           <motion.div 
             initial={{ scale: 0.95, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0.95, opacity: 0 }}
             transition={{ duration: 0.2, ease: "easeOut" }}
-            className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl overflow-hidden"
+            className="bg-white rounded-card shadow-2xl w-full max-w-2xl overflow-hidden"
           >
         <div className="bg-gradient-to-r from-blue-900 to-blue-800 p-6 flex justify-between items-center text-white border-b-2 border-white/10">
           <div className="flex items-center gap-3">
@@ -83,7 +55,7 @@ const RetireesModal = ({ isOpen, onClose, retirees = [], applicationsThisMonth =
             <div>
               <h2 className="text-[30px] font-black tracking-tight leading-none">Anticipated Vacancies</h2>
               <p className="text-[18px] text-blue-200 font-bold uppercase tracking-widest mt-1">
-                Upcoming Vacancies & Scheduled Retirements
+                Personnel Retiring Within 5 Years
               </p>
             </div>
           </div>
@@ -123,12 +95,12 @@ const RetireesModal = ({ isOpen, onClose, retirees = [], applicationsThisMonth =
                         {official.first_name} {official.last_name}
                       </h3>
                       {official.separationReason && (
-                         <span className={`text-[15px] font-black px-2.5 py-0.5 rounded-full border uppercase tracking-widest flex-shrink-0 max-w-[220px] truncate inline-block align-middle ${getReasonBadgeClass(official.separationReason)}`} title={official.separationReason}>
+                         <span className="text-[15px] font-black px-2 py-0.5 rounded-full bg-red-100 text-red-700 uppercase tracking-widest flex-shrink-0 max-w-[200px] truncate inline-block align-middle" title={official.separationReason}>
                            {official.separationReason}
                          </span>
                       )}
                       {official.isTurning65 && (
-                         <span className="text-[15px] font-black px-2 py-0.5 rounded-full bg-yellow-100 text-yellow-700 border border-yellow-200 uppercase tracking-widest flex-shrink-0">
+                         <span className="text-[15px] font-black px-2 py-0.5 rounded-full bg-yellow-100 text-yellow-700 uppercase tracking-widest flex-shrink-0">
                            Turns 65
                          </span>
                       )}
@@ -156,8 +128,8 @@ const RetireesModal = ({ isOpen, onClose, retirees = [], applicationsThisMonth =
             ) : (
               <div className="py-12 text-center border-2 border-dashed border-slate-200 rounded-3xl">
                 <FiAward className="mx-auto text-slate-300 mb-4" size={48} />
-                <h3 className="text-[30px] font-black text-[#08315F] uppercase tracking-tighter">No Anticipated Vacancies</h3>
-                <p className="text-[21px] font-bold text-slate-400 mt-2">There are no upcoming scheduled vacancies or retirements within the next 5 years.</p>
+                <h3 className="text-[30px] font-black text-brand-800 uppercase tracking-tighter">No Anticipated Vacancies</h3>
+                <p className="text-[21px] font-bold text-slate-400 mt-2">There are no personnel retiring within the next 5 years.</p>
               </div>
             )
           )}
@@ -188,14 +160,14 @@ const RetireesModal = ({ isOpen, onClose, retirees = [], applicationsThisMonth =
                 animate={{ scale: 1, opacity: 1 }}
                 exit={{ scale: 0.95, opacity: 0 }}
                 transition={{ duration: 0.2, ease: "easeOut" }}
-                className="bg-white rounded-[3rem] w-full max-w-xl shadow-2xl border-2 border-slate-200"
+                className="bg-white rounded-card w-full max-w-xl shadow-2xl border-2 border-slate-200"
               >
                 <div className="p-10">
                     <div className="flex justify-between items-start mb-8">
                         <div>
-                            <span className="text-[15px] font-black text-[#075985] uppercase tracking-widest mb-2 block">Administrative Action</span>
-                            <h2 className="text-[45px] font-['Plus_Jakarta_Sans'] font-black text-[#08315F] tracking-tighter uppercase italic leading-none">
-                                {selectedOfficial.separationReason === 'Anticipated Retirement' ? 'ANTICIPATED RETIREMENT' : 'SCHEDULED VACANCY'}
+                            <span className="text-[15px] font-black text-brand-700 uppercase tracking-widest mb-2 block">Administrative Action</span>
+                            <h2 className="text-[45px] font-black text-brand-800 tracking-tighter uppercase italic leading-none">
+                                VACATING OFFICIAL
                             </h2>
                             <p className="text-slate-400 text-[21px] font-bold mt-2">
                                 {selectedOfficial.first_name} {selectedOfficial.last_name}
@@ -242,4 +214,3 @@ const RetireesModal = ({ isOpen, onClose, retirees = [], applicationsThisMonth =
 };
 
 export default RetireesModal;
-

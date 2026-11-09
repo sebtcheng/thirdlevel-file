@@ -1,0 +1,31 @@
+{
+  "devCommands": [
+    "npm run dev:raw"
+  ],
+  "frontendDir": "ui",
+  "backendDir": "api",
+  "tsconfigDirs": [
+    "ui"
+  ],
+  "linter": "oxlint",
+  "packageManager": "npm",
+  "playwright": true,
+  "has": {
+    "vite": true,
+    "react": true,
+    "react19": true,
+    "express": true,
+    "drizzle": false,
+    "pg": true,
+    "pino": false,
+    "tanstackQuery": false,
+    "eslint": true,
+    "oxlint": true,
+    "typescript": true,
+    "vitest": true,
+    "playwright": true
+  },
+  "notes": [
+    "root dev already starts the backend: the runner wraps the original script unchanged"
+  ]
+}

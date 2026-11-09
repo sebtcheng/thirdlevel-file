@@ -1,0 +1,7 @@
+{
+  "name": "{{repoName}}",
+  "private": true,
+  "version": "0.0.0",
+  "workspaces": ["apps/*", "packages/*"],
+  "scripts": {}
+}

@@ -175,39 +175,12 @@ export async function upsertBinary(pool, rawBuffer, mimeType, originalSize) {
         };
     }
 
-    let insertResult;
-    try {
-        insertResult = await pool.query(
-            `INSERT INTO unified_binaries (hash, content, mime_type, size_bytes)
-             VALUES ($1, $2, $3, $4)
-             RETURNING id`,
-            [hash, finalBuffer, finalMime, finalBuffer.length]
-        );
-    } catch (insertErr) {
-        // Handle undefined column (PostgreSQL code 42703: undefined_column)
-        if (insertErr.code === '42703' || (insertErr.message && insertErr.message.includes('content'))) {
-            console.warn('⚠️ [BinaryPipeline] Column "content" not found, attempting auto-heal on unified_binaries...');
-            try {
-                await pool.query('ALTER TABLE unified_binaries ADD COLUMN IF NOT EXISTS content BYTEA;');
-                insertResult = await pool.query(
-                    `INSERT INTO unified_binaries (hash, content, mime_type, size_bytes)
-                     VALUES ($1, $2, $3, $4)
-                     RETURNING id`,
-                    [hash, finalBuffer, finalMime, finalBuffer.length]
-                );
-            } catch (healErr) {
-                console.warn('⚠️ [BinaryPipeline] Auto-heal failed or restricted, falling back to insert without content:', healErr.message);
-                insertResult = await pool.query(
-                    `INSERT INTO unified_binaries (hash, mime_type, size_bytes)
-                     VALUES ($1, $2, $3)
-                     RETURNING id`,
-                    [hash, finalMime, finalBuffer.length]
-                );
-            }
-        } else {
-            throw insertErr;
-        }
-    }
+    const insertResult = await pool.query(
+        `INSERT INTO unified_binaries (hash, content, mime_type, size_bytes)
+         VALUES ($1, $2, $3, $4)
+         RETURNING id`,
+        [hash, finalBuffer, finalMime, finalBuffer.length]
+    );
 
     return {
         binary_id: insertResult.rows[0].id,
