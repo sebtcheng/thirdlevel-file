@@ -33,6 +33,33 @@ pool.on('error', (err) => {
   console.error('[Database] Connection error:', err);
 });
 
+// Describes the DB target for logs. Never includes the password.
+const describeDbTarget = () => {
+  try {
+    if (process.env.DATABASE_URL) {
+      const u = new URL(process.env.DATABASE_URL);
+      return `${decodeURIComponent(u.username)}@${u.hostname}:${u.port || 5432}/${u.pathname.slice(1)}`;
+    }
+  } catch {
+    return 'DATABASE_URL (unparseable)';
+  }
+  return `${process.env.DB_USER || 'postgres'}@${process.env.DB_HOST || 'localhost'}:${process.env.DB_PORT || 5432}/${process.env.DB_NAME || 'insighted_standalone'}`;
+};
+
+// Startup health check: throws a clear error if the DB is unreachable or rejects the credentials.
+export const verifyDbConnection = async () => {
+  try {
+    await pool.query('SELECT 1');
+  } catch (err) {
+    const hint = err.code === '28P01'
+      ? 'Postgres rejected the username/password. Fix DATABASE_URL (or DB_USER/DB_PASSWORD) in the root .env, URL-encoding special characters in the password.'
+      : err.code === '3D000'
+        ? 'The database does not exist. Create it or fix the database name in .env.'
+        : 'Check that Postgres is running and the host/port in .env are correct.';
+    throw new Error(`Database connection failed for ${describeDbTarget()} [${err.code || 'no-code'}]: ${err.message}. ${hint}`, { cause: err });
+  }
+};
+
 export const initDB = async () => {
   try {
     await pool.query('ALTER TABLE third_level_officials_updates ADD COLUMN IF NOT EXISTS remarks TEXT;');

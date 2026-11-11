@@ -98,9 +98,10 @@ describe('Applicant Pooling UI definitions', () => {
     expect(EXECUTIVE_POSITIONS).toHaveLength(4);
     expect(EXECUTIVE_POSITIONS.map(p => p.code)).toEqual(['RD', 'ARD', 'SDS', 'ASDS']);
 
-    // 18 DepEd regions
-    expect(DEPED_REGIONS).toHaveLength(18);
+    // 18 DepEd regions + NIR (Negros Island Region)
+    expect(DEPED_REGIONS).toHaveLength(19);
     expect(DEPED_REGIONS).toContain('NCR');
+    expect(DEPED_REGIONS).toContain('NIR');
     expect(DEPED_REGIONS).toContain('Central Office');
     expect(DEPED_REGIONS).toContain('BARMM');
 

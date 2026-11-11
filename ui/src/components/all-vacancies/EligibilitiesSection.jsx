@@ -1,7 +1,15 @@
 import React from 'react';
 import { Medal as FiAward } from '@phosphor-icons/react';
 import { CES_STAGES } from './constants';
+import { MantineProvider } from '@mantine/core';
+import { DatePickerInput } from '@mantine/dates';
 import FloatingLabelInput from '../forms/FloatingLabelInput.jsx';
+
+// Mantine stylesheets are imported once in src/main.jsx.
+const toIsoDate = (d) => {
+    const pad = (n) => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+};
 
 const EligibilitiesSection = ({
     eligibilityData,
@@ -9,13 +17,6 @@ const EligibilitiesSection = ({
 }) => {
     const handleChange = (e) => {
         const { name, value } = e.target;
-
-        if (name === 'ces_stage_date' && value) {
-            const todayStr = new Date().toISOString().split('T')[0];
-            if (value > todayStr) {
-                return;
-            }
-        }
 
         setEligibilityData(prev => ({
             ...prev,
@@ -107,7 +108,19 @@ const EligibilitiesSection = ({
                 </div>
 
                 <div>
-                    <FloatingLabelInput label="Date Appointed/Conferred/Passed the CESO/CES eligibility process [Highest Stage]" className="w-full" type="date" name="ces_stage_date" max={new Date().toISOString().split('T')[0]} value={eligibilityData.ces_stage_date || ''} onChange={handleChange} />
+                    <label className="mb-1.5 block text-[13px] font-semibold leading-4 text-heading">Date Appointed/Conferred/Passed the CESO/CES eligibility process [Highest Stage]</label>
+                    <MantineProvider withGlobalClasses={false}>
+                        <DatePickerInput
+                            name="ces_stage_date"
+                            placeholder="Select date"
+                            valueFormat="YYYY-MM-DD"
+                            maxDate={new Date()}
+                            clearable
+                            value={eligibilityData.ces_stage_date ? new Date(`${eligibilityData.ces_stage_date}T00:00:00`) : null}
+                            onChange={(d) => setEligibilityData(prev => ({ ...prev, ces_stage_date: d ? toIsoDate(d) : '' }))}
+                            styles={{ input: { height: 44, fontSize: 15, borderRadius: 6 } }}
+                        />
+                    </MantineProvider>
                     <span className="text-[10px] text-slate-400 block mt-1">Cannot be a future date</span>
                 </div>
             </div>

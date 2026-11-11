@@ -326,7 +326,7 @@ export const forgotPassword = async (req, res) => {
 
     const secret = process.env.JWT_SECRET;
     const reqOrigin = req.headers.origin || (req.headers.referer ? new URL(req.headers.referer).origin : null);
-    const frontendUrl = process.env.url || process.env.URL || process.env.FRONTEND_URL || reqOrigin || 'http://localhost:5173';
+    const frontendUrl = process.env.url || process.env.URL || process.env.FRONTEND_URL || reqOrigin || 'http://localhost:5273';
 
     let linksHtml = '';
     authRes.rows.forEach(user => {

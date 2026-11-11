@@ -539,9 +539,6 @@ export const registerPersonnel = async (req, res) => {
   const client = await pool.connect();
   try {
     const normalizedEmail = email.toLowerCase().trim();
-    if (!normalizedEmail.endsWith('@deped.gov.ph')) {
-      return res.json({ success: false, error: 'Only @deped.gov.ph emails are allowed for DepEd Email.' });
-    }
 
     const mName = (middle_name || '').trim().toUpperCase();
     const fName = (first_name || '').trim().toUpperCase();

@@ -3,12 +3,17 @@ import { FileText as FiFileText, CloudArrowUp as FiUploadCloud, Check as FiCheck
 import Swal from 'sweetalert2';
 import { REQUIRED_DOCUMENTS } from './constants';
 import { apiUrl } from '../../utils/api';
+import { saveLocalDocument, deleteLocalDocument, openLocalDocument, isLocalBinaryId } from '../../utils/localDocumentStore';
+
+// Stored files have a UUID binary id; the viewer link is only shown for those.
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 const TwelveDocumentsSection = ({
     documents,
     setDocuments,
     uploadingDoc,
-    setUploadingDoc
+    setUploadingDoc,
+    readOnly = false
 }) => {
     const handleFileChange = async (docConfig, file) => {
         if (!file) return;
@@ -65,6 +70,15 @@ const TwelveDocumentsSection = ({
                 uploaded_at: new Date().toISOString()
             };
 
+            // Interim storage: keep the file in this browser (IndexedDB) so it can be viewed later.
+            let keptLocally = true;
+            try {
+                await saveLocalDocument(binaryId, file);
+            } catch (storeErr) {
+                keptLocally = false;
+                console.warn('[Document Upload] Could not keep a local copy:', storeErr);
+            }
+
             setDocuments(prev => ({
                 ...prev,
                 [docConfig.key]: fileData
@@ -73,10 +87,10 @@ const TwelveDocumentsSection = ({
             Swal.fire({
                 toast: true,
                 position: 'top-end',
-                icon: 'success',
-                title: `${file.name} attached.`,
+                icon: keptLocally ? 'success' : 'warning',
+                title: keptLocally ? `${file.name} attached.` : `${file.name} attached, but a viewable copy could not be kept on this device.`,
                 showConfirmButton: false,
-                timer: 2000
+                timer: keptLocally ? 2000 : 4000
             });
         } catch (err) {
             console.error('[Document Upload Error]:', err);
@@ -91,7 +105,21 @@ const TwelveDocumentsSection = ({
         }
     };
 
+    const handleViewLocal = async (binaryId) => {
+        const opened = await openLocalDocument(binaryId);
+        if (!opened) {
+            Swal.fire({
+                icon: 'info',
+                title: 'File Not Available',
+                text: 'This document is not stored on this device or browser, so it cannot be opened here.',
+                confirmButtonColor: 'var(--color-brand-800)'
+            });
+        }
+    };
+
     const handleRemove = (docKey) => {
+        const removedId = documents[docKey]?.binary_id;
+        if (isLocalBinaryId(removedId)) deleteLocalDocument(removedId).catch(() => {});
         setDocuments(prev => ({
             ...prev,
             [docKey]: null
@@ -189,26 +217,42 @@ const TwelveDocumentsSection = ({
                                         </span>
                                     </div>
                                     <div className="flex items-center gap-1 shrink-0">
-                                        {attached.binary_id && (
+                                        {isLocalBinaryId(attached.binary_id) && (
+                                            <button
+                                                type="button"
+                                                onClick={() => handleViewLocal(attached.binary_id)}
+                                                className="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-all"
+                                                title="View document (stored in this browser)"
+                                            >
+                                                <FiExternalLink size={13} />
+                                            </button>
+                                        )}
+                                        {attached.binary_id && !isLocalBinaryId(attached.binary_id) && (!readOnly || UUID_RE.test(attached.binary_id)) && (
                                             <a
                                                 href={apiUrl(`/api/binary/${attached.binary_id}`)}
                                                 target="_blank"
                                                 rel="noreferrer"
                                                 className="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-all"
-                                                title="View Document"
+                                                title={readOnly ? 'View / download document' : 'View Document'}
                                             >
                                                 <FiExternalLink size={13} />
                                             </a>
                                         )}
-                                        <button
-                                            type="button"
-                                            onClick={() => handleRemove(doc.key)}
-                                            className="p-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-600 text-xs transition-all"
-                                            title="Remove document"
-                                        >
-                                            <FiTrash2 size={13} />
-                                        </button>
+                                        {!readOnly && (
+                                            <button
+                                                type="button"
+                                                onClick={() => handleRemove(doc.key)}
+                                                className="p-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-600 text-xs transition-all"
+                                                title="Remove document"
+                                            >
+                                                <FiTrash2 size={13} />
+                                            </button>
+                                        )}
                                     </div>
+                                </div>
+                            ) : readOnly ? (
+                                <div className="mt-3 px-3 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-xs font-bold uppercase tracking-wider text-slate-400 text-center">
+                                    No document submitted
                                 </div>
                             ) : (
                                 <div className="mt-3">

@@ -11,7 +11,7 @@ import {
   uploadDocument,
   getNotableAchievements
 } from './profile.js';
-import { getVacancies, getPositions } from './applications.js';
+import { getVacancies, getPositions, getTloPositions, getMasterlistPositions } from './applications.js';
 
 const router = express.Router();
 const memoryUpload = multer({ storage: multer.memoryStorage() });
@@ -25,6 +25,8 @@ router.get('/submit-application', authMiddleware, submitApplication);
 router.post('/submit-application', authMiddleware, submitApplication);
 router.get('/vacancies', authMiddleware, getVacancies);
 router.get('/positions', authMiddleware, getPositions);
+router.get('/tlo-positions', authMiddleware, getTloPositions);
+router.get('/masterlist-positions', authMiddleware, getMasterlistPositions);
 router.get('/notable-achievements', authMiddleware, getNotableAchievements);
 router.get('/:TLOid/career-path', authMiddleware, getCareerPath);
 

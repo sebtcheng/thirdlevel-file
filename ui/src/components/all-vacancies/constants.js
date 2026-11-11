@@ -39,8 +39,31 @@ export const DEPED_REGIONS = [
     'CARAGA',
     'CAR',
     'NCR',
+    'NIR',
     'BARMM'
 ];
+
+// The masterlist stores CARAGA's divisions under "Region XIII".
+export const REGION_ALIASES = { CARAGA: 'Region XIII' };
+
+// Used only when the masterlist has no divisions for a region.
+export const FALLBACK_REGION_DIVISIONS = {
+    BARMM: [
+        'Basilan', 'Cotabato City', 'Lamitan City', 'Lanao del Sur I', 'Lanao del Sur II',
+        'Maguindanao del Norte', 'Maguindanao del Sur', 'Marawi City', 'Sulu', 'Tawi-Tawi'
+    ]
+};
+
+// Division options for a region: masterlist data (case-insensitive, with aliases), then the fallback list,
+// then "Regional Office" once a region is chosen.
+export const getDivisionOptions = (regionDivisions, region) => {
+    if (!region) return [];
+    const target = (REGION_ALIASES[region] || region).toUpperCase();
+    const key = Object.keys(regionDivisions || {}).find(k => k.toUpperCase() === target);
+    if (key && regionDivisions[key]?.length) return regionDivisions[key];
+    const fbKey = Object.keys(FALLBACK_REGION_DIVISIONS).find(k => k.toUpperCase() === target);
+    return fbKey ? FALLBACK_REGION_DIVISIONS[fbKey] : ['Regional Office'];
+};
 
 export const CES_STAGES = [
     'Appointed to a CESO Rank',

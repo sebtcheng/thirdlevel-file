@@ -1,17 +1,27 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import jwt from 'jsonwebtoken';
 import app from '../src/app.js';
+import pool from '../src/config/db.js';
 
 let server;
 let base;
 let adminToken;
 let applicantToken;
+let jwtSecret;
+const createdCandidateIds = [];
+
+// Each submission uses its own applicant, because the API allows one application per registrant per period.
+const mkApplicantToken = (id) => {
+  createdCandidateIds.push(String(id));
+  return jwt.sign({ id, role: 'TLO Applicant', email: `applicant.${id}@deped.gov.ph`, name: 'Applicant Test' }, jwtSecret, { expiresIn: '1h' });
+};
 
 beforeAll(async () => {
   await new Promise((resolve) => { server = app.listen(0, '127.0.0.1', resolve); });
   base = `http://127.0.0.1:${server.address().port}`;
 
   const secret = process.env.JWT_SECRET || 'STRIDE_INSIGHTED_SECRET_2026_KEY_PROD';
+  jwtSecret = secret;
   adminToken = jwt.sign(
     { id: 9999, role: 'Central Office', email: 'admin.records@deped.gov.ph', name: 'Records Admin' },
     secret,
@@ -25,6 +35,10 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
+  // Remove the applications these tests created so reruns start clean.
+  if (createdCandidateIds.length) {
+    await pool.query('DELETE FROM applications WHERE candidate_id = ANY($1::text[])', [createdCandidateIds]);
+  }
   await new Promise((resolve) => server.close(resolve));
 });
 
@@ -163,11 +177,11 @@ describe('Applicant Pooling & Records Management API', () => {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${applicantToken}`
+        Authorization: `Bearer ${mkApplicantToken(910001)}`
       },
       body: JSON.stringify({
-        first_name: 'Maria',
-        last_name: 'Santos',
+        first_name: 'MARIA',
+        last_name: 'SANTOS',
         email: 'maria.santos.test@deped.gov.ph',
         contact_number: '09171234567',
         applied_position: 'RD',
@@ -202,6 +216,97 @@ describe('Applicant Pooling & Records Management API', () => {
     createdAppId = data.data.id;
   });
 
+  it('POST /api/pooling/applications returns 409 when the same registrant applies twice in the active period', async () => {
+    const res = await fetch(`${base}/api/pooling/applications`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${mkApplicantToken(910001)}`
+      },
+      body: JSON.stringify({
+        first_name: 'MARIA',
+        last_name: 'SANTOS',
+        applied_position: 'RD',
+        target_region: 'Region IV-A',
+        questionnaire_responses: { pending_admin_case: 'No' },
+        document_attachments: [{ doc_type: 'pds', file_name: 'PDS.pdf', binary_id: 'e03104ab-b349-4a04-adc6-35c3137f918c' }]
+      })
+    });
+    expect(res.status).toBe(409);
+    const data = await res.json();
+    expect(data.error).toContain('already submitted an application for the current active period');
+  });
+
+  it('GET /api/pooling/my-application returns the submission and isReadOnly for the active period', async () => {
+    const res = await fetch(`${base}/api/pooling/my-application`, {
+      headers: { Authorization: `Bearer ${mkApplicantToken(910001)}` }
+    });
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(data.hasSubmitted).toBe(true);
+    expect(data.isReadOnly).toBe(true);
+    expect(data.period?.id).toBeTruthy();
+    expect(data.application.applied_position).toBe('RD');
+    expect(data.application.document_attachments).toHaveLength(2);
+  });
+
+  it('GET /api/pooling/my-application reports not submitted for a registrant with no application', async () => {
+    const res = await fetch(`${base}/api/pooling/my-application`, {
+      headers: { Authorization: `Bearer ${mkApplicantToken(910099)}` }
+    });
+    const data = await res.json();
+    expect(data.hasSubmitted).toBe(false);
+    expect(data.isReadOnly).toBe(false);
+    expect(data.application).toBeNull();
+  });
+
+  it('GET /api/pooling/history lists the registrant submissions with the period name, newest first', async () => {
+    const res = await fetch(`${base}/api/pooling/history`, {
+      headers: { Authorization: `Bearer ${mkApplicantToken(910001)}` }
+    });
+    expect(res.status).toBe(200);
+    const { data } = await res.json();
+    expect(data.length).toBeGreaterThanOrEqual(1);
+    expect(data[0].period_name).toBeTruthy();
+    expect(data[0].applied_position).toBe('RD');
+    expect(data[0].target_region).toBe('Region IV-A');
+    expect(data[0]).toHaveProperty('period_start');
+    expect(data[0]).toHaveProperty('period_end');
+    const times = data.map((d) => new Date(d.submission_timestamp).getTime());
+    expect([...times].sort((a, b) => b - a)).toEqual(times);
+
+    const empty = await fetch(`${base}/api/pooling/history`, {
+      headers: { Authorization: `Bearer ${mkApplicantToken(910098)}` }
+    });
+    expect((await empty.json()).data).toEqual([]);
+  });
+
+  it('GET /api/pooling/history/:id returns only the owner application', async () => {
+    const list = await (await fetch(`${base}/api/pooling/history`, {
+      headers: { Authorization: `Bearer ${mkApplicantToken(910001)}` }
+    })).json();
+    const id = list.data[0].id;
+
+    const own = await fetch(`${base}/api/pooling/history/${id}`, { headers: { Authorization: `Bearer ${mkApplicantToken(910001)}` } });
+    expect(own.status).toBe(200);
+    expect((await own.json()).isReadOnly).toBe(true);
+
+    const other = await fetch(`${base}/api/pooling/history/${id}`, { headers: { Authorization: `Bearer ${mkApplicantToken(910098)}` } });
+    expect(other.status).toBe(404);
+
+    const bad = await fetch(`${base}/api/pooling/history/abc`, { headers: { Authorization: `Bearer ${mkApplicantToken(910001)}` } });
+    expect(bad.status).toBe(400);
+  });
+
+  it('GET /api/pooling/history requires authentication', async () => {
+    expect((await fetch(`${base}/api/pooling/history`)).status).toBe(401);
+  });
+
+  it('GET /api/pooling/my-application requires authentication', async () => {
+    const res = await fetch(`${base}/api/pooling/my-application`);
+    expect(res.status).toBe(401);
+  });
+
   it('GET /api/admin/records/applications requires authentication', async () => {
     const res = await fetch(`${base}/api/admin/records/applications`);
     expect(res.status).toBe(401);
@@ -221,7 +326,7 @@ describe('Applicant Pooling & Records Management API', () => {
 
     const found = data.data.find(d => d.id === createdAppId);
     expect(found).toBeTruthy();
-    expect(found.candidate_name).toContain('Santos');
+    expect(found.candidate_name).toContain('SANTOS');
     expect(found.applied_position).toBe('RD');
     expect(found.target_region).toBe('Region IV-A');
   });
@@ -410,13 +515,13 @@ describe('Applicant Pooling & Records Management API', () => {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${applicantToken}`
+        Authorization: `Bearer ${mkApplicantToken(910002)}`
       },
       body: JSON.stringify({
         applied_position: 'ASDS',
         target_region: 'Central Office',
-        first_name: 'Test',
-        last_name: 'Applicant',
+        first_name: 'TEST',
+        last_name: 'APPLICANT',
         email: 'test.decoupled@deped.gov.ph',
         questionnaire_responses: {
           part_a_scenarios: { scenario_1: { ranking: ['B', 'A', 'C', 'D'], justification: 'Team collaboration' } },
@@ -442,13 +547,13 @@ describe('Applicant Pooling & Records Management API', () => {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${applicantToken}`
+        Authorization: `Bearer ${mkApplicantToken(910003)}`
       },
       body: JSON.stringify({
         applied_position: 'RD',
         target_region: 'Region III',
-        first_name: 'Qualification',
-        last_name: 'Tester',
+        first_name: 'QUALIFICATION',
+        last_name: 'TESTER',
         email: 'qs.tester@deped.gov.ph',
         questionnaire_responses: { pending_admin_case: 'No' },
         document_attachments: [{ doc_type: 'pds', binary_id: 'e03104ab-b349-4a04-adc6-35c3137f918c' }]

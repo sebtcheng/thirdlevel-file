@@ -27,7 +27,7 @@ const clearPort = (port) => {
 console.log('🔍 Checking for lingering processes...');
 if (process.env.PORT) clearPort(process.env.PORT);
 clearPort(3008);
-clearPort(5173);
+clearPort(5273);
 
 const commands = [
   { name: 'API', cmd: 'npm', args: ['run', 'dev'], cwd: path.join(__dirname, 'api') },

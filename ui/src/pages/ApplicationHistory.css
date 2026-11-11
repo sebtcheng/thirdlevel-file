@@ -1,0 +1,155 @@
+/* Application History: responsive card grid (BEM). Colors, radius and shadows come from the theme tokens. */
+.app-grid {
+  display: grid;
+  /* Two cards per row at most; one column on small screens. */
+  grid-template-columns: 1fr;
+  gap: 1.5rem;
+}
+
+@media (min-width: 640px) {
+  .app-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.app-card {
+  /* Status-driven variables (overridden per data-status below). */
+  --accent: var(--color-brand-700);
+  --status-bg: var(--color-brand-100);
+  --status-ink: var(--color-brand-800);
+
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1.5rem;
+  background: var(--color-card);
+  border: 1px solid var(--color-brand-300);
+  border-left: 4px solid var(--accent);
+  border-radius: var(--card-radius, 12px);
+  box-shadow: var(--shadow-sm);
+  color: var(--color-heading);
+  text-decoration: none;
+  transition: box-shadow 160ms ease, transform 160ms ease, border-color 160ms ease;
+}
+
+.app-card[data-status="submitted"] {
+  --accent: var(--color-brand-700);
+  --status-bg: var(--color-brand-100);
+  --status-ink: var(--color-brand-800);
+}
+
+.app-card[data-status="under_review"],
+.app-card[data-status="for_review"],
+.app-card[data-status="pending"] {
+  --accent: var(--color-warning-500);
+  --status-bg: var(--color-warning-50);
+  --status-ink: var(--color-warning-800);
+}
+
+.app-card[data-status="qualified"],
+.app-card[data-status="approved"],
+.app-card[data-status="shortlisted"] {
+  --accent: var(--color-success-600);
+  --status-bg: var(--color-success-50);
+  --status-ink: var(--color-success-800);
+}
+
+.app-card[data-status="rejected"],
+.app-card[data-status="not_qualified"],
+.app-card[data-status="denied"] {
+  --accent: var(--color-danger-600);
+  --status-bg: var(--color-danger-50);
+  --status-ink: var(--color-danger-800);
+}
+
+.app-card:hover {
+  box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
+  border-color: var(--accent);
+}
+
+.app-card:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 3px;
+}
+
+.app-card__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.app-card__title {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 900;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--color-brand-800);
+  overflow-wrap: anywhere;
+}
+
+.app-card__status {
+  flex-shrink: 0;
+  padding: 0.2rem 0.65rem;
+  border-radius: 999px;
+  background: var(--status-bg);
+  color: var(--status-ink);
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.app-card__body {
+  display: grid;
+  gap: 0.75rem;
+  margin: 0;
+}
+
+.app-card__period {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--color-secondary);
+}
+
+.app-card__label {
+  margin: 0;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-secondary);
+}
+
+.app-card__value {
+  margin: 0;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--color-heading);
+}
+
+.app-card__date {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-top: auto;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--color-secondary);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-card {
+    transition: none;
+  }
+  .app-card:hover {
+    transform: none;
+  }
+}

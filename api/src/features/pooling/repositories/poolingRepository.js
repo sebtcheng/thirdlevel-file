@@ -1,4 +1,7 @@
+import { and, desc, eq, gte, isNull, lte, or, sql } from 'drizzle-orm';
 import pool from '../../../config/db.js';
+import { db } from '../../../db/index.js';
+import { applicationPeriods, applications } from '../../../db/schema.js';
 
 export const getPoolingConfig = async () => {
   const query = `
@@ -30,7 +33,8 @@ export const createApplication = async (data) => {
     applied_position,
     target_region,
     questionnaire_responses,
-    document_attachments
+    document_attachments,
+    application_period_id
   } = data;
 
   const query = `
@@ -47,8 +51,9 @@ export const createApplication = async (data) => {
       document_attachments,
       submission_timestamp,
       evaluation_scores,
-      status
-    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW(), '{}'::jsonb, 'submitted')
+      status,
+      application_period_id
+    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW(), '{}'::jsonb, 'submitted', $11)
     RETURNING *;
   `;
 
@@ -62,11 +67,108 @@ export const createApplication = async (data) => {
     applied_position,
     target_region,
     JSON.stringify(questionnaire_responses || {}),
-    JSON.stringify(document_attachments || [])
+    JSON.stringify(document_attachments || []),
+    application_period_id ?? null
   ];
 
   const result = await pool.query(query, values);
   return result.rows[0];
+};
+
+// The period that is currently active and inside its date range (null bounds are open-ended).
+export const findActiveApplicationPeriod = async () => {
+  const [period] = await db
+    .select()
+    .from(applicationPeriods)
+    .where(and(
+      eq(applicationPeriods.isActive, true),
+      or(isNull(applicationPeriods.startDate), lte(applicationPeriods.startDate, sql`NOW()`)),
+      or(isNull(applicationPeriods.endDate), gte(applicationPeriods.endDate, sql`NOW()`))
+    ))
+    .limit(1);
+  return period || null;
+};
+
+// Every application a candidate has submitted, newest first, with the period it belongs to
+// (left join: submissions from before application periods existed have no period).
+export const findCandidateApplicationHistory = async (candidateId) => {
+  return db
+    .select({
+      id: applications.id,
+      application_period_id: applications.applicationPeriodId,
+      period_name: applicationPeriods.name,
+      period_start: applicationPeriods.startDate,
+      period_end: applicationPeriods.endDate,
+      applied_position: applications.appliedPosition,
+      target_region: applications.targetRegion,
+      submission_timestamp: applications.submissionTimestamp,
+      status: applications.status,
+    })
+    .from(applications)
+    .leftJoin(applicationPeriods, eq(applications.applicationPeriodId, applicationPeriods.id))
+    .where(eq(applications.candidateId, String(candidateId)))
+    .orderBy(desc(applications.submissionTimestamp), desc(applications.id));
+};
+
+// One application by id, only if it belongs to the candidate (full answers + document references).
+export const findCandidateApplicationById = async (candidateId, applicationId) => {
+  const [row] = await db
+    .select({
+      id: applications.id,
+      candidate_id: applications.candidateId,
+      candidate_name: applications.candidateName,
+      first_name: applications.firstName,
+      last_name: applications.lastName,
+      email: applications.email,
+      contact_number: applications.contactNumber,
+      applied_position: applications.appliedPosition,
+      target_region: applications.targetRegion,
+      submission_timestamp: applications.submissionTimestamp,
+      status: applications.status,
+      questionnaire_responses: applications.questionnaireResponses,
+      document_attachments: applications.documentAttachments,
+      application_period_id: applications.applicationPeriodId,
+      period_name: applicationPeriods.name,
+    })
+    .from(applications)
+    .leftJoin(applicationPeriods, eq(applications.applicationPeriodId, applicationPeriods.id))
+    .where(and(eq(applications.id, applicationId), eq(applications.candidateId, String(candidateId))))
+    .limit(1);
+  return row || null;
+};
+
+// Full application (answers + document references) a candidate submitted in a period, or null.
+export const findCandidateApplicationDetails = async (candidateId, periodId) => {
+  const [row] = await db
+    .select({
+      id: applications.id,
+      candidate_id: applications.candidateId,
+      candidate_name: applications.candidateName,
+      first_name: applications.firstName,
+      last_name: applications.lastName,
+      email: applications.email,
+      contact_number: applications.contactNumber,
+      applied_position: applications.appliedPosition,
+      target_region: applications.targetRegion,
+      submission_timestamp: applications.submissionTimestamp,
+      status: applications.status,
+      questionnaire_responses: applications.questionnaireResponses,
+      document_attachments: applications.documentAttachments,
+      application_period_id: applications.applicationPeriodId,
+    })
+    .from(applications)
+    .where(and(eq(applications.candidateId, String(candidateId)), eq(applications.applicationPeriodId, periodId)))
+    .limit(1);
+  return row || null;
+};
+
+export const findCandidateApplicationInPeriod = async (candidateId, periodId) => {
+  const [row] = await db
+    .select({ id: applications.id })
+    .from(applications)
+    .where(and(eq(applications.candidateId, String(candidateId)), eq(applications.applicationPeriodId, periodId)))
+    .limit(1);
+  return row || null;
 };
 
 export const findApplications = async ({ page = 1, limit = 10, sortBy = 'submission_timestamp', sortOrder = 'DESC', search = '', position = '', region = '' }) => {
