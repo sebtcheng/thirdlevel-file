@@ -55,6 +55,7 @@
 }
 
 .app-card[data-status="rejected"],
+.app-card[data-status="withdrawn"],
 .app-card[data-status="not_qualified"],
 .app-card[data-status="denied"] {
   --accent: var(--color-danger-600);

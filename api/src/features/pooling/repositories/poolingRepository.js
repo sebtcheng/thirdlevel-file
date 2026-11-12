@@ -3,6 +3,37 @@ import pool from '../../../config/db.js';
 import { db } from '../../../db/index.js';
 import { applicationPeriods, applications } from '../../../db/schema.js';
 
+export const setPoolingDateRange = async (start, end) => {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    await client.query('LOCK TABLE pooling_configurations, application_periods IN SHARE ROW EXCLUSIVE MODE');
+    await client.query(`
+      INSERT INTO pooling_configurations (id, intake_start_date, intake_end_date)
+      VALUES (COALESCE((SELECT id FROM pooling_configurations ORDER BY id LIMIT 1), 1), $1, $2)
+      ON CONFLICT (id) DO UPDATE SET intake_start_date = $1, intake_end_date = $2, updated_at = NOW()
+    `, [start, end]);
+    const updated = await client.query(`UPDATE application_periods SET start_date = $1, end_date = $2, updated_at = NOW() WHERE is_active = TRUE RETURNING id`, [start, end]);
+    if (!updated.rows.length) {
+      await client.query(`INSERT INTO application_periods (name, start_date, end_date, is_active) VALUES ('TIMON Application Period', $1, $2, TRUE)`, [start, end]);
+    }
+    await client.query('COMMIT');
+  } catch (err) {
+    await client.query('ROLLBACK');
+    throw err;
+  } finally {
+    client.release();
+  }
+};
+
+export const setPoolingIntakeActive = async (active) => {
+  await pool.query(`
+    INSERT INTO pooling_configurations (id, is_intake_active)
+    VALUES (COALESCE((SELECT id FROM pooling_configurations ORDER BY id LIMIT 1), 1), $1)
+    ON CONFLICT (id) DO UPDATE SET is_intake_active = EXCLUDED.is_intake_active, updated_at = NOW()
+  `, [active]);
+};
+
 export const getPoolingConfig = async () => {
   const query = `
     SELECT id, is_intake_active, intake_start_date, intake_end_date, created_at, updated_at
@@ -20,6 +51,33 @@ export const getPoolingConfig = async () => {
     };
   }
   return result.rows[0];
+};
+
+export const withdrawCandidateApplication = async (candidateId, applicationId) => {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const locked = await client.query(`
+      SELECT id FROM applications WHERE id = $1 AND candidate_id = $2
+        AND LOWER(COALESCE(status, 'submitted')) = 'submitted' FOR UPDATE
+    `, [applicationId, String(candidateId)]);
+    if (!locked.rows.length) {
+      await client.query('ROLLBACK');
+      return null;
+    }
+    await client.query('DELETE FROM nsc_scores WHERE application_id = $1', [applicationId]);
+    const result = await client.query(`
+      DELETE FROM applications WHERE id = $1 AND candidate_id = $2
+      RETURNING id, 'withdrawn'::text AS status
+    `, [applicationId, String(candidateId)]);
+    await client.query('COMMIT');
+    return result.rows[0];
+  } catch (err) {
+    await client.query('ROLLBACK');
+    throw err;
+  } finally {
+    client.release();
+  }
 };
 
 export const createApplication = async (data) => {
@@ -171,6 +229,29 @@ export const findCandidateApplicationInPeriod = async (candidateId, periodId) =>
   return row || null;
 };
 
+export const findCandidatePendingApplicationForPositionAndRegion = async (candidateId, appliedPosition, targetRegion, periodId = null) => {
+  const conditions = [
+    eq(applications.candidateId, String(candidateId)),
+    eq(applications.appliedPosition, String(appliedPosition)),
+    eq(applications.targetRegion, String(targetRegion)),
+    sql`LOWER(COALESCE(${applications.status}, 'submitted')) NOT IN ('rejected', 'disqualified', 'cancelled', 'withdrawn')`
+  ];
+  if (periodId) {
+    conditions.push(eq(applications.applicationPeriodId, periodId));
+  }
+  const [row] = await db
+    .select({
+      id: applications.id,
+      applied_position: applications.appliedPosition,
+      target_region: applications.targetRegion,
+      status: applications.status
+    })
+    .from(applications)
+    .where(and(...conditions))
+    .limit(1);
+  return row || null;
+};
+
 export const findApplications = async ({ page = 1, limit = 10, sortBy = 'submission_timestamp', sortOrder = 'DESC', search = '', position = '', region = '' }) => {
   const offset = (Math.max(1, parseInt(page, 10)) - 1) * parseInt(limit, 10);
   const safeLimit = Math.max(1, parseInt(limit, 10));
@@ -186,7 +267,7 @@ export const findApplications = async ({ page = 1, limit = 10, sortBy = 'submiss
   const sortCol = allowedSortCols[sortBy] || 'a.submission_timestamp';
   const orderDir = String(sortOrder).toUpperCase() === 'ASC' ? 'ASC' : 'DESC';
 
-  const conditions = [];
+  const conditions = ["LOWER(COALESCE(a.status, 'submitted')) <> 'withdrawn'"];
   const params = [];
 
   if (search && search.trim()) {

@@ -3,7 +3,8 @@ import { FileText as FiFileText, CloudArrowUp as FiUploadCloud, Check as FiCheck
 import Swal from 'sweetalert2';
 import { REQUIRED_DOCUMENTS } from './constants';
 import { apiUrl } from '../../utils/api';
-import { saveLocalDocument, deleteLocalDocument, openLocalDocument, isLocalBinaryId } from '../../utils/localDocumentStore';
+import { deleteLocalDocument, getLocalDocument, openLocalDocument, isLocalBinaryId } from '../../utils/localDocumentStore';
+import { useAuth } from '../../context/AuthContext';
 
 // Stored files have a UUID binary id; the viewer link is only shown for those.
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -13,8 +14,12 @@ const TwelveDocumentsSection = ({
     setDocuments,
     uploadingDoc,
     setUploadingDoc,
-    readOnly = false
+    readOnly = false,
+    applicationId = null
 }) => {
+    const { token } = useAuth();
+    const [restoringDoc, setRestoringDoc] = React.useState({});
+    const [restoringAll, setRestoringAll] = React.useState(false);
     const handleFileChange = async (docConfig, file) => {
         if (!file) return;
 
@@ -57,27 +62,23 @@ const TwelveDocumentsSection = ({
         setUploadingDoc(prev => ({ ...prev, [docConfig.key]: true }));
 
         try {
-            // Read file metadata & create attachment descriptor
-            const binaryId = 'bin-' + Math.random().toString(36).substring(2, 10) + '-' + Date.now();
+            const body = new FormData();
+            body.append('file', file);
+            const response = await fetch(apiUrl('/api/pooling/documents'), {
+                method: 'POST', headers: { Authorization: `Bearer ${token}` }, body
+            });
+            const result = await response.json();
+            if (!response.ok || !result.success) throw new Error(result.error || 'Could not upload the document.');
             const fileData = {
                 key: docConfig.key,
                 doc_type: docConfig.key,
                 label: docConfig.label,
                 file_name: file.name,
                 mime_type: file.type || (docConfig.isImage ? 'image/jpeg' : 'application/pdf'),
-                size_bytes: file.size,
-                binary_id: binaryId,
-                uploaded_at: new Date().toISOString()
+                size_bytes: result.data.size_bytes,
+                binary_id: result.data.binary_id,
+                uploaded_at: result.data.uploaded_at
             };
-
-            // Interim storage: keep the file in this browser (IndexedDB) so it can be viewed later.
-            let keptLocally = true;
-            try {
-                await saveLocalDocument(binaryId, file);
-            } catch (storeErr) {
-                keptLocally = false;
-                console.warn('[Document Upload] Could not keep a local copy:', storeErr);
-            }
 
             setDocuments(prev => ({
                 ...prev,
@@ -87,17 +88,17 @@ const TwelveDocumentsSection = ({
             Swal.fire({
                 toast: true,
                 position: 'top-end',
-                icon: keptLocally ? 'success' : 'warning',
-                title: keptLocally ? `${file.name} attached.` : `${file.name} attached, but a viewable copy could not be kept on this device.`,
+                icon: 'success',
+                title: `${file.name} uploaded.`,
                 showConfirmButton: false,
-                timer: keptLocally ? 2000 : 4000
+                timer: 2000
             });
         } catch (err) {
             console.error('[Document Upload Error]:', err);
             Swal.fire({
                 icon: 'error',
                 title: 'Upload Failed',
-                text: 'Could not attach the document. Please try again.',
+                text: err.message || 'Could not attach the document. Please try again.',
                 confirmButtonColor: 'var(--color-brand-800)'
             });
         } finally {
@@ -126,11 +127,134 @@ const TwelveDocumentsSection = ({
         }));
     };
 
+    const uploadLegacyDocument = async (docConfig, attached) => {
+        const file = await getLocalDocument(attached.binary_id).catch(() => null);
+        if (!file) return { ok: false, reason: 'missing' };
+        const body = new FormData();
+        body.append('file', file, attached.file_name || file.name);
+        const response = await fetch(apiUrl(`/api/pooling/history/${applicationId}/documents/${encodeURIComponent(docConfig.key)}`), {
+            method: 'POST',
+            headers: { Authorization: `Bearer ${token}` },
+            body
+        });
+        const result = await response.json();
+        if (!response.ok || !result.success) throw new Error(result.error || 'Could not restore the document.');
+        setDocuments(prev => ({ ...prev, [docConfig.key]: { ...prev[docConfig.key], ...result.data } }));
+        return { ok: true };
+    };
+
+    const handleRestoreToServer = async (docConfig, attached) => {
+        if (!applicationId) return;
+        setRestoringDoc(prev => ({ ...prev, [docConfig.key]: true }));
+        try {
+            const outcome = await uploadLegacyDocument(docConfig, attached);
+            if (!outcome.ok) {
+                Swal.fire({
+                    icon: 'info',
+                    title: 'File Not On This Device',
+                    text: 'This document was kept in the browser where it was uploaded. Open this application there to restore it for administrators.',
+                    confirmButtonColor: 'var(--color-brand-800)'
+                });
+                return;
+            }
+            Swal.fire({
+                toast: true,
+                position: 'top-end',
+                icon: 'success',
+                title: 'Document restored for administrators.',
+                showConfirmButton: false,
+                timer: 2500
+            });
+        } catch (err) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Restore Failed',
+                text: err.message || 'Could not restore the document. Please try again.',
+                confirmButtonColor: 'var(--color-brand-800)'
+            });
+        } finally {
+            setRestoringDoc(prev => ({ ...prev, [docConfig.key]: false }));
+        }
+    };
+
+    const handleRestoreAll = async () => {
+        if (!applicationId || restoringAll) return;
+        const pending = REQUIRED_DOCUMENTS
+            .map(config => ({ config, attached: documents[config.key] }))
+            .filter(({ attached }) => attached && isLocalBinaryId(attached.binary_id));
+        setRestoringAll(true);
+        setRestoringDoc(Object.fromEntries(pending.map(({ config }) => [config.key, true])));
+        let restored = 0;
+        let missing = 0;
+        const failed = [];
+        try {
+            for (const { config, attached } of pending) {
+                try {
+                    const outcome = await uploadLegacyDocument(config, attached);
+                    if (outcome.ok) restored += 1;
+                    else missing += 1;
+                } catch (err) {
+                    failed.push(`${config.label}: ${err.message}`);
+                }
+            }
+        } finally {
+            setRestoringAll(false);
+            setRestoringDoc({});
+        }
+        const lines = [`${restored} restored`, `${missing} not on this device`];
+        if (failed.length) lines.push(`${failed.length} failed`);
+        Swal.fire({
+            icon: failed.length ? 'warning' : restored > 0 ? 'success' : 'info',
+            title: restored > 0 ? 'Documents Restored' : 'No Document Restored',
+            html: `<p>${lines.join(' • ')}</p>${missing ? '<p style="margin-top:8px">Files kept on another device cannot be restored here. Open this application in the browser used to submit it.</p>' : ''}${failed.length ? `<p style="margin-top:8px">${failed.map(line => line.replace(/[<>&]/g, '')).join('<br>')}</p>` : ''}`,
+            confirmButtonColor: 'var(--color-brand-800)'
+        });
+    };
+
+    const legacyCount = Object.values(documents).filter(d => d && isLocalBinaryId(d.binary_id)).length;
+
+    // Legacy submissions kept their files in this browser. Upload them automatically the first time
+    // the applicant opens the submission, so administrators can preview the documents.
+    const autoRestoreRef = React.useRef('');
+    const documentsRef = React.useRef(documents);
+    documentsRef.current = documents;
+    React.useEffect(() => {
+        if (!readOnly || !applicationId || autoRestoreRef.current === String(applicationId)) return;
+        const pending = REQUIRED_DOCUMENTS
+            .map(config => ({ config, attached: documentsRef.current[config.key] }))
+            .filter(({ attached }) => attached && isLocalBinaryId(attached.binary_id));
+        if (pending.length === 0) return;
+        autoRestoreRef.current = String(applicationId);
+        (async () => {
+            setRestoringAll(true);
+            let restored = 0;
+            for (const { config, attached } of pending) {
+                try {
+                    const outcome = await uploadLegacyDocument(config, attached);
+                    if (outcome.ok) restored += 1;
+                } catch {
+                    // Leave the document as browser-only; the manual button can retry.
+                }
+            }
+            setRestoringAll(false);
+            if (restored > 0) {
+                Swal.fire({
+                    toast: true,
+                    position: 'top-end',
+                    icon: 'success',
+                    title: `${restored} document(s) uploaded for administrators.`,
+                    showConfirmButton: false,
+                    timer: 3500
+                });
+            }
+        })();
+    }, [readOnly, applicationId, legacyCount]);
+
     return (
         <div className="bg-white border-2 border-slate-200 rounded-card p-6 md:p-8 space-y-6 shadow-sm">
             <div className="border-b border-slate-100 pb-4">
                 <div className="flex items-center gap-2">
-                    <FiFileText className="text-brand-800" size={20} />
+                    <FiFileText size={20} className="text-brand-800" />
                     <h3 className="text-base font-black text-brand-800 uppercase tracking-wide">
                         5. Twelve (12) Required Document Attachments
                     </h3>
@@ -139,6 +263,27 @@ const TwelveDocumentsSection = ({
                     Upload official documentary credentials in accordance with DepEd executive selection guidelines.
                 </p>
             </div>
+
+            {readOnly && applicationId && legacyCount > 0 && (
+                <div role="status" className="p-4 rounded-2xl bg-amber-50 border border-amber-300 flex flex-col sm:flex-row sm:items-center gap-3">
+                    <FiInfo size={18} className="text-amber-700 mt-0.5 shrink-0" />
+                    <div className="flex-1 text-xs text-amber-900 space-y-1">
+                        <p className="font-bold">{legacyCount} document(s) are stored only in this browser.</p>
+                        <p className="leading-relaxed">
+                            Restore them to make them viewable by administrators. This only works in the browser where the files were uploaded.
+                        </p>
+                    </div>
+                    <button
+                        type="button"
+                        onClick={handleRestoreAll}
+                        disabled={restoringAll}
+                        className="shrink-0 inline-flex items-center justify-center gap-2 rounded-xl bg-amber-600 px-4 py-2.5 text-xs font-black uppercase tracking-wider text-white hover:bg-amber-700 disabled:opacity-60 disabled:cursor-not-allowed"
+                    >
+                        {restoringAll ? <FiLoader size={14} className="animate-spin" /> : <FiUploadCloud size={14} />}
+                        <span>{restoringAll ? 'Restoring...' : 'Restore all'}</span>
+                    </button>
+                </div>
+            )}
 
             {/* Instruction & Template Link Box */}
             <div className="p-4 rounded-2xl bg-blue-50/70 border border-blue-200/80 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
@@ -225,6 +370,17 @@ const TwelveDocumentsSection = ({
                                                 title="View document (stored in this browser)"
                                             >
                                                 <FiExternalLink size={13} />
+                                            </button>
+                                        )}
+                                        {readOnly && applicationId && isLocalBinaryId(attached.binary_id) && (
+                                            <button
+                                                type="button"
+                                                onClick={() => handleRestoreToServer(doc, attached)}
+                                                disabled={Boolean(restoringDoc[doc.key])}
+                                                className="p-1.5 rounded-lg bg-amber-100 hover:bg-amber-200 text-amber-800 text-xs font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                                                title="Restore to server so administrators can preview it"
+                                            >
+                                                {restoringDoc[doc.key] ? <FiLoader size={13} className="animate-spin" /> : <FiUploadCloud size={13} />}
                                             </button>
                                         )}
                                         {attached.binary_id && !isLocalBinaryId(attached.binary_id) && (!readOnly || UUID_RE.test(attached.binary_id)) && (

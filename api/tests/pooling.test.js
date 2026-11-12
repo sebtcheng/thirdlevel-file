@@ -43,6 +43,78 @@ afterAll(async () => {
 });
 
 describe('Applicant Pooling & Records Management API', () => {
+  it('synchronizes submission dates and enforces the window for signed-in applicants', async () => {
+    const { rows: [config] } = await pool.query('SELECT * FROM pooling_configurations ORDER BY id LIMIT 1');
+    const { rows: [period] } = await pool.query('SELECT * FROM application_periods WHERE is_active = TRUE');
+    const headers = { Authorization: `Bearer ${adminToken}`, 'Content-Type': 'application/json' };
+    try {
+      const denied = await fetch(`${base}/api/pooling/status`, {
+        method: 'PATCH', headers: { ...headers, Authorization: `Bearer ${applicantToken}` },
+        body: JSON.stringify({ start_date: '2099-01-01', end_date: '2099-01-31' })
+      });
+      expect(denied.status).toBe(403);
+      const saved = await fetch(`${base}/api/pooling/status`, {
+        method: 'PATCH', headers, body: JSON.stringify({ start_date: '2099-01-01', end_date: '2099-01-31' })
+      });
+      expect(saved.status).toBe(200);
+      expect((await saved.json()).isOpen).toBe(false);
+      const { rows: [updated] } = await pool.query('SELECT * FROM application_periods WHERE is_active = TRUE');
+      expect(updated.start_date.toISOString()).toBe('2098-12-31T16:00:00.000Z');
+      expect(updated.end_date.toISOString()).toBe('2099-01-31T15:59:59.999Z');
+      const { rows: [intake] } = await pool.query('SELECT * FROM pooling_configurations WHERE id = $1', [config.id]);
+      expect(intake.is_intake_active).toBe(config.is_intake_active);
+      expect(intake.intake_start_date).toEqual(updated.start_date);
+      const submitted = await fetch(`${base}/api/pooling/applications`, {
+        method: 'POST', headers: { ...headers, Authorization: `Bearer ${applicantToken}` }, body: '{}'
+      });
+      expect(submitted.status).toBe(403);
+    } finally {
+      await pool.query('UPDATE pooling_configurations SET intake_start_date=$1, intake_end_date=$2, updated_at=$3 WHERE id=$4', [config.intake_start_date, config.intake_end_date, config.updated_at, config.id]);
+      if (period) await pool.query('UPDATE application_periods SET start_date=$1, end_date=$2, updated_at=$3 WHERE id=$4', [period.start_date, period.end_date, period.updated_at, period.id]);
+      else await pool.query("DELETE FROM application_periods WHERE is_active = TRUE AND name = 'TIMON Application Period'");
+    }
+  });
+
+  it('withdrawal permanently deletes application details and scores without retaining history', async () => {
+    const token = mkApplicantToken(910004);
+    const headers = { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' };
+    const payload = {
+      applied_position: 'RD', target_region: 'Region VI', first_name: 'WITHDRAWAL', last_name: 'TEST',
+      questionnaire_responses: { pending_admin_case: 'No' },
+      document_attachments: [{ doc_type: 'pds', binary_id: 'e03104ab-b349-4a04-adc6-35c3137f918c' }]
+    };
+    const created = await fetch(`${base}/api/pooling/applications`, { method: 'POST', headers, body: JSON.stringify(payload) });
+    expect(created.status).toBe(201);
+    const { data: { id } } = await created.json();
+    await pool.query("INSERT INTO nsc_scores (application_id, evaluator_id) VALUES ($1, 'withdrawal-test')", [id]);
+    const stranger = await fetch(`${base}/api/pooling/history/${id}/withdraw`, {
+      method: 'POST', headers: { Authorization: `Bearer ${applicantToken}` }
+    });
+    expect(stranger.status).toBe(404);
+    expect((await pool.query('SELECT id FROM applications WHERE id = $1', [id])).rowCount).toBe(1);
+    const withdrawn = await fetch(`${base}/api/pooling/history/${id}/withdraw`, { method: 'POST', headers });
+    expect(withdrawn.status).toBe(200);
+    expect((await pool.query('SELECT id FROM applications WHERE id = $1', [id])).rowCount).toBe(0);
+    expect((await pool.query('SELECT id FROM nsc_scores WHERE application_id = $1', [id])).rowCount).toBe(0);
+    const history = await (await fetch(`${base}/api/pooling/history`, { headers })).json();
+    expect(history.data.some(item => item.id === id)).toBe(false);
+    const adminList = await (await fetch(`${base}/api/admin/records/applications?search=WITHDRAWAL`, {
+      headers: { Authorization: `Bearer ${adminToken}` }
+    })).json();
+    expect(adminList.data.some(item => item.id === id)).toBe(false);
+    expect((await fetch(`${base}/api/pooling/history/${id}/withdraw`, { method: 'POST', headers })).status).toBe(404);
+    expect((await fetch(`${base}/api/pooling/history/${id}`, { headers })).status).toBe(404);
+    expect((await fetch(`${base}/api/admin/records/applications/${id}`, {
+      headers: { Authorization: `Bearer ${adminToken}` }
+    })).status).toBe(404);
+    const strangerHistory = await (await fetch(`${base}/api/pooling/history`, {
+      headers: { Authorization: `Bearer ${applicantToken}` }
+    })).json();
+    expect(strangerHistory.data.some(item => item.id === id)).toBe(false);
+    const resubmitted = await fetch(`${base}/api/pooling/applications`, { method: 'POST', headers, body: JSON.stringify(payload) });
+    expect(resubmitted.status).toBe(201);
+  });
+
   it('GET /api/pooling/status returns window state without leaking raw vacancy counts', async () => {
     const res = await fetch(`${base}/api/pooling/status`);
     expect(res.status).toBe(200);
@@ -216,8 +288,8 @@ describe('Applicant Pooling & Records Management API', () => {
     createdAppId = data.data.id;
   });
 
-  it('POST /api/pooling/applications returns 409 when the same registrant applies twice in the active period', async () => {
-    const res = await fetch(`${base}/api/pooling/applications`, {
+  it('POST /api/pooling/applications returns 409 for the same position and region, but allows applying to a different region', async () => {
+    const dupRes = await fetch(`${base}/api/pooling/applications`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -229,12 +301,38 @@ describe('Applicant Pooling & Records Management API', () => {
         applied_position: 'RD',
         target_region: 'Region IV-A',
         questionnaire_responses: { pending_admin_case: 'No' },
-        document_attachments: [{ doc_type: 'pds', file_name: 'PDS.pdf', binary_id: 'e03104ab-b349-4a04-adc6-35c3137f918c' }]
+        document_attachments: [
+          { doc_type: 'pds', file_name: 'PDS.pdf', binary_id: 'e03104ab-b349-4a04-adc6-35c3137f918c' },
+          { doc_type: 'service_records', file_name: 'Maria_Santos_SR.pdf', binary_id: '68d5b268-30fc-4d48-bf5d-14fc39121744' }
+        ]
       })
     });
-    expect(res.status).toBe(409);
-    const data = await res.json();
-    expect(data.error).toContain('already submitted an application for the current active period');
+    expect(dupRes.status).toBe(409);
+    const dupData = await dupRes.json();
+    expect(dupData.error).toContain('already have a pending application for RD in Region IV-A');
+
+    const diffRegRes = await fetch(`${base}/api/pooling/applications`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${mkApplicantToken(910001)}`
+      },
+      body: JSON.stringify({
+        first_name: 'MARIA',
+        last_name: 'SANTOS',
+        applied_position: 'RD',
+        target_region: 'Region III',
+        questionnaire_responses: { pending_admin_case: 'No' },
+        document_attachments: [
+          { doc_type: 'pds', file_name: 'PDS.pdf', binary_id: 'e03104ab-b349-4a04-adc6-35c3137f918c' },
+          { doc_type: 'service_records', file_name: 'Maria_Santos_SR.pdf', binary_id: '68d5b268-30fc-4d48-bf5d-14fc39121744' }
+        ]
+      })
+    });
+    expect(diffRegRes.status).toBe(201);
+    const diffRegData = await diffRegRes.json();
+    expect(diffRegData.success).toBe(true);
+    expect(diffRegData.data.target_region).toBe('Region III');
   });
 
   it('GET /api/pooling/my-application returns the submission and isReadOnly for the active period', async () => {
@@ -266,10 +364,11 @@ describe('Applicant Pooling & Records Management API', () => {
     });
     expect(res.status).toBe(200);
     const { data } = await res.json();
-    expect(data.length).toBeGreaterThanOrEqual(1);
+    expect(data.length).toBeGreaterThanOrEqual(2);
     expect(data[0].period_name).toBeTruthy();
     expect(data[0].applied_position).toBe('RD');
-    expect(data[0].target_region).toBe('Region IV-A');
+    expect(data[0].target_region).toBe('Region III');
+    expect(data[1].target_region).toBe('Region IV-A');
     expect(data[0]).toHaveProperty('period_start');
     expect(data[0]).toHaveProperty('period_end');
     const times = data.map((d) => new Date(d.submission_timestamp).getTime());

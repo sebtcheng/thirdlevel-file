@@ -5,7 +5,7 @@ import { House as FiHome, Users as FiUsers, SignOut as FiLogOut, CaretLeft as Fi
 import { useAuth } from '../context/AuthContext';
 import newLogo from '../assets/modern_logo.png';
 
-const AdminSidebar = () => {
+const AdminSidebar = ({ isMobileOpen, setIsMobileOpen }) => {
     const navigate = useNavigate();
     const location = useLocation();
     const { user } = useAuth();
@@ -14,28 +14,28 @@ const AdminSidebar = () => {
     const [isHovered, setIsHovered] = useState(false);
     const sidebarCollapsed = !isHovered;
 
-    // Mobile Open State
-    const [isMobileOpen, setIsMobileOpen] = useState(false);
 
 
 
     // Close mobile menu when navigating
     useEffect(() => {
         setIsMobileOpen(false);
-    }, [location.pathname]);
+    }, [location.pathname, setIsMobileOpen]);
+
+    // Close the mobile drawer with Escape.
+    useEffect(() => {
+        if (!isMobileOpen) return undefined;
+        const onKeyDown = (event) => {
+            if (event.key === 'Escape') setIsMobileOpen(false);
+        };
+        document.addEventListener('keydown', onKeyDown);
+        return () => document.removeEventListener('keydown', onKeyDown);
+    }, [isMobileOpen, setIsMobileOpen]);
 
     return (
         <>
             {/* Desktop Spacer */}
             <div className="hidden lg:block w-[96px] shrink-0" />
-
-            {/* Mobile Hamburger Button (Floating) */}
-            <button
-                onClick={() => setIsMobileOpen(true)}
-                className="lg:hidden fixed bottom-6 right-6 w-14 h-14 bg-brand-800 rounded-full flex items-center justify-center text-white shadow-2xl z-[50] border-2 border-blue-400 hover:bg-blue-800 transition-colors"
-            >
-                <FiMenu size={24} />
-            </button>
 
             {/* Mobile Overlay */}
             {isMobileOpen && (
@@ -47,6 +47,7 @@ const AdminSidebar = () => {
 
             {/* Sidebar Container */}
             <div
+                id="admin-sidebar"
                 onMouseEnter={() => setIsHovered(true)}
                 onMouseLeave={() => setIsHovered(false)}
                 className={`fixed top-[72px] bottom-11 left-0 z-[100] flex shrink-0 bg-brand-800 border-r border-blue-900 flex-col pt-8 shadow-2xl transition-all duration-300 transform 
@@ -59,10 +60,15 @@ const AdminSidebar = () => {
 
                 {/* Mobile Close Button */}
                 <button
+                    type="button"
                     onClick={() => setIsMobileOpen(false)}
-                    className="lg:hidden absolute right-4 top-4 w-10 h-10 bg-white/10 rounded-full flex items-center justify-center text-white hover:bg-white/20 transition-colors"
+                    aria-label="Close navigation menu"
+                    aria-controls="admin-sidebar"
+                    aria-expanded={isMobileOpen}
+                    title="Collapse navigation"
+                    className="lg:hidden absolute right-2 top-8 w-11 h-11 rounded-md flex items-center justify-center text-blue-200 hover:bg-white/10 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-white transition-colors"
                 >
-                    <FiX size={20} />
+                    <FiChevronLeft size={22} />
                 </button>
 
                 {/* LOGO */}
@@ -111,6 +117,16 @@ const AdminSidebar = () => {
                         <FiBriefcase size={18} className="shrink-0" />
                         <span className={`whitespace-nowrap overflow-hidden transition-all duration-300 ${sidebarCollapsed ? 'lg:w-0 lg:opacity-0' : 'w-auto opacity-100'}`}>TIMON Applications</span>
                     </button>
+                    {['Central Office', 'Admin', 'Super User', 'Personnel Admin'].includes(user?.role) && (
+                        <button
+                            onClick={() => navigate('/control-center')}
+                            title="Control Center"
+                            className={`flex items-center gap-4 py-4 rounded-2xl text-xs font-black uppercase tracking-widest transition-all ${sidebarCollapsed ? 'lg:justify-center lg:px-0 px-5' : 'px-5'} ${location.pathname === '/control-center' ? 'bg-white text-brand-800 shadow-lg' : 'text-blue-200 hover:bg-white/10 hover:text-white'}`}
+                        >
+                            <FiSettings size={18} className="shrink-0" />
+                            <span className={`whitespace-nowrap overflow-hidden transition-all duration-300 ${sidebarCollapsed ? 'lg:w-0 lg:opacity-0' : 'w-auto opacity-100'}`}>Control Center</span>
+                        </button>
+                    )}
                 </nav>
 
                 <div className={`border-t border-blue-800/50 mt-auto flex flex-col gap-4 ${sidebarCollapsed ? 'lg:p-4' : 'p-8'}`}>

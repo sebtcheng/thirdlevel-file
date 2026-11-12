@@ -1,6 +1,8 @@
 import { validateUpperCaseNames, submitApplicationSchema } from './applicationSchemas.js';
 import {
   getPoolingConfig,
+  setPoolingIntakeActive,
+  setPoolingDateRange,
   createApplication,
   findApplications,
   findApplicationById,
@@ -12,10 +14,11 @@ import {
   upsertNSCScore,
   findApplicationsByCandidate,
   findActiveApplicationPeriod,
-  findCandidateApplicationInPeriod,
+  findCandidatePendingApplicationForPositionAndRegion,
   findCandidateApplicationDetails,
   findCandidateApplicationHistory,
-  findCandidateApplicationById
+  findCandidateApplicationById,
+  withdrawCandidateApplication
 } from './repositories/poolingRepository.js';
 
 const ALLOWED_ADMIN_ROLES = [
@@ -28,6 +31,38 @@ const ALLOWED_ADMIN_ROLES = [
   'RO HRMO',
   'SDO HRMO'
 ];
+
+export const updatePoolingStatus = async (req, res) => {
+  if (!req.user) return res.status(401).json({ success: false, error: 'Authentication required.' });
+  if (!['Central Office', 'Admin', 'Super User', 'Personnel Admin'].includes(req.user.role)) {
+    return res.status(403).json({ success: false, error: 'Only central administrators can manage vacancies.' });
+  }
+  const hasDates = req.body?.start_date !== undefined || req.body?.end_date !== undefined;
+  let start;
+  let end;
+  if (hasDates) {
+    const validDate = value => typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value)
+      && Number.isFinite(Date.parse(value)) && new Date(value).toISOString().slice(0, 10) === value;
+    if (!validDate(req.body.start_date) || !validDate(req.body.end_date) || req.body.start_date > req.body.end_date) {
+      return res.status(400).json({ success: false, error: 'Provide valid start and end dates, with the end on or after the start.' });
+    }
+    start = `${req.body.start_date}T00:00:00.000+08:00`;
+    end = `${req.body.end_date}T23:59:59.999+08:00`;
+  }
+  if ((!hasDates || req.body.is_intake_active !== undefined) && typeof req.body?.is_intake_active !== 'boolean') {
+    return res.status(400).json({ success: false, error: 'is_intake_active must be a boolean.' });
+  }
+  try {
+    if (hasDates && req.body.is_intake_active !== undefined) {
+      return res.status(400).json({ success: false, error: 'Save dates separately from the lock setting.' });
+    }
+    if (hasDates) await setPoolingDateRange(start, end);
+    else await setPoolingIntakeActive(req.body.is_intake_active);
+    return getPoolingStatus(req, res);
+  } catch {
+    return res.status(500).json({ success: false, error: 'Unable to update vacancies availability.' });
+  }
+};
 
 export const getPoolingStatus = async (_req, res) => {
   try {
@@ -113,12 +148,17 @@ export const submitApplication = async (req, res) => {
     const candidateId = req.user?.uid || req.user?.TLOid || req.user?.id || req.body.candidate_id || req.body.email || 'APP-' + Date.now();
     const candidateName = req.body.candidate_name || `${req.body.first_name || ''} ${req.body.last_name || ''}`.trim() || req.user?.name || `${req.user?.first_name || ''} ${req.user?.last_name || ''}`.trim() || 'Applicant';
 
-    // 5. One application per registrant per period
-    const existing = await findCandidateApplicationInPeriod(candidateId, activePeriod.id);
-    if (existing) {
+    // 5. Reject duplicate pending application for the same position and region
+    const existingSamePosRegion = await findCandidatePendingApplicationForPositionAndRegion(
+      candidateId,
+      appliedPosition,
+      targetRegion,
+      activePeriod.id
+    );
+    if (existingSamePosRegion) {
       return res.status(409).json({
         success: false,
-        error: 'You have already submitted an application for the current active period.'
+        error: `You already have a pending application for ${appliedPosition} in ${targetRegion}. Please select a different region or position.`
       });
     }
 
@@ -149,13 +189,6 @@ export const submitApplication = async (req, res) => {
       }
     });
   } catch (err) {
-    // Unique index (candidate_id, application_period_id): a concurrent duplicate lands here.
-    if (err?.code === '23505') {
-      return res.status(409).json({
-        success: false,
-        error: 'You have already submitted an application for the current active period.'
-      });
-    }
     res.status(500).json({ success: false, error: err.message });
   }
 };
@@ -494,6 +527,30 @@ export const getMyApplicationState = async (req, res) => {
 };
 
 const registrantId = (user) => user?.uid || user?.TLOid || user?.id;
+
+export const withdrawApplication = async (req, res) => {
+  const candidateId = registrantId(req.user);
+  if (!candidateId) {
+    return res.status(401).json({ success: false, error: 'Unauthorized: Authentication required.' });
+  }
+  const id = Number(req.params.id);
+  if (!Number.isSafeInteger(id) || id <= 0) {
+    return res.status(400).json({ success: false, error: 'Invalid application id.' });
+  }
+  try {
+    const application = await findCandidateApplicationById(candidateId, id);
+    if (!application) {
+      return res.status(404).json({ success: false, error: 'Application not found.' });
+    }
+    const data = await withdrawCandidateApplication(candidateId, id);
+    if (!data) {
+      return res.status(409).json({ success: false, error: 'Only submitted applications can be withdrawn. Refresh your application history.' });
+    }
+    res.json({ success: true, data });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+};
 
 // GET /api/pooling/history : the signed-in registrant's past submissions, newest first.
 export const getApplicationHistory = async (req, res) => {

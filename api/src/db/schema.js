@@ -115,7 +115,4 @@ export const applications = pgTable('applications', {
   qsEligibilityMet: boolean('qs_eligibility_met').default(false),
   overallQualificationStatus: varchar('overall_qualification_status').default('UNASSESSED'),
   applicationPeriodId: integer('application_period_id').references(() => applicationPeriods.id),
-}, (t) => [
-  // One application per registrant (candidate_id) per period; legacy rows with NULL period are exempt.
-  uniqueIndex('uq_applications_candidate_period').on(t.candidateId, t.applicationPeriodId).where(sql`${t.applicationPeriodId} IS NOT NULL`),
-]);
+});

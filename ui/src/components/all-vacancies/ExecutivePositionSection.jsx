@@ -8,8 +8,12 @@ const ExecutivePositionSection = ({
     appliedPosition,
     setAppliedPosition,
     targetRegion,
-    setTargetRegion
+    setTargetRegion,
+    duplicateError = ''
 }) => {
+    const posError = fieldErrors.find((er) => er.id === 'timon-position')?.message;
+    const regError = fieldErrors.find((er) => er.id === 'timon-region')?.message || duplicateError;
+
     return (
         <div className="bg-white border-2 border-slate-200 rounded-card p-6 md:p-8 space-y-6 shadow-sm">
             <div className="border-b border-slate-100 pb-4">
@@ -26,7 +30,7 @@ const ExecutivePositionSection = ({
 
             {/* Target Executive Position Dropdown */}
             <div className="space-y-2">
-                <FloatingLabelInput as="select" id="timon-position" error={fieldErrors.find((er) => er.id === 'timon-position')?.message} label="Target Executive Position" requiredMark icon={<FiBriefcase size={18} />} className="w-full" value={appliedPosition} onChange={e => setAppliedPosition(e.target.value)}>
+                <FloatingLabelInput as="select" id="timon-position" error={posError} label="Target Executive Position" requiredMark icon={<FiBriefcase size={18} />} className="w-full" value={appliedPosition} onChange={e => setAppliedPosition(e.target.value)}>
                         <option value="">Select target executive position...</option>
                         {EXECUTIVE_POSITIONS.map(pos => (
                             <option key={pos.code} value={pos.code}>
@@ -38,7 +42,7 @@ const ExecutivePositionSection = ({
 
             {/* Target Region Dropdown */}
             <div className="space-y-2 pt-2">
-                <FloatingLabelInput as="select" id="timon-region" error={fieldErrors.find((er) => er.id === 'timon-region')?.message} label="Target DepEd Region" requiredMark icon={<FiMapPin size={18} />} className="w-full" value={targetRegion} onChange={e => setTargetRegion(e.target.value)}>
+                <FloatingLabelInput as="select" id="timon-region" error={regError} label="Target DepEd Region" requiredMark icon={<FiMapPin size={18} />} className="w-full" value={targetRegion} onChange={e => setTargetRegion(e.target.value)}>
                         <option value="">Select target DepEd region...</option>
                         {DEPED_REGIONS.map(reg => (
                             <option key={reg} value={reg}>

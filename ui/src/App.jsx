@@ -18,6 +18,7 @@ import LoadingScreen from './components/LoadingScreen';
 import AllVacancies from './pages/AllVacancies';
 import ApplicationHistory from './pages/ApplicationHistory';
 import ResetPassword from './pages/ResetPassword';
+import ControlCenter from './pages/ControlCenter';
 
 import MainDashboard from './pages/MainDashboard';
 
@@ -177,6 +178,8 @@ const App = () => {
                 path="/main-dashboard" 
                 element={<Navigate to="/home" replace />} 
             />
+
+            <Route path="/control-center" element={<ProtectedRoute><ControlCenter /></ProtectedRoute>} />
 
             {/* Fallback */}
             <Route path="*" element={<Navigate to="/" replace />} />

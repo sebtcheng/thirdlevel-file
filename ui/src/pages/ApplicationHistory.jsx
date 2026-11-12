@@ -4,14 +4,17 @@ import { CaretLeft as FiChevronLeft, User as FiUser, Lock as FiLock, Clipboard a
 import './ApplicationHistory.css';
 import { useAuth } from '../context/AuthContext';
 import PageTransition from '../components/PageTransition';
-import { apiUrl } from '../utils/api';
+import { fetchLookupJson } from '../utils/lookupCache';
 import { EXECUTIVE_POSITIONS } from '../components/all-vacancies/constants';
+import ConfirmDestructiveDialog from '../components/forms/ConfirmDestructiveDialog';
+import { apiUrl } from '../utils/api';
 
 const positionTitle = (code) => EXECUTIVE_POSITIONS.find(p => p.code === code)?.title || code;
 
 const statusLabel = (status) => String(status).replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
 
 const formatDate =(value) => (value ? new Date(value).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' }) : '—');
+const formatSubmissionDate = value => value ? new Date(value).toLocaleDateString('en-PH', { year: 'numeric', month: 'long', day: 'numeric', timeZone: 'Asia/Manila' }) : 'Not set';
 
 const ApplicationHistory = () => {
     const navigate = useNavigate();
@@ -21,44 +24,97 @@ const ApplicationHistory = () => {
     const [error, setError] = useState('');
     const [history, setHistory] = useState([]);
     const [activePeriod, setActivePeriod] = useState(null);
-    const [hasSubmittedThisPeriod, setHasSubmittedThisPeriod] = useState(false);
+    const [intakeOpen, setIntakeOpen] = useState(false);
+    const [submissionRange, setSubmissionRange] = useState(null);
+    const [withdrawTarget, setWithdrawTarget] = useState(null);
+    const [withdrawing, setWithdrawing] = useState(false);
+    const [actionError, setActionError] = useState('');
+    const [actionMessage, setActionMessage] = useState('');
+
+    const handleWithdraw = async () => {
+        if (!withdrawTarget || withdrawing) return;
+        setWithdrawing(true);
+        setActionError('');
+        setActionMessage('');
+        try {
+            const response = await fetch(apiUrl(`/api/pooling/history/${withdrawTarget.id}/withdraw`), {
+                method: 'POST',
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            const result = await response.json();
+            if (!response.ok || !result.success) throw new Error(result.error || 'Could not withdraw your application.');
+            setHistory(items => items.filter(item => item.id !== result.data.id));
+            await Promise.allSettled([
+                fetchLookupJson('/api/pooling/history', { token, ttlMs: 0 }),
+                fetchLookupJson('/api/pooling/my-application', { token, ttlMs: 0 })
+            ]);
+            setActionMessage('Application withdrawn and permanently deleted.');
+        } catch (err) {
+            setActionError(err.message || 'Could not withdraw your application. Please try again.');
+        } finally {
+            setWithdrawing(false);
+            setWithdrawTarget(null);
+        }
+    };
 
     useEffect(() => {
         if (!token) return undefined;
-        const controller = new AbortController();
-        const headers = { Authorization: `Bearer ${token}` };
+        let alive = true;
 
         const load = async () => {
             setLoading(true);
             setError('');
             try {
-                const [historyRes, stateRes] = await Promise.all([
-                    fetch(apiUrl('/api/pooling/history'), { headers, signal: controller.signal }),
-                    fetch(apiUrl('/api/pooling/my-application'), { headers, signal: controller.signal })
+                const [historyData, stateData] = await Promise.all([
+                    fetchLookupJson('/api/pooling/history', { token, ttlMs: 3000 }),
+                    fetchLookupJson('/api/pooling/my-application', { token, ttlMs: 3000, returnErrorBody: true })
                 ]);
-                if (!historyRes.ok) throw new Error('Could not load your application history.');
-                const historyData = await historyRes.json();
+                if (!alive) return;
                 setHistory(historyData.data || []);
 
-                if (stateRes.ok) {
-                    const stateData = await stateRes.json();
+                if (stateData && stateData.success) {
                     setActivePeriod(stateData.period || null);
-                    setHasSubmittedThisPeriod(Boolean(stateData.hasSubmitted));
                 }
             } catch (err) {
-                if (err.name === 'AbortError') return;
+                if (!alive) return;
                 console.error('[Application History] Load failed:', err);
-                setError(err.message || 'Could not load your application history.');
+                setError('Could not load your application history.');
             } finally {
-                if (!controller.signal.aborted) setLoading(false);
+                if (alive) setLoading(false);
             }
         };
 
         load();
-        return () => controller.abort();
+        return () => { alive = false; };
     }, [token]);
 
-    const canStartNew = Boolean(activePeriod) && !hasSubmittedThisPeriod;
+    useEffect(() => {
+        let alive = true;
+        const refresh = async () => {
+            try {
+                const response = await fetch(apiUrl('/api/pooling/status'), { cache: 'no-store' });
+                const data = await response.json();
+                if (alive) {
+                    setIntakeOpen(Boolean(response.ok && data.success && data.isOpen));
+                    setSubmissionRange(response.ok && data.success ? { start: data.intake_start_date, end: data.intake_end_date } : null);
+                }
+                const state = await fetchLookupJson('/api/pooling/my-application', { token, ttlMs: 0, returnErrorBody: true });
+                if (alive) setActivePeriod(state?.success ? state.period : null);
+            } catch {
+                if (alive) setIntakeOpen(false);
+            }
+        };
+        refresh();
+        window.addEventListener('focus', refresh);
+        const interval = window.setInterval(refresh, 15000);
+        return () => {
+            alive = false;
+            window.removeEventListener('focus', refresh);
+            window.clearInterval(interval);
+        };
+    }, [token]);
+
+    const canStartNew = intakeOpen && Boolean(activePeriod);
 
     return (
         <PageTransition>
@@ -106,14 +162,20 @@ const ApplicationHistory = () => {
                 <main className="flex-1 max-w-[1100px] w-full mx-auto p-6 md:p-10 space-y-8">
                     {/* New application action */}
                     <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-5 bg-white border-2 border-slate-200 rounded-card shadow-sm">
-                        <span className="text-xs font-semibold text-slate-500">
-                            {hasSubmittedThisPeriod
-                                ? 'You have already submitted an application for the current active period.'
-                                : activePeriod
-                                    ? `Applications are open for ${activePeriod.name}.`
-                                    : 'There is no active application period right now.'}
-                        </span>
-                        <button
+                        <div className="min-w-0 space-y-2">
+                        <p className="text-xs font-semibold text-slate-500">
+                            {canStartNew
+                                ? `Applications are open for ${activePeriod.name}.`
+                                : 'Application submissions are currently closed.'}
+                        </p>
+                        {submissionRange && (submissionRange.start || submissionRange.end) && (
+                            <p className="flex items-start gap-2 text-[15px] text-brand-800">
+                                <FiCalendar size={18} className="mt-0.5 shrink-0" />
+                                <span><span className="font-semibold">Submission period: </span>{formatSubmissionDate(submissionRange.start)} – {formatSubmissionDate(submissionRange.end)}<span className="block text-[13px] text-secondary">Philippine time · End date included</span></span>
+                            </p>
+                        )}
+                        </div>
+                        {canStartNew && <button
                             type="button"
                             disabled={!canStartNew || loading}
                             onClick={() => navigate('/timon-applications/new')}
@@ -121,7 +183,7 @@ const ApplicationHistory = () => {
                         >
                             <FiSend size={16} />
                             <span>Start New Application</span>
-                        </button>
+                        </button>}
                     </div>
 
                     {loading ? (
@@ -144,14 +206,13 @@ const ApplicationHistory = () => {
                             {history.map((item) => {
                                 const status = String(item.status || 'submitted').toLowerCase();
                                 return (
-                                    <Link
+                                    <article
                                         key={item.id}
-                                        to={`/timon-applications/${item.id}`}
                                         className="app-card"
                                         data-status={status}
                                     >
                                         <div className="app-card__header">
-                                            <h3 className="app-card__title">{item.period_name || 'Earlier submission'}</h3>
+                                             <h3 className="app-card__title"><Link to={`/timon-applications/${item.id}`}>{item.period_name || 'Earlier submission'}</Link></h3>
                                             <span className="app-card__status">{statusLabel(status)}</span>
                                         </div>
                                         {(item.period_start || item.period_end) && (
@@ -174,12 +235,30 @@ const ApplicationHistory = () => {
                                             <FiClock size={13} />
                                             <span>Date Applied: {formatDate(item.submission_timestamp)}</span>
                                         </span>
-                                    </Link>
+                                        <div className="flex flex-wrap items-center justify-between gap-3">
+                                            <Link to={`/timon-applications/${item.id}`} className="text-sm font-bold underline">View Application</Link>
+                                            {status === 'submitted' && (
+                                                <button type="button" disabled={withdrawing} onClick={() => setWithdrawTarget(item)} className="rounded-md border border-danger-600 px-3 py-2 text-sm font-bold text-danger-600 hover:bg-danger-50 disabled:opacity-50">
+                                                    Withdraw Application
+                                                </button>
+                                            )}
+                                        </div>
+                                    </article>
                                 );
                             })}
                         </div>
                     )}
+                    {actionError && <p role="alert" className="text-sm font-bold text-danger-600">{actionError}</p>}
+                    {actionMessage && <p role="status" className="text-sm font-bold text-success-800">{actionMessage}</p>}
                 </main>
+                <ConfirmDestructiveDialog
+                    open={Boolean(withdrawTarget)}
+                    title="Withdraw Application"
+                    body={withdrawTarget ? `Permanently delete your ${positionTitle(withdrawTarget.applied_position)} application for ${withdrawTarget.target_region || 'the selected region'} in ${withdrawTarget.period_name || 'this application period'}, including its answers, attachment references, evaluations and NSC scores? No application history will remain. This cannot be undone.` : ''}
+                    confirmLabel={withdrawing ? 'Withdrawing...' : 'Withdraw Application'}
+                    onConfirm={handleWithdraw}
+                    onCancel={() => { if (!withdrawing) setWithdrawTarget(null); }}
+                />
             </div>
         </PageTransition>
     );

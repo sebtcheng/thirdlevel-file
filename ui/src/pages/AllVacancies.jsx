@@ -103,6 +103,17 @@ const AllVacancies = () => {
     // Existing submission in the active application period (read-only mode)
     const [isReadOnly, setIsReadOnly] = useState(false);
     const [existingSubmission, setExistingSubmission] = useState(null);
+    const [candidateHistory, setCandidateHistory] = useState([]);
+
+    const NON_PENDING_STATUSES = ['rejected', 'disqualified', 'cancelled', 'withdrawn'];
+    const hasDuplicatePending = !isReadOnly && Boolean(appliedPosition && targetRegion && candidateHistory.some(item =>
+        item.applied_position === appliedPosition &&
+        item.target_region === targetRegion &&
+        !NON_PENDING_STATUSES.includes(String(item.status || 'submitted').toLowerCase())
+    ));
+    const duplicatePositionRegionError = hasDuplicatePending
+        ? `You already have a pending application for ${appliedPosition} in ${targetRegion}. Please select a different region or position.`
+        : '';
 
     // Tab definitions
     const tabs = [
@@ -185,7 +196,7 @@ const AllVacancies = () => {
     };
 
     // History mode: load one of this registrant's submissions by id and force read-only.
-    // New mode: if the registrant already submitted in the active period, send them to that submission.
+    // New mode (/timon-applications/new): load candidate history so we can validate duplicate pending position + region.
     useEffect(() => {
         if (!token) return undefined;
         let alive = true;
@@ -204,11 +215,10 @@ const AllVacancies = () => {
                     return;
                 }
 
-                const res = await fetch(apiUrl('/api/pooling/my-application'), { headers });
-                if (!res.ok) return;
-                const data = await res.json();
-                if (!alive || !data.success || !data.isReadOnly || !data.application) return;
-                navigate(`/timon-applications/${data.application.id}`, { replace: true });
+                const historyData = await fetchLookupJson('/api/pooling/history', { token, ttlMs: 3000 });
+                if (alive && historyData?.data) {
+                    setCandidateHistory(historyData.data);
+                }
             } catch (err) {
                 if (alive) console.error('[TIMON Applications] Failed to load existing submission:', err);
             }
@@ -264,6 +274,7 @@ const AllVacancies = () => {
         const found = [];
         if (!appliedPosition) found.push({ id: 'timon-position', message: 'Please select one of the four executive designations (RD, ARD, SDS, ASDS).' });
         if (!targetRegion) found.push({ id: 'timon-region', message: 'Please select a target DepEd region for your application.' });
+        if (hasDuplicatePending) found.push({ id: 'timon-region', message: duplicatePositionRegionError });
         if (!personalData.surname) found.push({ id: 'field-surname', message: 'Please provide your Surname in ALL CAPS.' });
         if (!personalData.first_name) found.push({ id: 'field-first_name', message: 'Please provide your First Name in ALL CAPS.' });
         if (!personalData.contact_number) found.push({ id: 'field-contact_number', message: 'Please provide your 11-digit mobile/telephone contact number.' });
@@ -423,10 +434,13 @@ const AllVacancies = () => {
             const data = await res.json().catch(() => ({}));
 
             if (res.status === 409) {
+                setActiveTab('profile');
+                const dupMsg = data.error || `You already have a pending application for ${appliedPosition} in ${targetRegion}. Please select a different region or position.`;
+                setErrors([{ id: 'timon-region', message: dupMsg }]);
                 Swal.fire({
-                    title: 'Already Submitted',
-                    text: 'You have already submitted an application for the current active period.',
-                    icon: 'info',
+                    title: 'Pending Application Exists',
+                    text: dupMsg,
+                    icon: 'warning',
                     confirmButtonColor: 'var(--color-brand-800)'
                 });
                 return;
@@ -437,6 +451,16 @@ const AllVacancies = () => {
             }
 
             setSubmittedApplication(data.data);
+            setCandidateHistory(prev => [
+                {
+                    id: data.data?.id,
+                    applied_position: appliedPosition,
+                    target_region: targetRegion,
+                    status: 'submitted',
+                    submission_timestamp: data.data?.submission_timestamp || new Date().toISOString()
+                },
+                ...prev
+            ]);
 
             Swal.fire({
                 title: 'Application Submitted!',
@@ -700,6 +724,7 @@ const AllVacancies = () => {
                                         setAppliedPosition={setAppliedPosition}
                                         targetRegion={targetRegion}
                                         setTargetRegion={setTargetRegion}
+                                        duplicateError={duplicatePositionRegionError}
                                     />
 
                                     {/* Section 2: Personal Details & Current Employment */}
@@ -783,6 +808,7 @@ const AllVacancies = () => {
                                         uploadingDoc={uploadingDoc}
                                         setUploadingDoc={setUploadingDoc}
                                         readOnly={isReadOnly}
+                                        applicationId={applicationId || submittedApplication?.id || null}
                                     />
 
                                     {/* Final Review & Submission Action Bar */}

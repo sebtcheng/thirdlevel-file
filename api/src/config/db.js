@@ -136,6 +136,49 @@ export const initDB = async () => {
       CREATE INDEX IF NOT EXISTS idx_nsc_scores_application_id ON nsc_scores (application_id);
     `);
     await pool.query(`
+      CREATE SCHEMA IF NOT EXISTS ref;
+      CREATE TABLE IF NOT EXISTS ref.gmis_positions (
+        id SERIAL PRIMARY KEY,
+        position_title VARCHAR(255) NOT NULL,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+      INSERT INTO ref.gmis_positions (position_title)
+      SELECT DISTINCT UPPER(TRIM(position_title)) AS title
+      FROM (
+        SELECT position_title FROM tlo_positions WHERE position_title IS NOT NULL AND TRIM(position_title) <> ''
+        UNION
+        SELECT position_title FROM third_level_official_masterlist WHERE position_title IS NOT NULL AND TRIM(position_title) <> '' AND position_title NOT ILIKE 'N/A'
+      ) src
+      WHERE NOT EXISTS (SELECT 1 FROM ref.gmis_positions LIMIT 1)
+      ORDER BY title;
+    `);
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS application_periods (
+        id SERIAL PRIMARY KEY,
+        name VARCHAR(150) NOT NULL,
+        start_date TIMESTAMPTZ,
+        end_date TIMESTAMPTZ,
+        is_active BOOLEAN NOT NULL DEFAULT FALSE,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+      CREATE UNIQUE INDEX IF NOT EXISTS uq_application_periods_single_active
+        ON application_periods (is_active)
+        WHERE is_active;
+      INSERT INTO application_periods (name, start_date, end_date, is_active)
+      SELECT
+        'TIMON Executive Pooling Cycle 2026',
+        COALESCE((SELECT intake_start_date FROM pooling_configurations ORDER BY id ASC LIMIT 1), NOW() - INTERVAL '1 day'),
+        COALESCE((SELECT intake_end_date FROM pooling_configurations ORDER BY id ASC LIMIT 1), NOW() + INTERVAL '60 days'),
+        TRUE
+      WHERE NOT EXISTS (SELECT 1 FROM application_periods WHERE is_active = TRUE);
+    `);
+    await pool.query(`
+      ALTER TABLE applications
+        ADD COLUMN IF NOT EXISTS application_period_id INTEGER REFERENCES application_periods(id);
+      DROP INDEX IF EXISTS uq_applications_candidate_period;
+    `);
+    await pool.query(`
       CREATE TABLE IF NOT EXISTS authorization_codes (
         id SERIAL PRIMARY KEY,
         code TEXT UNIQUE NOT NULL,

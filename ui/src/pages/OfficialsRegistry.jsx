@@ -660,7 +660,7 @@ const OfficialsRegistry = () => {
     const StatusBadge = ({ status }) => {
         const displayStatus = status === 'Vacated' ? 'Vacant' : status;
         return (
-            <span className={`px-3 py-1 rounded-full text-[15px] font-black uppercase tracking-widest border-2 ${getStatusColor(displayStatus)}`}>
+            <span className={`inline-flex max-w-full items-center justify-center px-3 py-1 rounded-full text-center text-[15px] font-black uppercase tracking-widest border-2 ${getStatusColor(displayStatus)}`}>
                 {displayStatus || 'Unknown'}
             </span>
         );

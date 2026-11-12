@@ -23,14 +23,19 @@ const NexusGate = () => {
     const [poolingActive, setPoolingActive] = useState(false);
 
     useEffect(() => {
-        fetch(apiUrl('/api/pooling/status'))
+        const refreshStatus = () => fetch(apiUrl('/api/pooling/status'))
             .then(res => res.json())
             .then(data => {
-                if (data.success && data.isOpen) {
-                    setPoolingActive(true);
-                }
+                setPoolingActive(Boolean(data.success && data.isOpen));
             })
-            .catch(() => {});
+            .catch(() => setPoolingActive(false));
+        refreshStatus();
+        window.addEventListener('focus', refreshStatus);
+        const interval = window.setInterval(refreshStatus, 30000);
+        return () => {
+            window.removeEventListener('focus', refreshStatus);
+            window.clearInterval(interval);
+        };
     }, []);
 
     // Recruitment portal modal
@@ -305,12 +310,19 @@ const NexusGate = () => {
                     </div>
                 </motion.div>
 
-                {/* ── CARD 2: VACANCIES (LOCKED) ── */}
+                {/* ── CARD 2: VACANCIES ── */}
                 <motion.div
                     variants={direction === 'right' ? itemRight : itemLeft}
                     whileHover={{ y: -4, transition: { duration: 0.2 } }}
                     whileTap={{ scale: 0.98 }}
-                    onClick={handleLockedVacanciesClick}
+                    onClick={(e) => {
+                        if (poolingActive) {
+                            e.stopPropagation();
+                            setShowRecruitModal(true);
+                        } else {
+                            handleLockedVacanciesClick(e);
+                        }
+                    }}
                     className="nexus-card nexus-card-vacancies"
                 >
                     {/* Watermark Executive Chair Background Graphic */}
@@ -334,10 +346,17 @@ const NexusGate = () => {
                         <div className="nexus-card-badge nexus-badge-blue">
                             <FiBriefcase size={22} className="text-brand-700" />
                         </div>
-                        <div className="nexus-locked-pill">
-                            <FiLock size={12} className="text-gold" />
-                            <span>LOCKED</span>
-                        </div>
+                        {poolingActive ? (
+                            <div className="nexus-locked-pill">
+                                <FiCheckCircle size={12} className="text-gold" />
+                                <span>OPEN</span>
+                            </div>
+                        ) : (
+                            <div className="nexus-locked-pill">
+                                <FiLock size={12} className="text-gold" />
+                                <span>LOCKED</span>
+                            </div>
+                        )}
                     </div>
 
                     <div className="nexus-card-body">
@@ -348,6 +367,14 @@ const NexusGate = () => {
                             Explore official Third Level executive position vacancies, qualification standards, application requirements, and recruitment announcements across the Department.
                         </p>
                     </div>
+
+                    {poolingActive && (
+                        <div className="nexus-card-footer">
+                            <span className="nexus-action-link text-brand-800">
+                                APPLY NOW <FiArrowRight size={16} />
+                            </span>
+                        </div>
+                    )}
                 </motion.div>
             </div>
         </div>

@@ -1,5 +1,43 @@
 # CHANGELOG
 
+## 2026-11-12 — Admin vacancies control center
+
+- Added inclusive start/end submission dates in Philippine time. Date updates atomically synchronize intake configuration and the active application period (creating one if absent), preserving the manual lock setting. Updating a current period also updates its dates shown in application history.
+- Signed-in application history hides Start New Application when intake is closed, refreshing on focus and every 15 seconds.
+
+- Added `/control-center` and a sidebar entry for Central Office, Admin, Super User and Personnel Admin roles.
+- Authenticated `PATCH /api/pooling/status` permits only those roles to persist a boolean `is_intake_active` in the existing configuration. Locking blocks submissions through the existing intake guard; unlocking continues to respect application dates.
+- The public Vacancies card refreshes availability on focus and every 30 seconds. No schema changes are required.
+- Rollback: remove the control-center route, UI and PATCH endpoint; the current stored intake setting remains in effect.
+
+## 2026-11-12 — TIMON documents stored on the server
+
+- Root cause of admin document preview 500 (`requestId 908e6fcc…`): the applicant form recorded browser-only `bin-…` ids in `document_attachments`; `/api/binary/:id` passed them to a UUID column.
+- `POST /api/pooling/documents` (authenticated, one file, PDF/JPG/PNG/WebP, 10 MB) stores uploads through the existing `upsertBinary` pipeline (compression + hash deduplication) and returns the UUID `binary_id` the form now saves.
+- `/api/binary/:id` rejects non-UUID ids with 400 instead of querying PostgreSQL and returning 500.
+- Admin preview/download shows a clear notice for legacy browser-only attachments. Applicants can restore them from the original browser with the new upload button on each legacy document (`POST /api/pooling/history/:id/documents/:docType`), which stores the file and repoints that owned application's attachment. Only `bin-…` entries can be relinked, so already-stored documents cannot be replaced through this route. The read-only banner offers **Restore all**, and opening the submission's Document Uploads tab uploads browser-only files automatically once per application, then confirms how many were sent.
+- Rollback: revert the form to local storage and remove the routes; stored binaries remain in `unified_binaries` and no schema change was made.
+
+## 2026-11-12 — Withdrawal permanently deletes without history (supersedes receipt retention)
+
+- Withdrawal deletes the owned submitted application and its linked NSC scores atomically. No receipt is written; applicant history and admin lists contain no withdrawn application.
+- The history card is removed on success. Confirmation explicitly states that no history remains and deletion cannot be undone.
+- Migration `database/migrations/20261112_035_remove_withdrawal_history.sql` drops the withdrawal receipt table and deletes legacy withdrawn application rows/scores. Deploy the updated repository and UI before applying it. Other applications and shared binary storage are unaffected.
+- Rollback requires a pre-migration backup of the receipt table and any affected applications/scores, followed by the previous code; deleted data cannot be reconstructed.
+
+## 2026-11-12 — Withdrawal retains history only
+
+- Withdrawal now archives a minimal receipt and deletes the application and dependent NSC scores in one locked transaction. Answers, attachment references and evaluations are deleted with the application; shared binary storage is not deleted by this operation.
+- History combines applications with archived receipts. Withdrawn receipts show a withdrawal date and have no detail link; deleted application detail URLs return 404.
+- Required migration: `database/migrations/20261112_034_archive_withdrawn_applications.sql`. It also converts existing withdrawn rows to receipts. Back up before deployment: deleted details cannot be restored from receipts. Rollback requires restoring the backup before dropping the receipt table.
+
+## 2026-11-12 — Application withdrawal
+
+- Application History offers a named confirmation to withdraw submitted applications.
+- Authenticated `POST /api/pooling/history/:id/withdraw` checks ownership and atomically changes only submitted records to `withdrawn`, retaining their contents and updating `updated_at`.
+- Withdrawn applications remain readable in history; existing duplicate-submission rules already exclude withdrawn records.
+- The admin TIMON Applications list and pagination totals exclude withdrawn applications.
+
 ## 2026-11-09 — NexusGate & Git Configuration: Disable Vacancies Card in Staging and Ignore Env/Migrations
 
 ### Requirement & User Directive
