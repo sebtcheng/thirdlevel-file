@@ -10,6 +10,7 @@
     "build": "npm --prefix ui run build",
     "test": "npm --prefix api test --silent && npm --prefix ui test --silent",
     "test:unit": "vitest run",
+    "db:init": "node api/scripts/init-db.js",
     "test:e2e": "playwright test",
     "lint": "node scripts/run-lint.mjs",
     "lint:fast": "oxlint api ui",

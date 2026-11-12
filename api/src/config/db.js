@@ -62,16 +62,32 @@ export const verifyDbConnection = async () => {
 
 export const initDB = async () => {
   try {
-    await pool.query('ALTER TABLE third_level_officials_updates ADD COLUMN IF NOT EXISTS remarks TEXT;');
-    await pool.query('ALTER TABLE tlo_users ADD COLUMN IF NOT EXISTS assigned_region TEXT;');
-    await pool.query('ALTER TABLE tlo_users ADD COLUMN IF NOT EXISTS assigned_division TEXT;');
-    await pool.query('ALTER TABLE third_level_official_masterlist ADD COLUMN IF NOT EXISTS designation TEXT;');
-    await pool.query('ALTER TABLE third_level_officials_profiling_application ADD COLUMN IF NOT EXISTS designation TEXT;');
-    await pool.query('ALTER TABLE third_level_officials_profiling_application ADD COLUMN IF NOT EXISTS applied_position VARCHAR(10);');
-    await pool.query('ALTER TABLE third_level_officials_profiling_application ADD COLUMN IF NOT EXISTS target_region VARCHAR(100);');
-    await pool.query('ALTER TABLE third_level_officials_profiling_application ADD COLUMN IF NOT EXISTS submission_timestamp TIMESTAMPTZ;');
-    await pool.query('ALTER TABLE third_level_officials_profiling_application ADD COLUMN IF NOT EXISTS evaluation_scores JSONB DEFAULT \'{}\'::jsonb;');
-    await pool.query('ALTER TABLE third_level_officials_profiling_application ADD COLUMN IF NOT EXISTS questionnaire_responses JSONB DEFAULT \'{}\'::jsonb;');
+    // Legacy tables may not exist yet (fresh databases, test runners). Only patch the ones that do,
+    // so initialization can continue and create the current schema instead of aborting here.
+    await pool.query(`
+      DO $$
+      BEGIN
+        IF to_regclass('public.third_level_officials_updates') IS NOT NULL THEN
+          ALTER TABLE third_level_officials_updates ADD COLUMN IF NOT EXISTS remarks TEXT;
+        END IF;
+        IF to_regclass('public.tlo_users') IS NOT NULL THEN
+          ALTER TABLE tlo_users ADD COLUMN IF NOT EXISTS assigned_region TEXT;
+          ALTER TABLE tlo_users ADD COLUMN IF NOT EXISTS assigned_division TEXT;
+        END IF;
+        IF to_regclass('public.third_level_official_masterlist') IS NOT NULL THEN
+          ALTER TABLE third_level_official_masterlist ADD COLUMN IF NOT EXISTS designation TEXT;
+        END IF;
+        IF to_regclass('public.third_level_officials_profiling_application') IS NOT NULL THEN
+          ALTER TABLE third_level_officials_profiling_application ADD COLUMN IF NOT EXISTS designation TEXT;
+          ALTER TABLE third_level_officials_profiling_application ADD COLUMN IF NOT EXISTS applied_position VARCHAR(10);
+          ALTER TABLE third_level_officials_profiling_application ADD COLUMN IF NOT EXISTS target_region VARCHAR(100);
+          ALTER TABLE third_level_officials_profiling_application ADD COLUMN IF NOT EXISTS submission_timestamp TIMESTAMPTZ;
+          ALTER TABLE third_level_officials_profiling_application ADD COLUMN IF NOT EXISTS evaluation_scores JSONB DEFAULT '{}'::jsonb;
+          ALTER TABLE third_level_officials_profiling_application ADD COLUMN IF NOT EXISTS questionnaire_responses JSONB DEFAULT '{}'::jsonb;
+        END IF;
+      END
+      $$;
+    `);
     await pool.query(`
       CREATE TABLE IF NOT EXISTS pooling_configurations (
         id SERIAL PRIMARY KEY,
@@ -142,15 +158,32 @@ export const initDB = async () => {
         position_title VARCHAR(255) NOT NULL,
         created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
       );
-      INSERT INTO ref.gmis_positions (position_title)
-      SELECT DISTINCT UPPER(TRIM(position_title)) AS title
-      FROM (
-        SELECT position_title FROM tlo_positions WHERE position_title IS NOT NULL AND TRIM(position_title) <> ''
-        UNION
-        SELECT position_title FROM third_level_official_masterlist WHERE position_title IS NOT NULL AND TRIM(position_title) <> '' AND position_title NOT ILIKE 'N/A'
-      ) src
-      WHERE NOT EXISTS (SELECT 1 FROM ref.gmis_positions LIMIT 1)
-      ORDER BY title;
+    `);
+    // Seed the reference list from whichever legacy source tables exist; fresh databases have neither.
+    await pool.query(`
+      DO $$
+      DECLARE
+        sources TEXT[] := '{}';
+        seed_sql TEXT;
+      BEGIN
+        IF EXISTS (SELECT 1 FROM ref.gmis_positions) THEN
+          RETURN;
+        END IF;
+        IF to_regclass('public.tlo_positions') IS NOT NULL THEN
+          sources := array_append(sources, 'SELECT position_title FROM tlo_positions WHERE position_title IS NOT NULL AND TRIM(position_title) <> ''''');
+        END IF;
+        IF to_regclass('public.third_level_official_masterlist') IS NOT NULL THEN
+          sources := array_append(sources, 'SELECT position_title FROM third_level_official_masterlist WHERE position_title IS NOT NULL AND TRIM(position_title) <> '''' AND position_title NOT ILIKE ''N/A''');
+        END IF;
+        IF array_length(sources, 1) IS NULL THEN
+          RETURN;
+        END IF;
+        seed_sql := 'INSERT INTO ref.gmis_positions (position_title) SELECT DISTINCT UPPER(TRIM(position_title)) FROM ('
+          || array_to_string(sources, ' UNION ')
+          || ') src WHERE position_title IS NOT NULL ORDER BY 1';
+        EXECUTE seed_sql;
+      END
+      $$;
     `);
     await pool.query(`
       CREATE TABLE IF NOT EXISTS application_periods (
