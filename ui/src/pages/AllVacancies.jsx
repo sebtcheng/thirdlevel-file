@@ -16,6 +16,7 @@ import {
     StatutoryDeclarationsSection,
     FormTabs,
     REQUIRED_DOCUMENTS,
+    isDocumentComplete,
     formatContactNumber
 } from '../components/all-vacancies';
 
@@ -133,7 +134,7 @@ const AllVacancies = () => {
             id: 'documents',
             label: 'Tab 3: Document Uploads',
             icon: FiUploadCloud,
-            isComplete: REQUIRED_DOCUMENTS.filter(d => d.required).every(d => Boolean(documents[d.key]))
+            isComplete: REQUIRED_DOCUMENTS.filter(d => d.required).every(d => isDocumentComplete(d, documents[d.key]))
         }
     ];
 
@@ -191,7 +192,16 @@ const AllVacancies = () => {
         if (qr.eligibilities) setEligibilityData(prev => ({ ...prev, ...qr.eligibilities }));
         if (qr.statutory_declarations) setStatutoryData(prev => ({ ...prev, ...qr.statutory_declarations }));
         const docs = {};
-        (app.document_attachments || []).forEach(d => { if (d?.doc_type) docs[d.doc_type] = d; });
+        (app.document_attachments || []).forEach(d => {
+            if (!d?.doc_type) return;
+            const targetKey = d.doc_type === 'applicant_profile_word' ? 'applicant_profile_doc' : d.doc_type;
+            if (targetKey === 'applicant_profile_doc') {
+                const prev = Array.isArray(docs[targetKey]) ? docs[targetKey] : docs[targetKey] ? [docs[targetKey]] : [];
+                docs[targetKey] = [...prev, d];
+            } else {
+                docs[targetKey] = d;
+            }
+        });
         setDocuments(prev => ({ ...prev, ...docs }));
     };
 
@@ -278,9 +288,13 @@ const AllVacancies = () => {
         if (!personalData.surname) found.push({ id: 'field-surname', message: 'Please provide your Surname in ALL CAPS.' });
         if (!personalData.first_name) found.push({ id: 'field-first_name', message: 'Please provide your First Name in ALL CAPS.' });
         if (!personalData.contact_number) found.push({ id: 'field-contact_number', message: 'Please provide your 11-digit mobile/telephone contact number.' });
-        if (!personalData.current_position) found.push({ id: 'field-current_position', message: 'Please provide your current plantilla position title.' });
-        if (!personalData.plantilla_region) found.push({ id: 'field-plantilla_region', message: 'Please select the Region of your plantilla item.' });
-        if (!personalData.plantilla_division) found.push({ id: 'field-plantilla_division', message: 'Please select the Division of your plantilla item.' });
+        if (!personalData.current_position) found.push({ id: 'field-current_position', message: 'Please provide your current position title.' });
+        if (personalData.is_external || personalData.plantilla_region === 'External') {
+            if (!personalData.plantilla_office) found.push({ id: 'field-plantilla_office', message: 'Please provide your current affiliation or office.' });
+        } else {
+            if (!personalData.plantilla_region) found.push({ id: 'field-plantilla_region', message: 'Please select the Region of your plantilla item.' });
+            if (!personalData.plantilla_division) found.push({ id: 'field-plantilla_division', message: 'Please select the Division of your plantilla item.' });
+        }
         if (designationData.is_assigned_third_level === 'Yes') {
             if (!designationData.designation_capacity) found.push({ id: 'field-designation_capacity', message: 'Please indicate whether you are an Officer-in-Charge (OIC) or Full-Fledged.' });
             if (!designationData.current_designation_preset || designationData.current_designation_preset === 'N/A') found.push({ id: 'field-current_designation_preset', message: 'Please select your current designation.' });
@@ -378,7 +392,7 @@ const AllVacancies = () => {
         }
 
         // 4. Validate Tab 3: Required Documents
-        const missingDocs = REQUIRED_DOCUMENTS.filter(doc => doc.required && !documents[doc.key]);
+        const missingDocs = REQUIRED_DOCUMENTS.filter(doc => doc.required && !isDocumentComplete(doc, documents[doc.key]));
         if (missingDocs.length > 0) {
             setActiveTab('documents');
             Swal.fire({
@@ -393,7 +407,9 @@ const AllVacancies = () => {
         setSubmitting(true);
 
         try {
-            const documentAttachments = Object.values(documents).filter(Boolean);
+            const documentAttachments = Object.values(documents)
+                .flatMap(val => (Array.isArray(val) ? val : val ? [val] : []))
+                .filter(Boolean);
 
             const effectiveDesignation = designationData.current_designation_preset === 'Other'
                 ? designationData.current_designation_custom.trim()

@@ -68,15 +68,55 @@ const PersonalEmploymentSection = ({
         setPersonalData(prev => ({ ...prev, plantilla_division: e.target.value, plantilla_office: e.target.value }));
     };
 
+    const isExternal = Boolean(personalData.is_external) || personalData.plantilla_region === 'External';
+
+    const toggleExternalMode = (nextExternal, nextPosition = '') => {
+        if (nextExternal) {
+            setPersonalData(prev => ({
+                ...prev,
+                is_external: true,
+                current_position: prev.is_external ? prev.current_position : '',
+                plantilla_region: 'External',
+                plantilla_division: prev.is_external ? prev.plantilla_division : '',
+                plantilla_office: prev.is_external ? prev.plantilla_office : ''
+            }));
+        } else {
+            setPersonalData(prev => ({
+                ...prev,
+                is_external: false,
+                current_position: nextPosition,
+                ...(prev.plantilla_region === 'External'
+                    ? { plantilla_region: '', plantilla_division: '', plantilla_office: '' }
+                    : {})
+            }));
+        }
+    };
+
+    const handlePositionSelectChange = (e) => {
+        const { value } = e.target;
+        toggleExternalMode(value === '__OTHER__', value);
+    };
+
+    const handleExternalOfficeChange = (e) => {
+        const { value } = e.target;
+        setPersonalData(prev => ({
+            ...prev,
+            is_external: true,
+            plantilla_region: 'External',
+            plantilla_division: value,
+            plantilla_office: value
+        }));
+    };
+
     // Region keys come from the masterlist in whatever casing it holds ("REGION II"), so match case-insensitively.
     const divisionOptions = getDivisionOptions(regionDivisions, personalData.plantilla_region);
     // A saved position that differs only by case maps to the list entry instead of adding a duplicate.
     const savedPosition = (personalData.current_position || '').trim();
     const savedMatch = tloPositions.find(p => p.position_name.toUpperCase() === savedPosition.toUpperCase());
-    const positionOptions = !savedPosition || savedMatch
+    const positionOptions = !savedPosition || savedMatch || isExternal
         ? tloPositions
         : [{ id: 'current', position_name: savedPosition }, ...tloPositions];
-    const positionValue = savedMatch ? savedMatch.position_name : savedPosition;
+    const positionValue = isExternal ? '__OTHER__' : (savedMatch ? savedMatch.position_name : savedPosition);
 
     const handleContactChange = (e) => {
         const formatted = formatContactNumber(e.target.value);
@@ -143,36 +183,94 @@ const PersonalEmploymentSection = ({
             {/* Current Position & Plantilla Office */}
             <div className="space-y-4 pt-2">
                 <div>
-                    <label className="block text-xs font-black uppercase tracking-wider text-slate-700 mb-1">
-                        What is your current position? <span className="text-rose-500">*</span>
-                    </label>
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-1.5">
+                        <label className="block text-xs font-black uppercase tracking-wider text-slate-700">
+                            What is your current position? <span className="text-rose-500">*</span>
+                        </label>
+                        <div className="inline-flex rounded-xl border border-slate-200 bg-slate-100 p-1 self-start sm:self-auto" role="group" aria-label="Applicant employment type">
+                            <button
+                                type="button"
+                                onClick={() => toggleExternalMode(false)}
+                                className={`px-3 py-1 rounded-lg text-[11px] font-bold transition-all ${
+                                    !isExternal
+                                        ? 'bg-brand-800 text-white shadow-xs'
+                                        : 'text-slate-600 hover:text-slate-900'
+                                }`}
+                            >
+                                DepEd Personnel
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => toggleExternalMode(true)}
+                                className={`px-3 py-1 rounded-lg text-[11px] font-bold transition-all ${
+                                    isExternal
+                                        ? 'bg-brand-800 text-white shadow-xs'
+                                        : 'text-slate-600 hover:text-slate-900'
+                                }`}
+                            >
+                                External Applicant / Others
+                            </button>
+                        </div>
+                    </div>
                     <span className="text-[11px] text-slate-500 block mb-2 font-medium">
                         [For other positions, do not abbreviate. e.g. Education Program Supervisor, Public Schools District Supervisor]
                     </span>
-                    <FloatingLabelInput as="select" error={fieldErrors.find((er) => er.id === 'field-current_position')?.message} label="Current Position" icon={<FiBriefcase size={18} />} className="w-full" name="current_position" value={positionValue} onChange={handleChange} required>
+                    <FloatingLabelInput as="select" error={isExternal ? undefined : fieldErrors.find((er) => er.id === 'field-current_position')?.message} label="Current Position" icon={<FiBriefcase size={18} />} className="w-full" name="current_position_select" value={positionValue} onChange={handlePositionSelectChange} required>
                         <option value="">Select current position...</option>
+                        <option value="__OTHER__">Others (External / Specify Position &amp; Affiliation)</option>
                         {positionOptions.map(pos => (
                             <option key={pos.id} value={pos.position_name}>{pos.position_name}</option>
                         ))}
                     </FloatingLabelInput>
                 </div>
 
-                <div>
+                {isExternal ? (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <FloatingLabelInput as="select" error={fieldErrors.find((er) => er.id === 'field-plantilla_region')?.message} label="Region" icon={<FiMapPin size={18} />} className="w-full" name="plantilla_region" value={personalData.plantilla_region || ''} onChange={handleRegionChange} required>
-                            <option value="">Select region...</option>
-                            {DEPED_REGIONS.map(reg => (
-                                <option key={reg} value={reg}>{reg}</option>
-                            ))}
-                        </FloatingLabelInput>
-                        <FloatingLabelInput as="select" error={fieldErrors.find((er) => er.id === 'field-plantilla_division')?.message} label="Division" icon={<FiMapPin size={18} />} className="w-full" name="plantilla_division" value={personalData.plantilla_division || ''} onChange={handleDivisionChange} disabled={!personalData.plantilla_region} required>
-                            <option value="">Select division...</option>
-                            {divisionOptions.map(div => (
-                                <option key={div} value={div}>{String(div).toUpperCase()}</option>
-                            ))}
-                        </FloatingLabelInput>
+                        <FloatingLabelInput
+                            id="field-current_position"
+                            error={fieldErrors.find((er) => er.id === 'field-current_position')?.message}
+                            label="Specify Current Position"
+                            icon={<FiBriefcase size={18} />}
+                            className="w-full"
+                            type="text"
+                            name="current_position"
+                            value={personalData.current_position || ''}
+                            onChange={handleChange}
+                            placeholder="e.g. Chief Administrative Officer"
+                            required
+                        />
+                        <FloatingLabelInput
+                            id="field-plantilla_office"
+                            error={fieldErrors.find((er) => er.id === 'field-plantilla_office')?.message}
+                            label="Current Affiliation / Office"
+                            icon={<FiMapPin size={18} />}
+                            className="w-full"
+                            type="text"
+                            name="plantilla_office"
+                            value={personalData.plantilla_office || ''}
+                            onChange={handleExternalOfficeChange}
+                            placeholder="e.g. Commission on Higher Education (CHED)"
+                            required
+                        />
                     </div>
-                </div>
+                ) : (
+                    <div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <FloatingLabelInput as="select" error={fieldErrors.find((er) => er.id === 'field-plantilla_region')?.message} label="Region" icon={<FiMapPin size={18} />} className="w-full" name="plantilla_region" value={personalData.plantilla_region || ''} onChange={handleRegionChange} required>
+                                <option value="">Select region...</option>
+                                {DEPED_REGIONS.map(reg => (
+                                    <option key={reg} value={reg}>{reg}</option>
+                                ))}
+                            </FloatingLabelInput>
+                            <FloatingLabelInput as="select" error={fieldErrors.find((er) => er.id === 'field-plantilla_division')?.message} label="Division" icon={<FiMapPin size={18} />} className="w-full" name="plantilla_division" value={personalData.plantilla_division || ''} onChange={handleDivisionChange} disabled={!personalData.plantilla_region} required>
+                                <option value="">Select division...</option>
+                                {divisionOptions.map(div => (
+                                    <option key={div} value={div}>{String(div).toUpperCase()}</option>
+                                ))}
+                            </FloatingLabelInput>
+                        </div>
+                    </div>
+                )}
             </div>
         </div>
     );

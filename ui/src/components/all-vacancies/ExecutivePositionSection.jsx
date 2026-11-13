@@ -1,6 +1,6 @@
 import React from 'react';
 import { Briefcase as FiBriefcase, MapPin as FiMapPin } from '@phosphor-icons/react';
-import { EXECUTIVE_POSITIONS, DEPED_REGIONS } from './constants';
+import { EXECUTIVE_POSITIONS, TARGET_DEPED_REGIONS } from './constants';
 import FloatingLabelInput from '../forms/FloatingLabelInput.jsx';
 
 const ExecutivePositionSection = ({
@@ -44,7 +44,7 @@ const ExecutivePositionSection = ({
             <div className="space-y-2 pt-2">
                 <FloatingLabelInput as="select" id="timon-region" error={regError} label="Target DepEd Region" requiredMark icon={<FiMapPin size={18} />} className="w-full" value={targetRegion} onChange={e => setTargetRegion(e.target.value)}>
                         <option value="">Select target DepEd region...</option>
-                        {DEPED_REGIONS.map(reg => (
+                        {TARGET_DEPED_REGIONS.map(reg => (
                             <option key={reg} value={reg}>
                                 {reg}
                             </option>

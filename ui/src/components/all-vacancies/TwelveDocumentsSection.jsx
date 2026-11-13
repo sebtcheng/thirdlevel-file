@@ -1,13 +1,19 @@
 import React from 'react';
 import { FileText as FiFileText, CloudArrowUp as FiUploadCloud, Check as FiCheck, Trash as FiTrash2, ArrowSquareOut as FiExternalLink, Info as FiInfo, SpinnerGap as FiLoader } from '@phosphor-icons/react';
 import Swal from 'sweetalert2';
-import { REQUIRED_DOCUMENTS } from './constants';
+import { REQUIRED_DOCUMENTS, isDocumentComplete, isPdfAttachment, isWordAttachment } from './constants';
 import { apiUrl } from '../../utils/api';
 import { deleteLocalDocument, getLocalDocument, openLocalDocument, isLocalBinaryId } from '../../utils/localDocumentStore';
 import { useAuth } from '../../context/AuthContext';
 
 // Stored files have a UUID binary id; the viewer link is only shown for those.
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const WORD_MIMES = new Set([
+    'application/msword',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+]);
+
+const toAttachmentList = (val) => (Array.isArray(val) ? val.filter(Boolean) : val ? [val] : []);
 
 const TwelveDocumentsSection = ({
     documents,
@@ -34,10 +40,13 @@ const TwelveDocumentsSection = ({
             return;
         }
 
+        const isImgFile = file.type.startsWith('image/') || /\.(jpg|jpeg|png|webp)$/i.test(file.name);
+        const isWordFile = WORD_MIMES.has(file.type) || /\.(doc|docx)$/i.test(file.name);
+        const isPdfFile = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
+
         // Type check
         if (docConfig.isImage) {
-            const isImg = file.type.startsWith('image/') || /\.(jpg|jpeg|png|webp)$/i.test(file.name);
-            if (!isImg) {
+            if (!isImgFile) {
                 Swal.fire({
                     icon: 'warning',
                     title: 'Invalid File Type',
@@ -46,9 +55,28 @@ const TwelveDocumentsSection = ({
                 });
                 return;
             }
+        } else if (docConfig.isPdf && docConfig.isWord) {
+            if (!isPdfFile && !isWordFile) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Invalid File Type',
+                    text: `${docConfig.label} must be a PDF (.pdf) or Word (.doc/.docx) file.`,
+                    confirmButtonColor: 'var(--color-brand-800)'
+                });
+                return;
+            }
+        } else if (docConfig.isWord) {
+            if (!isWordFile) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Invalid File Type',
+                    text: `${docConfig.label} must be a Word document (.doc or .docx only).`,
+                    confirmButtonColor: 'var(--color-brand-800)'
+                });
+                return;
+            }
         } else {
-            const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
-            if (!isPdf) {
+            if (!isPdfFile) {
                 Swal.fire({
                     icon: 'warning',
                     title: 'Invalid File Type',
@@ -69,21 +97,43 @@ const TwelveDocumentsSection = ({
             });
             const result = await response.json();
             if (!response.ok || !result.success) throw new Error(result.error || 'Could not upload the document.');
+            const fallbackMime = isImgFile
+                ? 'image/jpeg'
+                : isWordFile
+                    ? (/\.doc$/i.test(file.name) ? 'application/msword' : 'application/vnd.openxmlformats-officedocument.wordprocessingml.document')
+                    : 'application/pdf';
             const fileData = {
                 key: docConfig.key,
                 doc_type: docConfig.key,
                 label: docConfig.label,
                 file_name: file.name,
-                mime_type: file.type || (docConfig.isImage ? 'image/jpeg' : 'application/pdf'),
+                mime_type: file.type || fallbackMime,
                 size_bytes: result.data.size_bytes,
                 binary_id: result.data.binary_id,
                 uploaded_at: result.data.uploaded_at
             };
 
-            setDocuments(prev => ({
-                ...prev,
-                [docConfig.key]: fileData
-            }));
+            if (docConfig.multiple) {
+                setDocuments(prev => {
+                    const existing = toAttachmentList(prev[docConfig.key]);
+                    const incomingIsWord = isWordAttachment(fileData);
+                    const incomingIsPdf = isPdfAttachment(fileData);
+                    const filtered = existing.filter(item => {
+                        if (incomingIsWord && isWordAttachment(item)) return false;
+                        if (incomingIsPdf && isPdfAttachment(item)) return false;
+                        return true;
+                    });
+                    return {
+                        ...prev,
+                        [docConfig.key]: [...filtered, fileData]
+                    };
+                });
+            } else {
+                setDocuments(prev => ({
+                    ...prev,
+                    [docConfig.key]: fileData
+                }));
+            }
 
             Swal.fire({
                 toast: true,
@@ -106,6 +156,13 @@ const TwelveDocumentsSection = ({
         }
     };
 
+    const handleFilesChange = async (docConfig, fileList) => {
+        const files = Array.from(fileList || []);
+        for (const file of files) {
+            await handleFileChange(docConfig, file);
+        }
+    };
+
     const handleViewLocal = async (binaryId) => {
         const opened = await openLocalDocument(binaryId);
         if (!opened) {
@@ -118,8 +175,18 @@ const TwelveDocumentsSection = ({
         }
     };
 
-    const handleRemove = (docKey) => {
-        const removedId = documents[docKey]?.binary_id;
+    const handleRemove = (docKey, targetBinaryId = null) => {
+        const current = documents[docKey];
+        if (Array.isArray(current) && targetBinaryId !== null) {
+            if (isLocalBinaryId(targetBinaryId)) deleteLocalDocument(targetBinaryId).catch(() => {});
+            const remaining = current.filter(item => item?.binary_id !== targetBinaryId);
+            setDocuments(prev => ({
+                ...prev,
+                [docKey]: remaining.length > 0 ? remaining : null
+            }));
+            return;
+        }
+        const removedId = current?.binary_id;
         if (isLocalBinaryId(removedId)) deleteLocalDocument(removedId).catch(() => {});
         setDocuments(prev => ({
             ...prev,
@@ -139,7 +206,18 @@ const TwelveDocumentsSection = ({
         });
         const result = await response.json();
         if (!response.ok || !result.success) throw new Error(result.error || 'Could not restore the document.');
-        setDocuments(prev => ({ ...prev, [docConfig.key]: { ...prev[docConfig.key], ...result.data } }));
+        setDocuments(prev => {
+            const cur = prev[docConfig.key];
+            if (Array.isArray(cur)) {
+                return {
+                    ...prev,
+                    [docConfig.key]: cur.map(item =>
+                        item?.binary_id === attached.binary_id ? { ...item, ...result.data } : item
+                    )
+                };
+            }
+            return { ...prev, [docConfig.key]: { ...cur, ...result.data } };
+        });
         return { ok: true };
     };
 
@@ -180,7 +258,7 @@ const TwelveDocumentsSection = ({
     const handleRestoreAll = async () => {
         if (!applicationId || restoringAll) return;
         const pending = REQUIRED_DOCUMENTS
-            .map(config => ({ config, attached: documents[config.key] }))
+            .flatMap(config => toAttachmentList(documents[config.key]).map(attached => ({ config, attached })))
             .filter(({ attached }) => attached && isLocalBinaryId(attached.binary_id));
         setRestoringAll(true);
         setRestoringDoc(Object.fromEntries(pending.map(({ config }) => [config.key, true])));
@@ -211,7 +289,9 @@ const TwelveDocumentsSection = ({
         });
     };
 
-    const legacyCount = Object.values(documents).filter(d => d && isLocalBinaryId(d.binary_id)).length;
+    const legacyCount = Object.values(documents)
+        .flatMap(toAttachmentList)
+        .filter(d => d && isLocalBinaryId(d.binary_id)).length;
 
     // Legacy submissions kept their files in this browser. Upload them automatically the first time
     // the applicant opens the submission, so administrators can preview the documents.
@@ -221,7 +301,7 @@ const TwelveDocumentsSection = ({
     React.useEffect(() => {
         if (!readOnly || !applicationId || autoRestoreRef.current === String(applicationId)) return;
         const pending = REQUIRED_DOCUMENTS
-            .map(config => ({ config, attached: documentsRef.current[config.key] }))
+            .flatMap(config => toAttachmentList(documentsRef.current[config.key]).map(attached => ({ config, attached })))
             .filter(({ attached }) => attached && isLocalBinaryId(attached.binary_id));
         if (pending.length === 0) return;
         autoRestoreRef.current = String(applicationId);
@@ -292,7 +372,7 @@ const TwelveDocumentsSection = ({
                     <div className="text-xs text-blue-900 space-y-0.5">
                         <p className="font-bold">DepEd Documentary Submission Rules</p>
                         <p className="text-blue-800 leading-relaxed">
-                            ID Picture (item 10) must be an image file (JPG/PNG/WebP); all other documents must be in PDF format (maximum 10 MB per file).
+                            ID Picture (item 10) must be an image file (JPG/PNG/WebP), Accomplished Applicant Profile (item 11) requires both PDF (.pdf) and Word (.doc/.docx) files, and all other documents must be in PDF format (maximum 10 MB per file).
                         </p>
                     </div>
                 </div>
@@ -310,14 +390,31 @@ const TwelveDocumentsSection = ({
             {/* 12 Documents Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {REQUIRED_DOCUMENTS.map((doc) => {
-                    const attached = documents[doc.key];
+                    const attachedList = toAttachmentList(documents[doc.key]);
+                    const isComplete = doc.required
+                        ? isDocumentComplete(doc, documents[doc.key])
+                        : attachedList.length > 0;
                     const isUploading = Boolean(uploadingDoc[doc.key]);
+                    const hasPdf = attachedList.some(isPdfAttachment);
+                    const hasWord = attachedList.some(isWordAttachment);
+
+                    const instructionParts = doc.templateUrl && doc.instruction.includes(doc.templateUrl)
+                        ? doc.instruction.split(doc.templateUrl)
+                        : null;
+
+                    const attachButtonLabel = doc.multiple && doc.isPdf && doc.isWord
+                        ? (hasPdf && !hasWord
+                            ? 'Attach Word (.doc/.docx) — Required'
+                            : hasWord && !hasPdf
+                            ? 'Attach PDF (.pdf) — Required'
+                            : 'Attach PDF & Word (.doc/.docx)')
+                        : `Attach ${doc.isImage ? 'Image' : doc.isWord ? 'Word (.doc/.docx)' : 'PDF'}`;
 
                     return (
                         <div
                             key={doc.key}
                             className={`p-4 rounded-2xl border-2 transition-all flex flex-col justify-between ${
-                                attached
+                                isComplete
                                     ? 'bg-emerald-50/40 border-emerald-300 shadow-xs'
                                     : doc.required
                                     ? 'bg-white border-slate-200 hover:border-slate-300'
@@ -340,11 +437,26 @@ const TwelveDocumentsSection = ({
                                             )}
                                         </div>
                                         <p className="text-[11px] text-slate-500 font-medium leading-snug mt-1">
-                                            {doc.instruction}
+                                            {instructionParts ? (
+                                                <>
+                                                    {instructionParts[0]}
+                                                    <a
+                                                        href={doc.templateUrl}
+                                                        target="_blank"
+                                                        rel="noreferrer"
+                                                        className="text-brand-800 underline font-bold hover:text-blue-900"
+                                                    >
+                                                        {doc.templateUrl}
+                                                    </a>
+                                                    {instructionParts[1]}
+                                                </>
+                                            ) : (
+                                                doc.instruction
+                                            )}
                                         </p>
                                     </div>
 
-                                    {attached && (
+                                    {isComplete && (
                                         <span className="w-5 h-5 rounded-full bg-emerald-500 text-white flex items-center justify-center shrink-0">
                                             <FiCheck size={12} strokeWidth={3} />
                                         </span>
@@ -352,96 +464,109 @@ const TwelveDocumentsSection = ({
                                 </div>
                             </div>
 
-                            {/* File Status or Upload Drop Area */}
-                            {attached ? (
-                                <div className="mt-3 p-2.5 rounded-card bg-white border border-emerald-200 flex items-center justify-between gap-2">
-                                    <div className="flex items-center gap-2 min-w-0">
-                                        <FiFileText size={16} className="text-emerald-600 shrink-0" />
-                                        <span className="text-xs font-mono font-bold text-slate-800 truncate" title={attached.file_name}>
-                                            {attached.file_name}
-                                        </span>
+                            {/* File Status & Upload Drop Area */}
+                            <div className="mt-3 space-y-2">
+                                {attachedList.map((attached, idx) => (
+                                    <div
+                                        key={attached.binary_id || `${attached.file_name}-${idx}`}
+                                        className="p-2.5 rounded-card bg-white border border-emerald-200 flex items-center justify-between gap-2"
+                                    >
+                                        <div className="flex items-center gap-2 min-w-0">
+                                            <FiFileText size={16} className="text-emerald-600 shrink-0" />
+                                            <span className="text-xs font-mono font-bold text-slate-800 truncate" title={attached.file_name}>
+                                                {attached.file_name}
+                                            </span>
+                                        </div>
+                                        <div className="flex items-center gap-1 shrink-0">
+                                            {isLocalBinaryId(attached.binary_id) && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleViewLocal(attached.binary_id)}
+                                                    className="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-all"
+                                                    title="View document (stored in this browser)"
+                                                >
+                                                    <FiExternalLink size={13} />
+                                                </button>
+                                            )}
+                                            {readOnly && applicationId && isLocalBinaryId(attached.binary_id) && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleRestoreToServer(doc, attached)}
+                                                    disabled={Boolean(restoringDoc[doc.key])}
+                                                    className="p-1.5 rounded-lg bg-amber-100 hover:bg-amber-200 text-amber-800 text-xs font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                                                    title="Restore to server so administrators can preview it"
+                                                >
+                                                    {restoringDoc[doc.key] ? <FiLoader size={13} className="animate-spin" /> : <FiUploadCloud size={13} />}
+                                                </button>
+                                            )}
+                                            {attached.binary_id && !isLocalBinaryId(attached.binary_id) && (!readOnly || UUID_RE.test(attached.binary_id)) && (
+                                                <a
+                                                    href={apiUrl(`/api/binary/${attached.binary_id}`)}
+                                                    target="_blank"
+                                                    rel="noreferrer"
+                                                    className="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-all"
+                                                    title={readOnly ? 'View / download document' : 'View Document'}
+                                                >
+                                                    <FiExternalLink size={13} />
+                                                </a>
+                                            )}
+                                            {!readOnly && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleRemove(doc.key, attached.binary_id)}
+                                                    className="p-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-600 text-xs transition-all"
+                                                    title="Remove document"
+                                                >
+                                                    <FiTrash2 size={13} />
+                                                </button>
+                                            )}
+                                        </div>
                                     </div>
-                                    <div className="flex items-center gap-1 shrink-0">
-                                        {isLocalBinaryId(attached.binary_id) && (
-                                            <button
-                                                type="button"
-                                                onClick={() => handleViewLocal(attached.binary_id)}
-                                                className="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-all"
-                                                title="View document (stored in this browser)"
-                                            >
-                                                <FiExternalLink size={13} />
-                                            </button>
-                                        )}
-                                        {readOnly && applicationId && isLocalBinaryId(attached.binary_id) && (
-                                            <button
-                                                type="button"
-                                                onClick={() => handleRestoreToServer(doc, attached)}
-                                                disabled={Boolean(restoringDoc[doc.key])}
-                                                className="p-1.5 rounded-lg bg-amber-100 hover:bg-amber-200 text-amber-800 text-xs font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                                                title="Restore to server so administrators can preview it"
-                                            >
-                                                {restoringDoc[doc.key] ? <FiLoader size={13} className="animate-spin" /> : <FiUploadCloud size={13} />}
-                                            </button>
-                                        )}
-                                        {attached.binary_id && !isLocalBinaryId(attached.binary_id) && (!readOnly || UUID_RE.test(attached.binary_id)) && (
-                                            <a
-                                                href={apiUrl(`/api/binary/${attached.binary_id}`)}
-                                                target="_blank"
-                                                rel="noreferrer"
-                                                className="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-all"
-                                                title={readOnly ? 'View / download document' : 'View Document'}
-                                            >
-                                                <FiExternalLink size={13} />
-                                            </a>
-                                        )}
-                                        {!readOnly && (
-                                            <button
-                                                type="button"
-                                                onClick={() => handleRemove(doc.key)}
-                                                className="p-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-600 text-xs transition-all"
-                                                title="Remove document"
-                                            >
-                                                <FiTrash2 size={13} />
-                                            </button>
-                                        )}
-                                    </div>
-                                </div>
-                            ) : readOnly ? (
-                                <div className="mt-3 px-3 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-xs font-bold uppercase tracking-wider text-slate-400 text-center">
-                                    No document submitted
-                                </div>
-                            ) : (
-                                <div className="mt-3">
-                                    <label className={`w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl border-2 border-dashed text-xs font-bold uppercase tracking-wider cursor-pointer transition-all ${
-                                        isUploading
-                                            ? 'bg-slate-100 border-slate-300 text-slate-400 cursor-not-allowed'
-                                            : 'bg-white hover:bg-blue-50/50 border-slate-300 hover:border-brand-800 text-slate-600 hover:text-brand-800'
-                                    }`}>
-                                        {isUploading ? (
-                                            <>
-                                                <FiLoader className="animate-spin text-brand-800" size={14} />
-                                                <span>Attaching...</span>
-                                            </>
-                                        ) : (
-                                            <>
-                                                <FiUploadCloud size={15} />
-                                                <span>Attach {doc.isImage ? 'Image' : 'PDF'}</span>
-                                            </>
-                                        )}
-                                        <input
-                                            type="file"
-                                            accept={doc.accept}
-                                            disabled={isUploading}
-                                            onChange={(e) => {
-                                                if (e.target.files && e.target.files[0]) {
-                                                    handleFileChange(doc, e.target.files[0]);
-                                                }
-                                            }}
-                                            className="hidden"
-                                        />
-                                    </label>
-                                </div>
-                            )}
+                                ))}
+
+                                {readOnly ? (
+                                    attachedList.length === 0 && (
+                                        <div className="px-3 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-xs font-bold uppercase tracking-wider text-slate-400 text-center">
+                                            No document submitted
+                                        </div>
+                                    )
+                                ) : (
+                                    (attachedList.length === 0 || (doc.multiple && !isComplete)) && (
+                                        <div>
+                                            <label className={`w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl border-2 border-dashed text-xs font-bold uppercase tracking-wider cursor-pointer transition-all ${
+                                                isUploading
+                                                    ? 'bg-slate-100 border-slate-300 text-slate-400 cursor-not-allowed'
+                                                    : 'bg-white hover:bg-blue-50/50 border-slate-300 hover:border-brand-800 text-slate-600 hover:text-brand-800'
+                                            }`}>
+                                                {isUploading ? (
+                                                    <>
+                                                        <FiLoader className="animate-spin text-brand-800" size={14} />
+                                                        <span>Attaching...</span>
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <FiUploadCloud size={15} />
+                                                        <span>{attachButtonLabel}</span>
+                                                    </>
+                                                )}
+                                                <input
+                                                    type="file"
+                                                    accept={doc.accept}
+                                                    multiple={Boolean(doc.multiple)}
+                                                    disabled={isUploading}
+                                                    onChange={(e) => {
+                                                        if (e.target.files && e.target.files.length > 0) {
+                                                            handleFilesChange(doc, e.target.files);
+                                                            e.target.value = '';
+                                                        }
+                                                    }}
+                                                    className="hidden"
+                                                />
+                                            </label>
+                                        </div>
+                                    )
+                                )}
+                            </div>
                         </div>
                     );
                 })}

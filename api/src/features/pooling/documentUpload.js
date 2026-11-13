@@ -5,8 +5,18 @@ const receiveFile = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 10 * 1024 * 1024, files: 1 },
   fileFilter: (_req, file, done) => {
-    const allowed = ['application/pdf', 'image/jpeg', 'image/png', 'image/webp'];
-    done(allowed.includes(file.mimetype) ? null : new Error('Upload a PDF, JPG, PNG, or WebP file.'), allowed.includes(file.mimetype));
+    const allowed = [
+      'application/pdf',
+      'application/msword',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'image/jpeg',
+      'image/png',
+      'image/webp'
+    ];
+    done(
+      allowed.includes(file.mimetype) ? null : new Error('Upload a PDF, Word (.doc/.docx), JPG, PNG, or WebP file.'),
+      allowed.includes(file.mimetype)
+    );
   }
 }).single('file');
 
