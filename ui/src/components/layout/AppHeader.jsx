@@ -82,11 +82,11 @@ const AppHeader = ({ isNavigationOpen = false, onToggleNavigation }) => {
                                 <span className="block truncate text-[15px] font-medium leading-tight text-heading">{fullName}</span>
                                 <span className="block truncate text-[13px] leading-tight text-secondary">{user?.role || 'Central Office'}</span>
                             </span>
-                            <CaretDown size={14} className="text-secondary" />
+                            <CaretDown size={14} className={`text-secondary transition-transform duration-150 ${open ? 'rotate-180' : ''}`} />
                         </button>
                         {open ? (
                             <div className="absolute right-0 top-full w-48 pt-2">
-                            <div role="menu" className="rounded-md border border-muted bg-white py-1 shadow-md">
+                            <div role="menu" className="ui-pop-in rounded-md border border-muted bg-white py-1 shadow-md">
                                 <button type="button" role="menuitem" onClick={() => { setOpen(false); navigate('/settings'); }} className="flex w-full items-center gap-2 px-3 py-2 text-left text-[15px] text-heading hover:bg-brand-50">
                                     <Gear size={16} /> Settings
                                 </button>

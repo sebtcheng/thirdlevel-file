@@ -252,7 +252,7 @@ const NexusGate = () => {
             </div>
 
             {/* Cards Container */}
-            <div className="nexus-cards-stack">
+            <div className="nexus-cards-stack ui-stagger">
                 {/* ── CARD 1: THIRD LEVEL PORTAL ── */}
                 <motion.div
                     variants={direction === 'right' ? itemRight : itemLeft}

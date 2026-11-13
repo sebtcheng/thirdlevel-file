@@ -646,21 +646,21 @@ const OfficialsRegistry = () => {
 
     const getStatusColor = (status) => {
         switch (status?.toLowerCase()) {
-            case 'active': return 'bg-emerald-50 text-emerald-600 border-emerald-100';
-            case 'pending': return 'bg-amber-50 text-amber-600 border-amber-100';
-            case 'inactive': return 'bg-slate-50 text-slate-400 border-slate-100';
-            case 'retired': return 'bg-purple-50 text-purple-600 border-purple-100';
-            case 'succeeded': return 'bg-cyan-50 text-cyan-600 border-cyan-100';
+            case 'active': return 'bg-emerald-50 text-emerald-800 border-emerald-200';
+            case 'pending': return 'bg-amber-50 text-amber-800 border-amber-200';
+            case 'inactive': return 'bg-slate-100 text-slate-600 border-slate-200';
+            case 'retired': return 'bg-purple-50 text-purple-800 border-purple-200';
+            case 'succeeded': return 'bg-cyan-50 text-cyan-800 border-cyan-200';
             case 'vacated':
-            case 'vacant': return 'bg-rose-50 text-rose-600 border-rose-100';
-            default: return 'bg-blue-50 text-brand-700 border-blue-100';
+            case 'vacant': return 'bg-rose-50 text-rose-800 border-rose-200';
+            default: return 'bg-brand-50 text-brand-800 border-brand-200';
         }
     };
 
     const StatusBadge = ({ status }) => {
         const displayStatus = status === 'Vacated' ? 'Vacant' : status;
         return (
-            <span className={`inline-flex max-w-full items-center justify-center px-3 py-1 rounded-full text-center text-[15px] font-black uppercase tracking-widest border-2 ${getStatusColor(displayStatus)}`}>
+            <span className={`inline-flex max-w-full items-center justify-center whitespace-nowrap px-2.5 py-1 rounded-full text-center text-[11.5px] font-bold uppercase tracking-wider border ${getStatusColor(displayStatus)}`}>
                 {displayStatus || 'Unknown'}
             </span>
         );

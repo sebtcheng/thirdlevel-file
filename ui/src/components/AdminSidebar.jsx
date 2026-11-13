@@ -40,7 +40,7 @@ const AdminSidebar = ({ isMobileOpen, setIsMobileOpen }) => {
             {/* Mobile Overlay */}
             {isMobileOpen && (
                 <div
-                    className="lg:hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[90]"
+                    className="lg:hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[90] ui-fade-in"
                     onClick={() => setIsMobileOpen(false)}
                 />
             )}
@@ -50,7 +50,8 @@ const AdminSidebar = ({ isMobileOpen, setIsMobileOpen }) => {
                 id="admin-sidebar"
                 onMouseEnter={() => setIsHovered(true)}
                 onMouseLeave={() => setIsHovered(false)}
-                className={`fixed top-[72px] bottom-11 left-0 z-[100] flex shrink-0 bg-brand-800 border-r border-blue-900 flex-col pt-8 shadow-2xl transition-all duration-300 transform 
+                style={{ background: 'linear-gradient(180deg, var(--sidebar-gradient-1) 0%, var(--sidebar-gradient-2) 55%, var(--sidebar-gradient-3) 100%)' }}
+                className={`fixed top-[72px] bottom-11 left-0 z-[100] flex shrink-0 border-r border-brand-900 flex-col pt-8 shadow-2xl transition-all duration-200 transform 
                 ${isMobileOpen ? 'translate-x-0' : '-translate-x-full'} 
                 lg:translate-x-0 
                 ${sidebarCollapsed ? 'w-[320px] lg:w-[96px]' : 'w-[320px]'}`
@@ -84,47 +85,52 @@ const AdminSidebar = ({ isMobileOpen, setIsMobileOpen }) => {
                     </div>
                 </div>
 
-                <nav className={`flex flex-col gap-3 flex-1 ${sidebarCollapsed ? 'lg:px-4' : 'px-6'}`}>
+                <nav className={`flex flex-col gap-2.5 flex-1 ${sidebarCollapsed ? 'lg:px-4' : 'px-6'}`}>
                     <button
                         onClick={() => navigate('/home')}
                         title="Executive Dashboard"
-                        className={`flex items-center gap-4 py-4 rounded-2xl text-xs font-black uppercase tracking-widest transition-all ${sidebarCollapsed ? 'lg:justify-center lg:px-0 px-5' : 'px-5'} ${location.pathname === '/home' ? 'bg-white text-brand-800 shadow-lg' : 'text-blue-200 hover:bg-white/10 hover:text-white'}`}
+                        className={`relative flex items-center gap-4 py-3.5 rounded-xl text-xs font-bold uppercase tracking-widest transition-all duration-150 ${sidebarCollapsed ? 'lg:justify-center lg:px-0 px-5' : 'px-5'} ${location.pathname === '/home' ? 'bg-white/15 text-white shadow-sm ring-1 ring-white/20' : 'text-blue-200 hover:bg-white/10 hover:text-white hover:translate-x-0.5'}`}
                     >
+                        {location.pathname === '/home' && <span className="absolute left-0 top-2.5 bottom-2.5 w-1 rounded-r-full bg-gold" aria-hidden="true" />}
                         <FiGrid size={18} className="shrink-0" />
-                        <span className={`whitespace-nowrap overflow-hidden transition-all duration-300 ${sidebarCollapsed ? 'lg:w-0 lg:opacity-0' : 'w-auto opacity-100'}`}>Executive Dashboard</span>
+                        <span className={`whitespace-nowrap overflow-hidden transition-all duration-200 ${sidebarCollapsed ? 'lg:w-0 lg:opacity-0' : 'w-auto opacity-100'}`}>Executive Dashboard</span>
                     </button>
                     <button
                         onClick={() => navigate('/officials-registry')}
                         title="Personnel Registry"
-                        className={`flex items-center gap-4 py-4 rounded-2xl text-xs font-black uppercase tracking-widest transition-all ${sidebarCollapsed ? 'lg:justify-center lg:px-0 px-5' : 'px-5'} ${location.pathname === '/officials-registry' && !location.search.includes('status=For%20Approval') && !location.search.includes('status=Applications') ? 'bg-white text-brand-800 shadow-lg' : 'text-blue-200 hover:bg-white/10 hover:text-white'}`}
+                        className={`relative flex items-center gap-4 py-3.5 rounded-xl text-xs font-bold uppercase tracking-widest transition-all duration-150 ${sidebarCollapsed ? 'lg:justify-center lg:px-0 px-5' : 'px-5'} ${location.pathname === '/officials-registry' && !location.search.includes('status=For%20Approval') && !location.search.includes('status=Applications') ? 'bg-white/15 text-white shadow-sm ring-1 ring-white/20' : 'text-blue-200 hover:bg-white/10 hover:text-white hover:translate-x-0.5'}`}
                     >
+                        {location.pathname === '/officials-registry' && !location.search.includes('status=For%20Approval') && !location.search.includes('status=Applications') && <span className="absolute left-0 top-2.5 bottom-2.5 w-1 rounded-r-full bg-gold" aria-hidden="true" />}
                         <FiUsers size={18} className="shrink-0" />
-                        <span className={`whitespace-nowrap overflow-hidden transition-all duration-300 ${sidebarCollapsed ? 'lg:w-0 lg:opacity-0' : 'w-auto opacity-100'}`}>Personnel Registry</span>
+                        <span className={`whitespace-nowrap overflow-hidden transition-all duration-200 ${sidebarCollapsed ? 'lg:w-0 lg:opacity-0' : 'w-auto opacity-100'}`}>Personnel Registry</span>
                     </button>
                     <button
                         onClick={() => navigate('/officials-registry?status=For%20Approval')}
                         title="Pending Approvals"
-                        className={`flex items-center gap-4 py-4 rounded-2xl text-xs font-black uppercase tracking-widest transition-all ${sidebarCollapsed ? 'lg:justify-center lg:px-0 px-5' : 'px-5'} ${location.search.includes('status=For%20Approval') ? 'bg-white text-brand-800 shadow-lg' : 'text-blue-200 hover:bg-white/10 hover:text-white'}`}
+                        className={`relative flex items-center gap-4 py-3.5 rounded-xl text-xs font-bold uppercase tracking-widest transition-all duration-150 ${sidebarCollapsed ? 'lg:justify-center lg:px-0 px-5' : 'px-5'} ${location.search.includes('status=For%20Approval') ? 'bg-white/15 text-white shadow-sm ring-1 ring-white/20' : 'text-blue-200 hover:bg-white/10 hover:text-white hover:translate-x-0.5'}`}
                     >
+                        {location.search.includes('status=For%20Approval') && <span className="absolute left-0 top-2.5 bottom-2.5 w-1 rounded-r-full bg-gold" aria-hidden="true" />}
                         <FiCheckCircle size={18} className="shrink-0" />
-                        <span className={`whitespace-nowrap overflow-hidden transition-all duration-300 ${sidebarCollapsed ? 'lg:w-0 lg:opacity-0' : 'w-auto opacity-100'}`}>Pending Approvals</span>
+                        <span className={`whitespace-nowrap overflow-hidden transition-all duration-200 ${sidebarCollapsed ? 'lg:w-0 lg:opacity-0' : 'w-auto opacity-100'}`}>Pending Approvals</span>
                     </button>
                     <button
                         onClick={() => navigate('/officials-registry?status=Applications')}
                         title="TIMON Applications"
-                        className={`flex items-center gap-4 py-4 rounded-2xl text-xs font-black uppercase tracking-widest transition-all ${sidebarCollapsed ? 'lg:justify-center lg:px-0 px-5' : 'px-5'} ${location.search.includes('status=Applications') ? 'bg-white text-brand-800 shadow-lg' : 'text-blue-200 hover:bg-white/10 hover:text-white'}`}
+                        className={`relative flex items-center gap-4 py-3.5 rounded-xl text-xs font-bold uppercase tracking-widest transition-all duration-150 ${sidebarCollapsed ? 'lg:justify-center lg:px-0 px-5' : 'px-5'} ${location.search.includes('status=Applications') ? 'bg-white/15 text-white shadow-sm ring-1 ring-white/20' : 'text-blue-200 hover:bg-white/10 hover:text-white hover:translate-x-0.5'}`}
                     >
+                        {location.search.includes('status=Applications') && <span className="absolute left-0 top-2.5 bottom-2.5 w-1 rounded-r-full bg-gold" aria-hidden="true" />}
                         <FiBriefcase size={18} className="shrink-0" />
-                        <span className={`whitespace-nowrap overflow-hidden transition-all duration-300 ${sidebarCollapsed ? 'lg:w-0 lg:opacity-0' : 'w-auto opacity-100'}`}>TIMON Applications</span>
+                        <span className={`whitespace-nowrap overflow-hidden transition-all duration-200 ${sidebarCollapsed ? 'lg:w-0 lg:opacity-0' : 'w-auto opacity-100'}`}>TIMON Applications</span>
                     </button>
                     {['Central Office', 'Admin', 'Super User', 'Personnel Admin'].includes(user?.role) && (
                         <button
                             onClick={() => navigate('/control-center')}
                             title="Control Center"
-                            className={`flex items-center gap-4 py-4 rounded-2xl text-xs font-black uppercase tracking-widest transition-all ${sidebarCollapsed ? 'lg:justify-center lg:px-0 px-5' : 'px-5'} ${location.pathname === '/control-center' ? 'bg-white text-brand-800 shadow-lg' : 'text-blue-200 hover:bg-white/10 hover:text-white'}`}
+                            className={`relative flex items-center gap-4 py-3.5 rounded-xl text-xs font-bold uppercase tracking-widest transition-all duration-150 ${sidebarCollapsed ? 'lg:justify-center lg:px-0 px-5' : 'px-5'} ${location.pathname === '/control-center' ? 'bg-white/15 text-white shadow-sm ring-1 ring-white/20' : 'text-blue-200 hover:bg-white/10 hover:text-white hover:translate-x-0.5'}`}
                         >
+                            {location.pathname === '/control-center' && <span className="absolute left-0 top-2.5 bottom-2.5 w-1 rounded-r-full bg-gold" aria-hidden="true" />}
                             <FiSettings size={18} className="shrink-0" />
-                            <span className={`whitespace-nowrap overflow-hidden transition-all duration-300 ${sidebarCollapsed ? 'lg:w-0 lg:opacity-0' : 'w-auto opacity-100'}`}>Control Center</span>
+                            <span className={`whitespace-nowrap overflow-hidden transition-all duration-200 ${sidebarCollapsed ? 'lg:w-0 lg:opacity-0' : 'w-auto opacity-100'}`}>Control Center</span>
                         </button>
                     )}
                 </nav>
