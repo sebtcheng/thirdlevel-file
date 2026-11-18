@@ -5,6 +5,7 @@ import {
   CES_STAGES,
   DESIGNATION_PRESETS,
   REQUIRED_DOCUMENTS,
+  isDocumentComplete,
   formatContactNumber
 } from '../src/components/all-vacancies/constants.js';
 
@@ -98,9 +99,10 @@ describe('Applicant Pooling UI definitions', () => {
     expect(EXECUTIVE_POSITIONS).toHaveLength(4);
     expect(EXECUTIVE_POSITIONS.map(p => p.code)).toEqual(['RD', 'ARD', 'SDS', 'ASDS']);
 
-    // 18 DepEd regions
-    expect(DEPED_REGIONS).toHaveLength(18);
+    // 18 DepEd regions + NIR (Negros Island Region)
+    expect(DEPED_REGIONS).toHaveLength(19);
     expect(DEPED_REGIONS).toContain('NCR');
+    expect(DEPED_REGIONS).toContain('NIR');
     expect(DEPED_REGIONS).toContain('Central Office');
     expect(DEPED_REGIONS).toContain('BARMM');
 
@@ -114,14 +116,25 @@ describe('Applicant Pooling UI definitions', () => {
     expect(DESIGNATION_PRESETS[2]).toBe('N/A');
     expect(DESIGNATION_PRESETS[3]).toBe('Other');
 
-    // 12 Required Documents
+    // 12 Required Documents (Item 11 requires both PDF and Word attachments)
     expect(REQUIRED_DOCUMENTS).toHaveLength(12);
     expect(REQUIRED_DOCUMENTS[0].key).toBe('letter_of_intent');
     expect(REQUIRED_DOCUMENTS[1].key).toBe('pds');
     expect(REQUIRED_DOCUMENTS[9].key).toBe('id_picture');
     expect(REQUIRED_DOCUMENTS[9].isImage).toBe(true);
     expect(REQUIRED_DOCUMENTS[10].key).toBe('applicant_profile_doc');
+    expect(REQUIRED_DOCUMENTS[10].multiple).toBe(true);
+    expect(REQUIRED_DOCUMENTS[10].isPdf).toBe(true);
+    expect(REQUIRED_DOCUMENTS[10].isWord).toBe(true);
     expect(REQUIRED_DOCUMENTS[10].templateUrl).toBe('https://tinyurl.com/3rdLevelForms');
+
+    const profileDoc = REQUIRED_DOCUMENTS[10];
+    const samplePdf = { file_name: 'profile.pdf', mime_type: 'application/pdf' };
+    const sampleWord = { file_name: 'profile.docx', mime_type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' };
+    expect(isDocumentComplete(profileDoc, null)).toBe(false);
+    expect(isDocumentComplete(profileDoc, [samplePdf])).toBe(false);
+    expect(isDocumentComplete(profileDoc, [sampleWord])).toBe(false);
+    expect(isDocumentComplete(profileDoc, [samplePdf, sampleWord])).toBe(true);
 
     // formatContactNumber helper
     expect(formatContactNumber('09171234567')).toBe('0917-123-4567');

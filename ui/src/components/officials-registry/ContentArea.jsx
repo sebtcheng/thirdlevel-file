@@ -42,19 +42,18 @@ const ContentArea = ({ StatusBadge, currentPage, directoryGroups, getOfficialReg
                          </FloatingLabelInput>
                                                         </th>
                                                     ))}
-
                                                 </tr>
                                             </thead>
                                             <tbody className="divide-y divide-muted bg-white">
                                                 {pagedRecords.map((item) => (
-                                                    <tr key={item.TLOid} className="group transition-colors relative hover:bg-slate-50/80">
+                                                    <tr key={item.TLOid} className="group relative hover:bg-brand-50/70">
                                                         <td className="px-3 py-4 align-middle max-w-[120px]">
-                                                            <div className="font-semibold text-brand-800 text-[15px] uppercase tracking-tight truncate" title={item.status === 'Inactive' ? 'N/A' : (item.region || 'N/A')}>
+                                                            <div className="font-semibold text-brand-800 text-[13.5px] uppercase tracking-tight truncate" title={item.status === 'Inactive' ? 'N/A' : (item.region || 'N/A')}>
                                                                 <span>{item.status === 'Inactive' ? 'N/A' : (item.region || 'N/A')}</span>
                                                             </div>
                                                         </td>
                                                         <td className="px-2 py-4 align-middle max-w-[200px]">
-                                                            <div className="text-[15px] font-bold text-slate-700 uppercase tracking-wide truncate" title={item.status === 'Inactive' ? 'N/A' : ((item.region || getOfficialRegion(item)) === 'Central Office' ? (item.strand || item.division || 'N/A') : (item.division || 'N/A'))}>
+                                                            <div className="text-[13.5px] font-semibold text-heading tracking-tight truncate" title={item.status === 'Inactive' ? 'N/A' : ((item.region || getOfficialRegion(item)) === 'Central Office' ? (item.strand || item.division || 'N/A') : (item.division || 'N/A'))}>
                                                                 {item.status === 'Inactive' ? 'N/A' : ((item.region || getOfficialRegion(item)) === 'Central Office' ? (item.strand || item.division || 'N/A') : (item.division || 'N/A'))}
                                                             </div>
                                                         </td>
@@ -81,7 +80,7 @@ const ContentArea = ({ StatusBadge, currentPage, directoryGroups, getOfficialReg
                                                                             </span>
                                                                         )}
                                                                     </div>
-                                                                    <div className="text-[13.5px] font-bold text-slate-400 uppercase tracking-wide mt-1 flex items-center gap-1.5 truncate">
+                                                                    <div className="text-[12.5px] font-medium text-secondary mt-1 flex items-center gap-1.5 truncate">
                                                                         <FiArrowRight className="text-brand-700 shrink-0" size={10} />
                                                                         <span className="truncate">{item.email}</span>
                                                                         {item.status !== 'Inactive' && item.effectivity_date && (
@@ -117,12 +116,12 @@ const ContentArea = ({ StatusBadge, currentPage, directoryGroups, getOfficialReg
                                                                 <span className="text-slate-300 font-bold text-[15px]">—</span>
                                                             ) : (
                                                                 <div className="flex flex-col gap-1.5 w-full pr-2">
-                                                                    <span className="text-[15px] font-bold text-brand-800 leading-none">
+                                                                    <span className="num text-[14px] font-bold text-brand-800 leading-none">
                                                                         {Math.min(100, Math.max(0, Math.round(item.profile_completion)))}%
                                                                     </span>
-                                                                    <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden border border-slate-200">
+                                                                    <div className="w-full h-2 bg-brand-50 rounded-full overflow-hidden border border-brand-200">
                                                                         <div
-                                                                            className="h-full bg-brand-800 rounded-full transition-all duration-300"
+                                                                            className="h-full bg-brand-700 rounded-full transition-[width] duration-200 ease-out"
                                                                             style={{ width: `${Math.min(100, Math.max(0, Math.round(item.profile_completion)))}%` }}
                                                                         />
                                                                     </div>
@@ -156,49 +155,83 @@ const ContentArea = ({ StatusBadge, currentPage, directoryGroups, getOfficialReg
                                                                 )}
                                                             </div>
                                                         </td>
-                                                        <td className="px-1 py-4 align-middle static md:relative">
-                                                            <StatusBadge status={item.status} />
+                                                        <td className="px-2 py-4 align-middle static md:relative">
+                                                            <div className={user?.role === 'Central Office' ? 'transition-opacity duration-150 group-hover:opacity-0' : ''}>
+                                                                <StatusBadge status={item.status} />
+                                                            </div>
 
-                                                            <div className="absolute right-4 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1.5 z-10 bg-white/90 backdrop-blur-md p-1.5 rounded-xl shadow-sm border-2 border-slate-200 pointer-events-none group-hover:pointer-events-auto">
-                                                                {item.status === 'For Approval' && user?.role === 'Central Office' && (
-                                                                    <>
-                                                                        <button onClick={(e) => { e.stopPropagation(); handleRegistrationAction(item.TLOid, 'approve'); }} title="Approve" className="flex items-center justify-center gap-1 px-2 py-1.5 bg-emerald-50 text-emerald-600 rounded-lg text-[15px] font-semibold uppercase tracking-wide hover:bg-emerald-500 hover:text-white transition-all border-2 border-emerald-100 shadow-sm shrink-0">
-                                                                            <FiCheckCircle size={14} />
+                                                            {user?.role === 'Central Office' && (
+                                                                <div className="absolute right-2 top-1/2 -translate-y-1/2 translate-x-1 group-hover:translate-x-0 opacity-0 group-hover:opacity-100 transition-all duration-150 flex items-center gap-1 z-10 bg-white p-1 rounded-lg shadow-md border border-slate-200 pointer-events-none group-hover:pointer-events-auto">
+                                                                    {item.status === 'For Approval' && (
+                                                                        <>
+                                                                            <button
+                                                                                type="button"
+                                                                                onClick={(e) => { e.stopPropagation(); handleRegistrationAction(item.TLOid, 'approve'); }}
+                                                                                title="Approve"
+                                                                                aria-label="Approve"
+                                                                                className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-600 hover:border-emerald-600 hover:text-white transition-colors duration-150 shrink-0"
+                                                                            >
+                                                                                <FiCheckCircle size={14} />
+                                                                            </button>
+                                                                            <button
+                                                                                type="button"
+                                                                                onClick={(e) => { e.stopPropagation(); handleRegistrationAction(item.TLOid, 'reject'); }}
+                                                                                title="Reject"
+                                                                                aria-label="Reject"
+                                                                                className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-600 hover:border-rose-600 hover:text-white transition-colors duration-150 shrink-0"
+                                                                            >
+                                                                                <FiX size={14} />
+                                                                            </button>
+                                                                        </>
+                                                                    )}
+                                                                    {item.status === 'Rejected' && (
+                                                                        <button
+                                                                            type="button"
+                                                                            onClick={(e) => { e.stopPropagation(); handleRegistrationAction(item.TLOid, 'retrieve'); }}
+                                                                            title="Retrieve"
+                                                                            aria-label="Retrieve"
+                                                                            className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-sky-200 bg-sky-50 text-sky-700 hover:bg-sky-600 hover:border-sky-600 hover:text-white transition-colors duration-150 shrink-0"
+                                                                        >
+                                                                            <FiRefreshCw size={14} />
                                                                         </button>
-                                                                        <button onClick={(e) => { e.stopPropagation(); handleRegistrationAction(item.TLOid, 'reject'); }} title="Reject" className="flex items-center justify-center gap-1 px-2 py-1.5 bg-rose-50 text-rose-600 rounded-lg text-[15px] font-semibold uppercase tracking-wide hover:bg-rose-500 hover:text-white transition-all border-2 border-rose-100 shadow-sm shrink-0">
-                                                                            <FiX size={14} />
+                                                                    )}
+                                                                    {item.status !== 'Inactive' && item.status !== 'For Approval' && item.status !== 'Rejected' && (
+                                                                        <button
+                                                                            type="button"
+                                                                            onClick={(e) => { e.stopPropagation(); handleOpenReassignModal(item); }}
+                                                                            title="Reassign"
+                                                                            aria-label="Reassign"
+                                                                            className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-500 hover:border-amber-500 hover:text-white transition-colors duration-150 shrink-0"
+                                                                        >
+                                                                            <FiLayers size={14} />
                                                                         </button>
-                                                                    </>
-                                                                )}
-                                                                {item.status === 'Rejected' && user?.role === 'Central Office' && (
-                                                                    <button onClick={(e) => { e.stopPropagation(); handleRegistrationAction(item.TLOid, 'retrieve'); }} title="Retrieve" className="flex items-center justify-center gap-1 px-2 py-1.5 bg-sky-50 text-sky-600 rounded-lg text-[15px] font-semibold uppercase tracking-wide hover:bg-sky-500 hover:text-white transition-all border-2 border-sky-100 shadow-sm shrink-0">
-                                                                        <FiRefreshCw size={14} />
-                                                                    </button>
-                                                                )}
-                                                                {item.status !== 'Inactive' && item.status !== 'For Approval' && item.status !== 'Rejected' && user?.role === 'Central Office' && (
-                                                                    <button onClick={() => handleOpenReassignModal(item)} title="Reassign" className="flex items-center justify-center gap-1 px-2 py-1.5 bg-amber-50 text-amber-600 rounded-lg text-[15px] font-semibold uppercase tracking-wide hover:bg-amber-500 hover:text-white transition-all border-2 border-amber-100 shadow-sm shrink-0">
-                                                                        <FiLayers size={14} />
-                                                                    </button>
-                                                                )}
-                                                                {item.first_name && item.status !== 'Reassigning' && item.status !== 'Pending Assignment' && item.status !== 'For Approval' && item.status !== 'Rejected' && user?.role === 'Central Office' && (
-                                                                    <button onClick={() => openActionModal(item, 'vacate')} title="Vacate" className="flex items-center justify-center gap-1 px-2 py-1.5 bg-rose-50 text-rose-600 rounded-lg text-[15px] font-semibold uppercase tracking-wide hover:bg-rose-500 hover:text-white transition-all border-2 border-rose-100 shadow-sm shrink-0">
-                                                                        <FiTrash2 size={14} />
-                                                                    </button>
-                                                                )}
-                                                                {user?.role === 'Central Office' && (
+                                                                    )}
+                                                                    {item.first_name && item.status !== 'Reassigning' && item.status !== 'Pending Assignment' && item.status !== 'For Approval' && item.status !== 'Rejected' && (
+                                                                        <button
+                                                                            type="button"
+                                                                            onClick={(e) => { e.stopPropagation(); openActionModal(item, 'vacate'); }}
+                                                                            title="Vacate"
+                                                                            aria-label="Vacate"
+                                                                            className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-600 hover:border-rose-600 hover:text-white transition-colors duration-150 shrink-0"
+                                                                        >
+                                                                            <FiTrash2 size={14} />
+                                                                        </button>
+                                                                    )}
                                                                     <button
+                                                                        type="button"
                                                                         onClick={(e) => { e.stopPropagation(); handleToggleTestAccount(item); }}
                                                                         title={item.is_testaccount ? "Remove Test Account Flag" : "Mark as Test Account"}
-                                                                        className={`flex items-center justify-center gap-1 px-2 py-1.5 rounded-lg text-[15px] font-semibold uppercase tracking-wide transition-all border-2 shadow-sm shrink-0 ${
+                                                                        aria-label={item.is_testaccount ? "Remove Test Account Flag" : "Mark as Test Account"}
+                                                                        className={`inline-flex h-7 w-7 items-center justify-center rounded-md border transition-colors duration-150 shrink-0 ${
                                                                             item.is_testaccount
-                                                                                ? 'bg-purple-600 text-white border-purple-600 hover:bg-purple-700'
-                                                                                : 'bg-purple-50 text-purple-600 border-purple-200 hover:bg-purple-600 hover:text-white'
+                                                                                ? 'bg-purple-600 text-white border-purple-600 hover:bg-purple-700 hover:border-purple-700'
+                                                                                : 'bg-slate-50 text-slate-500 border-slate-200 hover:bg-purple-50 hover:text-purple-700 hover:border-purple-200'
                                                                         }`}
                                                                     >
                                                                         <FaVial size={14} />
                                                                     </button>
-                                                                )}
-                                                            </div>
+                                                                </div>
+                                                            )}
                                                         </td>
                                                     </tr>
                                                 ))}
@@ -312,13 +345,13 @@ const ContentArea = ({ StatusBadge, currentPage, directoryGroups, getOfficialReg
                                 </motion.div>
                             ) : viewMode === 'grid' ? (
                                 <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-8">
-                                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+                                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 ui-stagger">
                                         {pagedRecords.map((item) => (
                                             <motion.div
                                                 key={item.TLOid}
                                                 whileHover={{ y: -4 }}
                                                 onClick={() => item.email && navigate(`/official-profiling?email=${encodeURIComponent(item.email)}`)}
-                                                className={`card-surface p-5 group flex flex-col justify-between h-full relative overflow-hidden ${item.email ? 'cursor-pointer' : 'cursor-default'}`}
+                                                className={`card-surface card-interactive p-5 group flex flex-col justify-between h-full relative overflow-hidden ${item.email ? 'cursor-pointer' : 'cursor-default'}`}
                                             >
                                                 <div className="absolute top-0 right-0 w-24 h-24 bg-blue-50/30 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2"></div>
                                                 <div>

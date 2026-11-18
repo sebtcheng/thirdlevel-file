@@ -1,7 +1,11 @@
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import nodemailer from 'nodemailer';
+import { and, inArray, sql } from 'drizzle-orm';
 import pool from '../../config/db.js';
+import { db } from '../../db/index.js';
+import { tloUsers, officialMasterlist } from '../../db/schema.js';
+import { emailCheckQuerySchema, registerBodySchema, validationError } from './authSchemas.js';
 
 const transporter = nodemailer.createTransport({
   service: 'gmail',
@@ -156,42 +160,47 @@ const THIRD_LEVEL_ROLES = [
 ];
 
 export const checkEmail = async (req, res) => {
-  const { email, isCO, role } = req.query;
-  if (!email) return res.status(400).json({ error: 'Email required' });
+  const parsed = emailCheckQuerySchema.safeParse(req.query);
+  if (!parsed.success) return res.status(400).json(validationError(parsed));
+  const { email, isCO, role } = parsed.data;
   try {
-    const normalizedEmail = email.toLowerCase().trim();
-    const isCOBool = isCO === 'true' || isCO === true || ADMIN_ROLES.includes(role);
+    const normalizedEmail = email.toLowerCase();
+    const isCOBool = isCO === 'true' || ADMIN_ROLES.includes(role);
     const targetRoles = isCOBool ? ADMIN_ROLES : THIRD_LEVEL_ROLES;
 
-    const check = await pool.query(
-      'SELECT uid FROM tlo_users WHERE LOWER(email) = $1 AND role = ANY($2)',
-      [normalizedEmail, targetRoles]
-    );
-    res.json({ exists: check.rows.length > 0 });
+    const check = await db
+      .select({ uid: tloUsers.uid })
+      .from(tloUsers)
+      .where(and(sql`LOWER(${tloUsers.email}) = ${normalizedEmail}`, inArray(tloUsers.role, targetRoles)));
+    res.json({ exists: check.length > 0 });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 };
 
 export const checkMasterlistEmail = async (req, res) => {
-  const { email, isCO, role } = req.query;
-  if (!email) return res.status(400).json({ error: 'Email required' });
+  const parsed = emailCheckQuerySchema.safeParse(req.query);
+  if (!parsed.success) return res.status(400).json(validationError(parsed));
+  const { email, isCO, role } = parsed.data;
   try {
-    const normalizedEmail = email.toLowerCase().trim();
-    const isCOBool = isCO === 'true' || isCO === true || ADMIN_ROLES.includes(role);
+    const normalizedEmail = email.toLowerCase();
+    const isCOBool = isCO === 'true' || ADMIN_ROLES.includes(role);
     const targetRoles = isCOBool ? ADMIN_ROLES : THIRD_LEVEL_ROLES;
 
-    const userCheck = await pool.query(
-      'SELECT uid FROM tlo_users WHERE LOWER(email) = $1 AND role = ANY($2)',
-      [normalizedEmail, targetRoles]
-    );
-    if (userCheck.rows.length > 0) {
+    const userCheck = await db
+      .select({ uid: tloUsers.uid })
+      .from(tloUsers)
+      .where(and(sql`LOWER(${tloUsers.email}) = ${normalizedEmail}`, inArray(tloUsers.role, targetRoles)));
+    if (userCheck.length > 0) {
       return res.json({ alreadyRegistered: true });
     }
 
-    const check = await pool.query('SELECT first_name, last_name, position_title FROM third_level_official_masterlist WHERE LOWER(email) = $1', [normalizedEmail]);
-    if (check.rows.length > 0) {
-      res.json({ alreadyRegistered: false, inMasterlist: true, official: check.rows[0] });
+    const check = await db
+      .select({ first_name: officialMasterlist.firstName, last_name: officialMasterlist.lastName, position_title: officialMasterlist.positionTitle })
+      .from(officialMasterlist)
+      .where(sql`LOWER(${officialMasterlist.email}) = ${normalizedEmail}`);
+    if (check.length > 0) {
+      res.json({ alreadyRegistered: false, inMasterlist: true, official: check[0] });
     } else {
       res.json({ alreadyRegistered: false, inMasterlist: false });
     }
@@ -201,30 +210,24 @@ export const checkMasterlistEmail = async (req, res) => {
 };
 
 export const registerUser = async (req, res) => {
-  let { email, password, firstName, lastName, contactNumber, role, assigned_region, assigned_division, passcode, isCO } = req.body;
-
-  if (!email || !password) {
-    return res.status(400).json({ error: 'Email and Password are required' });
-  }
+  const parsedBody = registerBodySchema.safeParse(req.body ?? {});
+  if (!parsedBody.success) return res.status(400).json(validationError(parsedBody));
+  let { email, password, firstName, lastName, contactNumber, role, assigned_region, assigned_division, passcode, isCO } = parsedBody.data;
 
   // Defensive uppercase for names
   firstName = (firstName || '').trim().toUpperCase();
   lastName = (lastName || '').trim().toUpperCase();
 
   const normalizedEmail = email.toLowerCase().trim();
-  const client = await pool.connect();
+  let client;
 
   try {
+    client = await pool.connect();
     let assignedRole = role || 'TLO Applicant';
     if (assignedRole === 'Third Level Applicant') assignedRole = 'TLO Applicant';
     if (assignedRole === 'CO_PD') assignedRole = 'Central Office';
     if (assignedRole === 'RO_HRMO') assignedRole = 'Regional Office';
     if (assignedRole === 'SDO_HRMO') assignedRole = 'School Division Office';
-
-    if (['Personnel Admin', 'Central Office'].includes(assignedRole) && !normalizedEmail.endsWith('@deped.gov.ph')) {
-      client.release();
-      return res.status(400).json({ error: 'Central Office Admin accounts must use an official @deped.gov.ph email' });
-    }
 
     await client.query('BEGIN');
 
@@ -324,7 +327,7 @@ export const registerUser = async (req, res) => {
       }
     }
   } catch (err) {
-    if (client) await client.query('ROLLBACK');
+    if (client) await client.query('ROLLBACK').catch(() => {});
     console.error('[Register] Registration failed:', err.message);
     res.status(500).json({ error: 'Registration failed: ' + err.message });
   } finally {

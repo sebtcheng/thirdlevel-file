@@ -1,5 +1,8 @@
+import { validateUpperCaseNames, submitApplicationSchema } from './applicationSchemas.js';
 import {
   getPoolingConfig,
+  setPoolingIntakeActive,
+  setPoolingDateRange,
   createApplication,
   findApplications,
   findApplicationById,
@@ -9,7 +12,13 @@ import {
   getNSCScoresByApplicationId,
   getNSCAggregation,
   upsertNSCScore,
-  findApplicationsByCandidate
+  findApplicationsByCandidate,
+  findActiveApplicationPeriod,
+  findCandidatePendingApplicationForPositionAndRegion,
+  findCandidateApplicationDetails,
+  findCandidateApplicationHistory,
+  findCandidateApplicationById,
+  withdrawCandidateApplication
 } from './repositories/poolingRepository.js';
 
 const ALLOWED_ADMIN_ROLES = [
@@ -23,7 +32,37 @@ const ALLOWED_ADMIN_ROLES = [
   'SDO HRMO'
 ];
 
-const ALLOWED_POSITIONS = ['RD', 'ARD', 'SDS', 'ASDS'];
+export const updatePoolingStatus = async (req, res) => {
+  if (!req.user) return res.status(401).json({ success: false, error: 'Authentication required.' });
+  if (!['Central Office', 'Admin', 'Super User', 'Personnel Admin'].includes(req.user.role)) {
+    return res.status(403).json({ success: false, error: 'Only central administrators can manage vacancies.' });
+  }
+  const hasDates = req.body?.start_date !== undefined || req.body?.end_date !== undefined;
+  let start;
+  let end;
+  if (hasDates) {
+    const validDate = value => typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value)
+      && Number.isFinite(Date.parse(value)) && new Date(value).toISOString().slice(0, 10) === value;
+    if (!validDate(req.body.start_date) || !validDate(req.body.end_date) || req.body.start_date > req.body.end_date) {
+      return res.status(400).json({ success: false, error: 'Provide valid start and end dates, with the end on or after the start.' });
+    }
+    start = `${req.body.start_date}T00:00:00.000+08:00`;
+    end = `${req.body.end_date}T23:59:59.999+08:00`;
+  }
+  if ((!hasDates || req.body.is_intake_active !== undefined) && typeof req.body?.is_intake_active !== 'boolean') {
+    return res.status(400).json({ success: false, error: 'is_intake_active must be a boolean.' });
+  }
+  try {
+    if (hasDates && req.body.is_intake_active !== undefined) {
+      return res.status(400).json({ success: false, error: 'Save dates separately from the lock setting.' });
+    }
+    if (hasDates) await setPoolingDateRange(start, end);
+    else await setPoolingIntakeActive(req.body.is_intake_active);
+    return getPoolingStatus(req, res);
+  } catch {
+    return res.status(500).json({ success: false, error: 'Unable to update vacancies availability.' });
+  }
+};
 
 export const getPoolingStatus = async (_req, res) => {
   try {
@@ -81,44 +120,47 @@ export const submitApplication = async (req, res) => {
       });
     }
 
-    // 2. Strictly validate applied_position against allowed set
-    const appliedPosition = String(req.body.applied_position || '').trim().toUpperCase();
-    if (!ALLOWED_POSITIONS.includes(appliedPosition)) {
-      return res.status(400).json({
-        success: false,
-        error: `Invalid applied position '${appliedPosition}'. Allowed positions are strictly: ${ALLOWED_POSITIONS.join(', ')}.`
-      });
+    // 2. Validate the payload (position, region, questionnaire, documents) with Zod
+    const parsed = submitApplicationSchema.safeParse(req.body ?? {});
+    if (!parsed.success) {
+      return res.status(400).json({ success: false, error: parsed.error.issues[0].message });
+    }
+    const appliedPosition = parsed.data.applied_position;
+    const targetRegion = parsed.data.target_region;
+    const questionnaire = parsed.data.questionnaire_responses;
+    const documents = parsed.data.document_attachments;
+
+    // 3. Names must be ALL CAPS (DepEd standard); enforced here, not only in the form.
+    const nameCheck = validateUpperCaseNames(req.body);
+    if (!nameCheck.ok) {
+      return res.status(400).json({ success: false, error: nameCheck.error });
     }
 
-    // 3. Validate presence of target_region
-    const targetRegion = String(req.body.target_region || '').trim();
-    if (!targetRegion) {
-      return res.status(400).json({
+    // 4. There must be an active application period
+    const activePeriod = await findActiveApplicationPeriod();
+    if (!activePeriod) {
+      return res.status(403).json({
         success: false,
-        error: 'Target region is required.'
-      });
-    }
-
-    // 4. Validate presence of questionnaire answers
-    const questionnaire = req.body.questionnaire_responses;
-    if (!questionnaire || typeof questionnaire !== 'object' || Object.keys(questionnaire).length === 0) {
-      return res.status(400).json({
-        success: false,
-        error: 'Questionnaire responses are required.'
-      });
-    }
-
-    // 5. Validate presence of required document attachments
-    const documents = req.body.document_attachments;
-    if (!Array.isArray(documents) || documents.length === 0) {
-      return res.status(400).json({
-        success: false,
-        error: 'Document attachments are required. Please upload required supporting documents.'
+        error: 'There is no active application period. Submissions are rejected.'
       });
     }
 
     const candidateId = req.user?.uid || req.user?.TLOid || req.user?.id || req.body.candidate_id || req.body.email || 'APP-' + Date.now();
     const candidateName = req.body.candidate_name || `${req.body.first_name || ''} ${req.body.last_name || ''}`.trim() || req.user?.name || `${req.user?.first_name || ''} ${req.user?.last_name || ''}`.trim() || 'Applicant';
+
+    // 5. Reject duplicate pending application for the same position and region
+    const existingSamePosRegion = await findCandidatePendingApplicationForPositionAndRegion(
+      candidateId,
+      appliedPosition,
+      targetRegion,
+      activePeriod.id
+    );
+    if (existingSamePosRegion) {
+      return res.status(409).json({
+        success: false,
+        error: `You already have a pending application for ${appliedPosition} in ${targetRegion}. Please select a different region or position.`
+      });
+    }
 
     const newApp = await createApplication({
       candidate_id: candidateId,
@@ -130,7 +172,8 @@ export const submitApplication = async (req, res) => {
       applied_position: appliedPosition,
       target_region: targetRegion,
       questionnaire_responses: questionnaire,
-      document_attachments: documents
+      document_attachments: documents,
+      application_period_id: activePeriod.id
     });
 
     res.status(201).json({
@@ -452,6 +495,93 @@ export const updateAdminEvaluation = async (req, res) => {
         updated_at: updated.updated_at
       }
     });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+};
+
+// The signed-in registrant's submission for the CURRENTLY ACTIVE period (drives the read-only form).
+export const getMyApplicationState = async (req, res) => {
+  if (!req.user) {
+    return res.status(401).json({ success: false, error: 'Unauthorized: Authentication required.' });
+  }
+
+  try {
+    // Same identifier order the submit endpoint stores in applications.candidate_id.
+    const candidateId = req.user.uid || req.user.TLOid || req.user.id;
+    const period = await findActiveApplicationPeriod();
+    const application = period && candidateId
+      ? await findCandidateApplicationDetails(candidateId, period.id)
+      : null;
+
+    res.json({
+      success: true,
+      hasSubmitted: Boolean(application),
+      isReadOnly: Boolean(application),
+      period: period ? { id: period.id, name: period.name, start_date: period.startDate, end_date: period.endDate } : null,
+      application
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+};
+
+const registrantId = (user) => user?.uid || user?.TLOid || user?.id;
+
+export const withdrawApplication = async (req, res) => {
+  const candidateId = registrantId(req.user);
+  if (!candidateId) {
+    return res.status(401).json({ success: false, error: 'Unauthorized: Authentication required.' });
+  }
+  const id = Number(req.params.id);
+  if (!Number.isSafeInteger(id) || id <= 0) {
+    return res.status(400).json({ success: false, error: 'Invalid application id.' });
+  }
+  try {
+    const application = await findCandidateApplicationById(candidateId, id);
+    if (!application) {
+      return res.status(404).json({ success: false, error: 'Application not found.' });
+    }
+    const data = await withdrawCandidateApplication(candidateId, id);
+    if (!data) {
+      return res.status(409).json({ success: false, error: 'Only submitted applications can be withdrawn. Refresh your application history.' });
+    }
+    res.json({ success: true, data });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+};
+
+// GET /api/pooling/history : the signed-in registrant's past submissions, newest first.
+export const getApplicationHistory = async (req, res) => {
+  if (!req.user) {
+    return res.status(401).json({ success: false, error: 'Unauthorized: Authentication required.' });
+  }
+  try {
+    const candidateId = registrantId(req.user);
+    const data = candidateId ? await findCandidateApplicationHistory(candidateId) : [];
+    res.json({ success: true, data });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+};
+
+// GET /api/pooling/history/:id : one of the registrant's own submissions (404 for anyone else's).
+export const getApplicationHistoryDetail = async (req, res) => {
+  if (!req.user) {
+    return res.status(401).json({ success: false, error: 'Unauthorized: Authentication required.' });
+  }
+  const id = Number(req.params.id);
+  if (!Number.isInteger(id) || id <= 0) {
+    return res.status(400).json({ success: false, error: 'Invalid application id.' });
+  }
+  try {
+    const candidateId = registrantId(req.user);
+    const application = candidateId ? await findCandidateApplicationById(candidateId, id) : null;
+    if (!application) {
+      return res.status(404).json({ success: false, error: 'Application not found.' });
+    }
+    res.json({ success: true, isReadOnly: true, application });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
   }

@@ -16,7 +16,9 @@ import Settings from './pages/Settings';
 import NotableAchievements from './pages/NotableAchievements';
 import LoadingScreen from './components/LoadingScreen';
 import AllVacancies from './pages/AllVacancies';
+import ApplicationHistory from './pages/ApplicationHistory';
 import ResetPassword from './pages/ResetPassword';
+import ControlCenter from './pages/ControlCenter';
 
 import MainDashboard from './pages/MainDashboard';
 
@@ -131,13 +133,30 @@ const App = () => {
                     </ProtectedRoute>
                 } 
             />
-            <Route 
-                path="/timon-applications" 
+            {/* TIMON Applications: history is the landing page; the form lives at /new and /:applicationId */}
+            <Route
+                path="/timon-applications"
+                element={
+                    <ProtectedRoute>
+                        <ApplicationHistory />
+                    </ProtectedRoute>
+                }
+            />
+            <Route
+                path="/timon-applications/new"
                 element={
                     <ProtectedRoute>
                         <AllVacancies />
                     </ProtectedRoute>
-                } 
+                }
+            />
+            <Route
+                path="/timon-applications/:applicationId"
+                element={
+                    <ProtectedRoute>
+                        <AllVacancies />
+                    </ProtectedRoute>
+                }
             />
             <Route 
                 path="/all-vacancies" 
@@ -159,6 +178,8 @@ const App = () => {
                 path="/main-dashboard" 
                 element={<Navigate to="/home" replace />} 
             />
+
+            <Route path="/control-center" element={<ProtectedRoute><ControlCenter /></ProtectedRoute>} />
 
             {/* Fallback */}
             <Route path="*" element={<Navigate to="/" replace />} />

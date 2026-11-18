@@ -6,6 +6,9 @@ import { downloadFromAzure } from '../../utils/azureBlobService.js';
 export const getBinary = async (req, res) => {
     try {
         const { id } = req.params;
+        if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) {
+            return res.status(400).json({ error: 'Invalid document ID. Browser-only attachments are not stored on the server.' });
+        }
         const result = await pool.query('SELECT * FROM unified_binaries WHERE id = $1', [id]);
         if (result.rows.length === 0) return res.status(404).json({ error: 'Binary not found' });
         

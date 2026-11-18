@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import pool from '../../config/db.js';
-import { findPositionLookups, runApplicationsQuery } from './repositories/applicationsRepository.js';
+import { findPositionLookups, findTloPositions, findMasterlistPositions, runApplicationsQuery } from './repositories/applicationsRepository.js';
 import { upsertBinary } from '../../utils/binaryPipeline.js';
 import { uploadToAzure } from '../../utils/azureBlobService.js';
 import {
@@ -106,6 +106,23 @@ export const getPositions = async (req, res) => {
       divisions: finalDivisions,
       regionDivisions: regionDivisionsMap
     });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+export const getTloPositions = async (req, res) => {
+  try {
+    const { rows } = await findTloPositions();
+    res.json({ success: true, positions: rows });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+export const getMasterlistPositions = async (req, res) => {
+  try {
+    res.json({ success: true, positions: await findMasterlistPositions() });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

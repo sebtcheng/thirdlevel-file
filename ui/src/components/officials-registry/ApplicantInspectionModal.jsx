@@ -4,6 +4,7 @@ import { X as FiX, User as FiUser, Briefcase as FiBriefcase, MapPin as FiMapPin,
 import { apiUrl } from '../../utils/api';
 import Swal from 'sweetalert2';
 import FloatingLabelInput from '../forms/FloatingLabelInput.jsx';
+import { getLocalDocument, openLocalDocument, isLocalBinaryId } from '../../utils/localDocumentStore';
 
 const POSITION_TITLES = {
     RD: 'Regional Director (RD)',
@@ -289,7 +290,13 @@ const ApplicantInspectionModal = ({ isOpen, applicationId, onClose, token, onSco
         }
     };
 
-    const handlePreviewDocument = (doc) => {
+    const handlePreviewDocument = async (doc) => {
+        if (isLocalBinaryId(doc.binary_id)) {
+            if (!await openLocalDocument(doc.binary_id)) {
+                Swal.fire('Document Not Uploaded', 'This older attachment was saved only in the applicant’s browser. It must be uploaded again to be available to administrators on other devices.', 'info');
+            }
+            return;
+        }
         if (!doc.binary_id && !doc.preview_url) {
             Swal.fire('Preview Unavailable', 'Document binary stream is not ready for direct preview.', 'info');
             return;
@@ -298,7 +305,23 @@ const ApplicantInspectionModal = ({ isOpen, applicationId, onClose, token, onSco
         window.open(url, '_blank', 'noopener,noreferrer');
     };
 
-    const handleDownloadDocument = (doc) => {
+    const handleDownloadDocument = async (doc) => {
+        if (isLocalBinaryId(doc.binary_id)) {
+            const file = await getLocalDocument(doc.binary_id).catch(() => null);
+            if (!file) {
+                Swal.fire('Document Not Uploaded', 'This older attachment was saved only in the applicant’s browser. It must be uploaded again to be available to administrators on other devices.', 'info');
+                return;
+            }
+            const localUrl = URL.createObjectURL(file);
+            const localLink = document.createElement('a');
+            localLink.href = localUrl;
+            localLink.download = doc.file_name || 'document.pdf';
+            document.body.appendChild(localLink);
+            localLink.click();
+            localLink.remove();
+            setTimeout(() => URL.revokeObjectURL(localUrl), 60000);
+            return;
+        }
         if (!doc.binary_id && !doc.download_url) {
             Swal.fire('Download Unavailable', 'Document binary content is not accessible.', 'info');
             return;
@@ -334,7 +357,7 @@ const ApplicantInspectionModal = ({ isOpen, applicationId, onClose, token, onSco
                     initial={{ opacity: 0, scale: 0.95, y: 15 }}
                     animate={{ opacity: 1, scale: 1, y: 0 }}
                     exit={{ opacity: 0, scale: 0.95, y: 15 }}
-                    className="relative w-full max-w-4xl bg-white rounded-card border-2 border-brand-800 shadow-2xl overflow-hidden z-10 my-8 flex flex-col max-h-[92vh]"
+                    className="relative w-full max-w-5xl bg-white rounded-card border-2 border-brand-800 shadow-2xl overflow-hidden z-10 my-8 flex flex-col max-h-[92vh]"
                 >
                     {/* Header */}
                     <div className="bg-brand-800 text-white p-6 sm:p-7 flex items-center justify-between shrink-0 border-b border-blue-900 relative">
@@ -369,53 +392,65 @@ const ApplicantInspectionModal = ({ isOpen, applicationId, onClose, token, onSco
                     </div>
 
                     {/* 4-Tab Navigation Header */}
-                    <div className="flex border-b border-slate-200 bg-slate-50 px-6 sm:px-8 gap-2 overflow-x-auto shrink-0">
+                    <div className="grid grid-cols-4 border-b border-slate-200 bg-slate-50 px-2 sm:px-8 gap-1 sm:gap-2 shrink-0">
                         <button
                             type="button"
                             onClick={() => setActiveTab('basic')}
-                            className={`py-3.5 px-4 font-black text-xs uppercase tracking-wider border-b-2 flex items-center gap-2 transition-all whitespace-nowrap cursor-pointer ${
+                            title="Tab 1: Basic Information"
+                            aria-label="Tab 1: Basic Information"
+                            className={`py-3.5 px-2 sm:px-3 font-black text-xs uppercase tracking-wide border-b-2 flex items-center justify-center gap-2 transition-all min-w-0 cursor-pointer ${
                                 activeTab === 'basic'
                                     ? 'border-brand-800 text-brand-800 bg-white rounded-t-xl shadow-sm'
                                     : 'border-transparent text-slate-500 hover:text-slate-800'
                             }`}
                         >
-                            <FiUser size={14} /> Tab 1: Basic Information
+                            <FiUser size={14} className="shrink-0" />
+                            <span className="hidden sm:block truncate"><span className="hidden lg:inline">Tab 1: </span>Basic Info</span>
                         </button>
 
                         <button
                             type="button"
                             onClick={() => setActiveTab('documents_qs')}
-                            className={`py-3.5 px-4 font-black text-xs uppercase tracking-wider border-b-2 flex items-center gap-2 transition-all whitespace-nowrap cursor-pointer ${
+                            title="Tab 2: Documentary & QS"
+                            aria-label="Tab 2: Documentary & QS"
+                            className={`py-3.5 px-2 sm:px-3 font-black text-xs uppercase tracking-wide border-b-2 flex items-center justify-center gap-2 transition-all min-w-0 cursor-pointer ${
                                 activeTab === 'documents_qs'
                                     ? 'border-brand-800 text-brand-800 bg-white rounded-t-xl shadow-sm'
                                     : 'border-transparent text-slate-500 hover:text-slate-800'
                             }`}
                         >
-                            <FiFileText size={14} /> Tab 2: Documentary & QS
+                            <FiFileText size={14} className="shrink-0" />
+                            <span className="hidden sm:block truncate"><span className="hidden lg:inline">Tab 2: </span>Documentary &amp; QS</span>
                         </button>
 
                         <button
                             type="button"
                             onClick={() => setActiveTab('nsc_scoring')}
-                            className={`py-3.5 px-4 font-black text-xs uppercase tracking-wider border-b-2 flex items-center gap-2 transition-all whitespace-nowrap cursor-pointer ${
+                            title="Tab 3: NSC Scoring"
+                            aria-label="Tab 3: NSC Scoring"
+                            className={`py-3.5 px-2 sm:px-3 font-black text-xs uppercase tracking-wide border-b-2 flex items-center justify-center gap-2 transition-all min-w-0 cursor-pointer ${
                                 activeTab === 'nsc_scoring'
                                     ? 'border-brand-800 text-brand-800 bg-white rounded-t-xl shadow-sm'
                                     : 'border-transparent text-slate-500 hover:text-slate-800'
                             }`}
                         >
-                            <FiAward size={14} /> Tab 3: NSC Scoring
+                            <FiAward size={14} className="shrink-0" />
+                            <span className="hidden sm:block truncate"><span className="hidden lg:inline">Tab 3: </span>NSC Scoring</span>
                         </button>
 
                         <button
                             type="button"
                             onClick={() => setActiveTab('summary')}
-                            className={`py-3.5 px-4 font-black text-xs uppercase tracking-wider border-b-2 flex items-center gap-2 transition-all whitespace-nowrap cursor-pointer ${
+                            title="Tab 4: Summary"
+                            aria-label="Tab 4: Summary"
+                            className={`py-3.5 px-2 sm:px-3 font-black text-xs uppercase tracking-wide border-b-2 flex items-center justify-center gap-2 transition-all min-w-0 cursor-pointer ${
                                 activeTab === 'summary'
                                     ? 'border-brand-800 text-brand-800 bg-white rounded-t-xl shadow-sm'
                                     : 'border-transparent text-slate-500 hover:text-slate-800'
                             }`}
                         >
-                            <FiClipboard size={14} /> Tab 4: Summary
+                            <FiClipboard size={14} className="shrink-0" />
+                            <span className="hidden sm:block truncate"><span className="hidden lg:inline">Tab 4: </span>Summary</span>
                         </button>
                     </div>
 

@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { CaretLeft as FiChevronLeft, CaretRight as FiChevronRight, CheckCircle as FiCheckCircle, Warning as FiAlertTriangle, Lock as FiLock, SignIn as FiLogIn, UserPlus as FiUserPlus, Clock as FiClock, User as FiUser, PaperPlaneTilt as FiSend, SpinnerGap as FiLoader, Clipboard as FiClipboard, CloudArrowUp as FiUploadCloud } from '@phosphor-icons/react';
 import { useAuth } from '../context/AuthContext';
 import PageTransition from '../components/PageTransition';
 import { apiUrl } from '../utils/api';
+import { fetchLookupJson } from '../utils/lookupCache';
 import Swal from 'sweetalert2';
 import FormErrorSummary from '../components/forms/FormErrorSummary.jsx';
 import {
@@ -15,11 +16,14 @@ import {
     StatutoryDeclarationsSection,
     FormTabs,
     REQUIRED_DOCUMENTS,
+    isDocumentComplete,
     formatContactNumber
 } from '../components/all-vacancies';
 
 const AllVacancies = () => {
     const navigate = useNavigate();
+    // /timon-applications/:applicationId opens one past submission read-only; /timon-applications/new is the form.
+    const { applicationId } = useParams();
     const { user, token, logout } = useAuth();
 
     // Intake window state
@@ -49,8 +53,12 @@ const AllVacancies = () => {
 
     // Step 3: Designation & OIC Assignment
     const [designationData, setDesignationData] = useState({
+        is_assigned_third_level: 'No',
+        designation_capacity: '',
         current_designation_preset: 'N/A',
         current_designation_custom: '',
+        assigned_oic_region: '',
+        assigned_oic_division: '',
         assigned_oic_office: ''
     });
 
@@ -93,6 +101,20 @@ const AllVacancies = () => {
     // Submission status
     const [submitting, setSubmitting] = useState(false);
     const [submittedApplication, setSubmittedApplication] = useState(null);
+    // Existing submission in the active application period (read-only mode)
+    const [isReadOnly, setIsReadOnly] = useState(false);
+    const [existingSubmission, setExistingSubmission] = useState(null);
+    const [candidateHistory, setCandidateHistory] = useState([]);
+
+    const NON_PENDING_STATUSES = ['rejected', 'disqualified', 'cancelled', 'withdrawn'];
+    const hasDuplicatePending = !isReadOnly && Boolean(appliedPosition && targetRegion && candidateHistory.some(item =>
+        item.applied_position === appliedPosition &&
+        item.target_region === targetRegion &&
+        !NON_PENDING_STATUSES.includes(String(item.status || 'submitted').toLowerCase())
+    ));
+    const duplicatePositionRegionError = hasDuplicatePending
+        ? `You already have a pending application for ${appliedPosition} in ${targetRegion}. Please select a different region or position.`
+        : '';
 
     // Tab definitions
     const tabs = [
@@ -112,17 +134,19 @@ const AllVacancies = () => {
             id: 'documents',
             label: 'Tab 3: Document Uploads',
             icon: FiUploadCloud,
-            isComplete: REQUIRED_DOCUMENTS.filter(d => d.required).every(d => Boolean(documents[d.key]))
+            isComplete: REQUIRED_DOCUMENTS.filter(d => d.required).every(d => isDocumentComplete(d, documents[d.key]))
         }
     ];
 
     // Fetch window status on mount
     useEffect(() => {
+        let alive = true;
         const fetchStatus = async () => {
             setWindowLoading(true);
             try {
-                const res = await fetch(apiUrl('/api/pooling/status'));
-                const data = await res.json();
+                // Short TTL: collapses the StrictMode double-mount into one request without serving stale status.
+                const data = await fetchLookupJson('/api/pooling/status', { ttlMs: 3000, returnErrorBody: true });
+                if (!alive) return;
                 if (data.success) {
                     setIntakeWindow({
                         isOpen: Boolean(data.isOpen),
@@ -139,6 +163,7 @@ const AllVacancies = () => {
                     });
                 }
             } catch (err) {
+                if (!alive) return;
                 console.error('[TIMON Applications] Failed to fetch window status:', err);
                 setIntakeWindow({
                     isOpen: false,
@@ -147,12 +172,70 @@ const AllVacancies = () => {
                     intake_end_date: null
                 });
             } finally {
-                setWindowLoading(false);
+                if (alive) setWindowLoading(false);
             }
         };
 
         fetchStatus();
+        return () => { alive = false; };
     }, []);
+
+    // Fills the form from a saved submission and locks it.
+    const applySubmission = (app) => {
+        const qr = app.questionnaire_responses || {};
+        setExistingSubmission(app);
+        setIsReadOnly(true);
+        setAppliedPosition(app.applied_position || '');
+        setTargetRegion(app.target_region || '');
+        if (qr.personal_employment) setPersonalData(prev => ({ ...prev, ...qr.personal_employment }));
+        if (qr.designation_oic) setDesignationData(prev => ({ ...prev, ...qr.designation_oic }));
+        if (qr.eligibilities) setEligibilityData(prev => ({ ...prev, ...qr.eligibilities }));
+        if (qr.statutory_declarations) setStatutoryData(prev => ({ ...prev, ...qr.statutory_declarations }));
+        const docs = {};
+        (app.document_attachments || []).forEach(d => {
+            if (!d?.doc_type) return;
+            const targetKey = d.doc_type === 'applicant_profile_word' ? 'applicant_profile_doc' : d.doc_type;
+            if (targetKey === 'applicant_profile_doc') {
+                const prev = Array.isArray(docs[targetKey]) ? docs[targetKey] : docs[targetKey] ? [docs[targetKey]] : [];
+                docs[targetKey] = [...prev, d];
+            } else {
+                docs[targetKey] = d;
+            }
+        });
+        setDocuments(prev => ({ ...prev, ...docs }));
+    };
+
+    // History mode: load one of this registrant's submissions by id and force read-only.
+    // New mode (/timon-applications/new): load candidate history so we can validate duplicate pending position + region.
+    useEffect(() => {
+        if (!token) return undefined;
+        let alive = true;
+        const headers = { Authorization: `Bearer ${token}` };
+        const loadSubmission = async () => {
+            try {
+                if (applicationId) {
+                    const res = await fetch(apiUrl(`/api/pooling/history/${encodeURIComponent(applicationId)}`), { headers });
+                    if (!alive) return;
+                    if (!res.ok) {
+                        navigate('/timon-applications', { replace: true });
+                        return;
+                    }
+                    const data = await res.json();
+                    if (alive && data.success && data.application) applySubmission(data.application);
+                    return;
+                }
+
+                const historyData = await fetchLookupJson('/api/pooling/history', { token, ttlMs: 3000 });
+                if (alive && historyData?.data) {
+                    setCandidateHistory(historyData.data);
+                }
+            } catch (err) {
+                if (alive) console.error('[TIMON Applications] Failed to load existing submission:', err);
+            }
+        };
+        loadSubmission();
+        return () => { alive = false; };
+    }, [token, applicationId]);
 
     // Sync authenticated user info when user changes
     useEffect(() => {
@@ -201,12 +284,21 @@ const AllVacancies = () => {
         const found = [];
         if (!appliedPosition) found.push({ id: 'timon-position', message: 'Please select one of the four executive designations (RD, ARD, SDS, ASDS).' });
         if (!targetRegion) found.push({ id: 'timon-region', message: 'Please select a target DepEd region for your application.' });
+        if (hasDuplicatePending) found.push({ id: 'timon-region', message: duplicatePositionRegionError });
         if (!personalData.surname) found.push({ id: 'field-surname', message: 'Please provide your Surname in ALL CAPS.' });
         if (!personalData.first_name) found.push({ id: 'field-first_name', message: 'Please provide your First Name in ALL CAPS.' });
         if (!personalData.contact_number) found.push({ id: 'field-contact_number', message: 'Please provide your 11-digit mobile/telephone contact number.' });
-        if (!personalData.current_position) found.push({ id: 'field-current_position', message: 'Please provide your current plantilla position title.' });
-        if (!personalData.plantilla_office) found.push({ id: 'field-plantilla_office', message: 'Please indicate your official SDO, Regional Office, or Agency station.' });
-        if (designationData.current_designation_preset === 'Other' && !designationData.current_designation_custom?.trim()) found.push({ id: 'field-current_designation_custom', message: 'Please specify your full designation in the text field provided.' });
+        if (!personalData.current_position) found.push({ id: 'field-current_position', message: 'Please provide your current position title.' });
+        if (personalData.is_external || personalData.plantilla_region === 'External') {
+            if (!personalData.plantilla_office) found.push({ id: 'field-plantilla_office', message: 'Please provide your current affiliation or office.' });
+        } else {
+            if (!personalData.plantilla_region) found.push({ id: 'field-plantilla_region', message: 'Please select the Region of your plantilla item.' });
+            if (!personalData.plantilla_division) found.push({ id: 'field-plantilla_division', message: 'Please select the Division of your plantilla item.' });
+        }
+        if (designationData.is_assigned_third_level === 'Yes') {
+            if (!designationData.designation_capacity) found.push({ id: 'field-designation_capacity', message: 'Please indicate whether you are an Officer-in-Charge (OIC) or Full-Fledged.' });
+            if (!designationData.current_designation_preset || designationData.current_designation_preset === 'N/A') found.push({ id: 'field-current_designation_preset', message: 'Please select your current designation.' });
+        }
         setErrors(found);
         if (found.length > 0) {
             window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -227,6 +319,7 @@ const AllVacancies = () => {
 
     const handleTabChange = (targetTabId) => {
         if (targetTabId === activeTab) return;
+        if (isReadOnly) { setActiveTab(targetTabId); return; }
 
         // If advancing forward from profile tab
         if (activeTab === 'profile' && (targetTabId === 'questionnaire' || targetTabId === 'documents')) {
@@ -249,6 +342,11 @@ const AllVacancies = () => {
     };
 
     const handleNext = () => {
+        if (isReadOnly) {
+            setActiveTab(activeTab === 'profile' ? 'questionnaire' : 'documents');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+            return;
+        }
         if (activeTab === 'profile') {
             if (validateProfileTab()) {
                 setActiveTab('questionnaire');
@@ -294,7 +392,7 @@ const AllVacancies = () => {
         }
 
         // 4. Validate Tab 3: Required Documents
-        const missingDocs = REQUIRED_DOCUMENTS.filter(doc => doc.required && !documents[doc.key]);
+        const missingDocs = REQUIRED_DOCUMENTS.filter(doc => doc.required && !isDocumentComplete(doc, documents[doc.key]));
         if (missingDocs.length > 0) {
             setActiveTab('documents');
             Swal.fire({
@@ -309,7 +407,9 @@ const AllVacancies = () => {
         setSubmitting(true);
 
         try {
-            const documentAttachments = Object.values(documents).filter(Boolean);
+            const documentAttachments = Object.values(documents)
+                .flatMap(val => (Array.isArray(val) ? val : val ? [val] : []))
+                .filter(Boolean);
 
             const effectiveDesignation = designationData.current_designation_preset === 'Other'
                 ? designationData.current_designation_custom.trim()
@@ -347,13 +447,36 @@ const AllVacancies = () => {
                 body: JSON.stringify(payload)
             });
 
-            const data = await res.json();
+            const data = await res.json().catch(() => ({}));
+
+            if (res.status === 409) {
+                setActiveTab('profile');
+                const dupMsg = data.error || `You already have a pending application for ${appliedPosition} in ${targetRegion}. Please select a different region or position.`;
+                setErrors([{ id: 'timon-region', message: dupMsg }]);
+                Swal.fire({
+                    title: 'Pending Application Exists',
+                    text: dupMsg,
+                    icon: 'warning',
+                    confirmButtonColor: 'var(--color-brand-800)'
+                });
+                return;
+            }
 
             if (!res.ok || !data.success) {
                 throw new Error(data.error || 'Failed to submit application.');
             }
 
             setSubmittedApplication(data.data);
+            setCandidateHistory(prev => [
+                {
+                    id: data.data?.id,
+                    applied_position: appliedPosition,
+                    target_region: targetRegion,
+                    status: 'submitted',
+                    submission_timestamp: data.data?.submission_timestamp || new Date().toISOString()
+                },
+                ...prev
+            ]);
 
             Swal.fire({
                 title: 'Application Submitted!',
@@ -442,12 +565,12 @@ const AllVacancies = () => {
                 {/* Main Content */}
                 <main className="flex-1 max-w-[1100px] w-full mx-auto p-6 md:p-10 space-y-8">
                     {/* Status Loading Skeleton */}
-                    {windowLoading ? (
+                    {windowLoading && !applicationId ? (
                         <div className="bg-white border-2 border-slate-200 rounded-card p-12 text-center shadow-sm">
                             <FiLoader className="animate-spin text-brand-800 mx-auto mb-4" size={36} />
                             <h3 className="text-sm font-black uppercase tracking-wider text-slate-500">Checking Application Window Status...</h3>
                         </div>
-                    ) : !intakeWindow.isOpen ? (
+                    ) : !intakeWindow.isOpen && !applicationId ? (
                         /* Closed Window State */
                         <div className="bg-white border-2 border-rose-200 rounded-card p-8 md:p-12 text-center space-y-6 shadow-sm">
                             <div className="w-16 h-16 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center mx-auto shadow-sm">
@@ -540,7 +663,7 @@ const AllVacancies = () => {
                         /* Active Application Intake Form */
                         <form onSubmit={handleSubmit} className="space-y-8">
                             {/* Intake Window Active Notification Bar */}
-                            <div className="flex items-center justify-between p-4 bg-emerald-50 rounded-2xl border border-emerald-200">
+                            {!applicationId && <div className="flex items-center justify-between p-4 bg-emerald-50 rounded-2xl border border-emerald-200">
                                 <div className="flex items-center gap-3">
                                     <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></div>
                                     <span className="text-xs font-black uppercase tracking-wider text-emerald-900">
@@ -555,7 +678,21 @@ const AllVacancies = () => {
                                 <span className="text-[11px] font-bold text-emerald-700 bg-white/70 px-3 py-1 rounded-full border border-emerald-200">
                                     Third Level Executive
                                 </span>
-                            </div>
+                            </div>}
+
+                            {isReadOnly && (
+                                <div role="status" className="flex items-start gap-3 p-5 bg-blue-50 rounded-2xl border-2 border-brand-800/30">
+                                    <FiLock className="text-brand-800 mt-0.5 shrink-0" size={20} />
+                                    <div className="space-y-1">
+                                        <h4 className="text-sm font-black text-brand-800 uppercase tracking-wide">Application Submitted — Read-Only</h4>
+                                        <p className="text-xs font-semibold text-slate-600 leading-relaxed">
+                                            You have already submitted an application for the current active period
+                                            {existingSubmission?.submission_timestamp ? ` on ${new Date(existingSubmission.submission_timestamp).toLocaleString()}` : ''}.
+                                            Your answers and documents are shown below and can no longer be edited.
+                                        </p>
+                                    </div>
+                                </div>
+                            )}
 
                             {/* Unauthenticated User Warning / Gate Banner */}
                             {!user && (
@@ -596,12 +733,14 @@ const AllVacancies = () => {
                                 <div className="space-y-8">
                                     <FormErrorSummary errors={errors} />
                                     {/* Section 1: Executive Position & Target Region (Decoupled from database plantilla items) */}
+                                    <fieldset disabled={isReadOnly} className="space-y-8 border-0 p-0 m-0 min-w-0">
                                     <ExecutivePositionSection
                                         fieldErrors={errors}
                                         appliedPosition={appliedPosition}
                                         setAppliedPosition={setAppliedPosition}
                                         targetRegion={targetRegion}
                                         setTargetRegion={setTargetRegion}
+                                        duplicateError={duplicatePositionRegionError}
                                     />
 
                                     {/* Section 2: Personal Details & Current Employment */}
@@ -617,6 +756,7 @@ const AllVacancies = () => {
                                         designationData={designationData}
                                         setDesignationData={setDesignationData}
                                     />
+                                    </fieldset>
 
                                     {/* Tab 1 Navigation Action Bar */}
                                     <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-5 bg-white border-2 border-slate-200 rounded-card shadow-sm">
@@ -638,6 +778,7 @@ const AllVacancies = () => {
                             {/* Tab 2: Questionnaire */}
                             {activeTab === 'questionnaire' && (
                                 <div className="space-y-8">
+                                    <fieldset disabled={isReadOnly} className="space-y-8 border-0 p-0 m-0 min-w-0">
                                     {/* Section 4: Examination & CES Eligibilities */}
                                     <EligibilitiesSection
                                         eligibilityData={eligibilityData}
@@ -649,6 +790,7 @@ const AllVacancies = () => {
                                         statutoryData={statutoryData}
                                         setStatutoryData={setStatutoryData}
                                     />
+                                    </fieldset>
 
                                     {/* Tab 2 Navigation Action Bar */}
                                     <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-5 bg-white border-2 border-slate-200 rounded-card shadow-sm">
@@ -681,6 +823,8 @@ const AllVacancies = () => {
                                         setDocuments={setDocuments}
                                         uploadingDoc={uploadingDoc}
                                         setUploadingDoc={setUploadingDoc}
+                                        readOnly={isReadOnly}
+                                        applicationId={applicationId || submittedApplication?.id || null}
                                     />
 
                                     {/* Final Review & Submission Action Bar */}
@@ -694,11 +838,11 @@ const AllVacancies = () => {
                                                 <FiChevronLeft size={16} />
                                                 <span>Back</span>
                                             </button>
-                                            <div className="text-xs font-semibold text-slate-500">
+                                            {!isReadOnly && <div className="text-xs font-semibold text-slate-500">
                                                 By submitting, you certify under oath that all responses and attached credentials are true, correct, and complete.
-                                            </div>
+                                            </div>}
                                         </div>
-                                        <button
+                                        {!isReadOnly && <button
                                             type="submit"
                                             disabled={submitting}
                                             className="w-full sm:w-auto px-8 py-4 bg-brand-800 text-white font-black text-xs uppercase tracking-widest rounded-xl hover:bg-blue-900 transition-all shadow-md active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2 shrink-0"
@@ -714,7 +858,7 @@ const AllVacancies = () => {
                                                     Submit TIMON Application
                                                 </>
                                             )}
-                                        </button>
+                                        </button>}
                                     </div>
                                 </div>
                             )}

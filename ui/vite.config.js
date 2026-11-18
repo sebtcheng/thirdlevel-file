@@ -7,7 +7,7 @@ import { devLogSink } from './src/devtools/vite-plugin-dev-log-sink'
 export default defineConfig(({ mode }) => {
   const rootDir = path.resolve(__dirname, '..')
   const env = loadEnv(mode, rootDir, '')
-  const apiTarget = normalizeApiBaseUrl(process.env.API_PROXY_TARGET || env.VITE_API_URL)
+  const apiTarget = normalizeApiBaseUrl(process.env.API_PROXY_TARGET || env.VITE_API_URL || 'http://localhost:3008')
   const base = env.VITE_BASE_PATH || '/'
 
   return {
@@ -15,7 +15,7 @@ export default defineConfig(({ mode }) => {
     envDir: rootDir,
     base,
     server: {
-      port: Number(process.env.VITE_PORT) || 5173,
+      port: Number(process.env.VITE_PORT) || 5273,
       strictPort: true,
       proxy: apiTarget ? {
         '/insighted-third-level-officials/api': {

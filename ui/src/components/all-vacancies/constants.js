@@ -39,8 +39,36 @@ export const DEPED_REGIONS = [
     'CARAGA',
     'CAR',
     'NCR',
+    'NIR',
     'BARMM'
 ];
+
+// Target Region options exclude Central Office and BARMM (used in Target Executive Designation & Region).
+export const TARGET_DEPED_REGIONS = DEPED_REGIONS.filter(
+    (region) => region !== 'Central Office' && region !== 'BARMM'
+);
+
+// The masterlist stores CARAGA's divisions under "Region XIII".
+export const REGION_ALIASES = { CARAGA: 'Region XIII' };
+
+// Used only when the masterlist has no divisions for a region.
+export const FALLBACK_REGION_DIVISIONS = {
+    BARMM: [
+        'Basilan', 'Cotabato City', 'Lamitan City', 'Lanao del Sur I', 'Lanao del Sur II',
+        'Maguindanao del Norte', 'Maguindanao del Sur', 'Marawi City', 'Sulu', 'Tawi-Tawi'
+    ]
+};
+
+// Division options for a region: masterlist data (case-insensitive, with aliases), then the fallback list,
+// then "Regional Office" once a region is chosen.
+export const getDivisionOptions = (regionDivisions, region) => {
+    if (!region) return [];
+    const target = (REGION_ALIASES[region] || region).toUpperCase();
+    const key = Object.keys(regionDivisions || {}).find(k => k.toUpperCase() === target);
+    if (key && regionDivisions[key]?.length) return regionDivisions[key];
+    const fbKey = Object.keys(FALLBACK_REGION_DIVISIONS).find(k => k.toUpperCase() === target);
+    return fbKey ? FALLBACK_REGION_DIVISIONS[fbKey] : ['Regional Office'];
+};
 
 export const CES_STAGES = [
     'Appointed to a CESO Rank',
@@ -165,9 +193,11 @@ export const REQUIRED_DOCUMENTS = [
         binaryKey: 'applicant_profile_doc_binary_id',
         nameKey: 'applicant_profile_doc_filename',
         label: '11. Accomplished Applicant Profile',
-        instruction: 'Accomplished template from https://tinyurl.com/3rdLevelForms (PDF only)',
-        accept: '.pdf,application/pdf',
+        instruction: 'Accomplished PDF and Word-format (.doc/.docx) templates from https://tinyurl.com/3rdLevelForms',
+        accept: '.pdf,application/pdf,.doc,.docx,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document',
         isPdf: true,
+        isWord: true,
+        multiple: true,
         templateUrl: 'https://tinyurl.com/3rdLevelForms',
         required: true
     },
@@ -182,6 +212,28 @@ export const REQUIRED_DOCUMENTS = [
         required: false
     }
 ];
+
+export const isPdfAttachment = (f) =>
+    Boolean(f && (f.mime_type === 'application/pdf' || /\.pdf$/i.test(f.file_name || '')));
+
+export const isWordAttachment = (f) =>
+    Boolean(f && (
+        f.mime_type === 'application/msword' ||
+        f.mime_type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
+        /\.(doc|docx)$/i.test(f.file_name || '')
+    ));
+
+export const isDocumentComplete = (docConfig, attached) => {
+    if (!docConfig) return false;
+    if (docConfig.multiple) {
+        const list = Array.isArray(attached) ? attached.filter(Boolean) : attached ? [attached] : [];
+        if (docConfig.isPdf && docConfig.isWord) {
+            return list.some(isPdfAttachment) && list.some(isWordAttachment);
+        }
+        return list.length > 0;
+    }
+    return Boolean(attached);
+};
 
 export const formatContactNumber = (val) => {
     const digits = (val || '').replace(/\D/g, '').slice(0, 11);

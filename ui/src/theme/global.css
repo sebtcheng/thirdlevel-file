@@ -51,10 +51,23 @@
   strong, b { font-weight: 600; }
 
   /* UI labels, buttons, tabs, navigation: Plus Jakarta Sans 500. */
-  button, label, [role="tab"], nav a { font-family: var(--font-ui); font-weight: 500; }
+  button, label, [role="tab"], nav a {
+    font-family: var(--font-ui);
+    font-weight: 500;
+    transition:
+      background-color var(--motion-fast) var(--motion-ease),
+      border-color var(--motion-fast) var(--motion-ease),
+      color var(--motion-fast) var(--motion-ease),
+      box-shadow var(--motion-base) var(--motion-ease),
+      transform var(--motion-fast) var(--motion-ease);
+  }
+  button:not(:disabled):active { transform: translateY(1px); }
 
-  /* Table headers: Plus Jakarta Sans 600. Cells inherit Public Sans 400. */
+  /* Table headers and row hover transitions */
   th { font-family: var(--font-ui); font-weight: 600; }
+  tbody tr {
+    transition: background-color var(--motion-fast) var(--motion-ease);
+  }
 
   /* Data entry: IBM Plex Mono at 14px (16px on mobile so iOS does not zoom). */
   input, select, textarea, option, code, kbd {
@@ -75,6 +88,18 @@
     border: var(--card-border);
     border-radius: var(--card-radius);
     box-shadow: var(--card-shadow);
+    transition:
+      box-shadow var(--motion-base) var(--motion-ease),
+      border-color var(--motion-base) var(--motion-ease),
+      transform var(--motion-base) var(--motion-ease);
+  }
+  .card-interactive:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+    border-color: var(--color-brand-300);
+  }
+  .card-interactive:active {
+    transform: translateY(0);
   }
   .shadow-level-1 { box-shadow: var(--shadow-sm); }
   .shadow-level-2 { box-shadow: var(--shadow-md); }
@@ -131,16 +156,25 @@
 }
 
 @keyframes ui-pop-in {
-  from { opacity: 0; translate: 0 4px; }
+  from { opacity: 0; translate: 0 8px; }
   to { opacity: 1; translate: 0 0; }
 }
 
-/* Screen changes and simple entrances fade in; dialogs, drawers and cards rise 4px while fading. */
-.ui-fade-in { animation: ui-fade-in var(--motion-base) var(--motion-ease) backwards; }
-.ui-pop-in { animation: ui-pop-in var(--motion-base) var(--motion-ease) backwards; }
+/* Screen changes and simple entrances fade in; dialogs, drawers and cards rise smoothly while fading. */
+.ui-fade-in { animation: ui-fade-in var(--motion-slow) var(--motion-ease) backwards; }
+.ui-pop-in { animation: ui-pop-in var(--motion-slow) var(--motion-ease) backwards; }
+
+.ui-stagger > * { animation: ui-pop-in var(--motion-slow) var(--motion-ease) backwards; }
+.ui-stagger > *:nth-child(1) { animation-delay: 0ms; }
+.ui-stagger > *:nth-child(2) { animation-delay: 30ms; }
+.ui-stagger > *:nth-child(3) { animation-delay: 60ms; }
+.ui-stagger > *:nth-child(4) { animation-delay: 90ms; }
+.ui-stagger > *:nth-child(5) { animation-delay: 120ms; }
+.ui-stagger > *:nth-child(n+6) { animation-delay: 150ms; }
 
 /* Respect reduced motion: drop non-essential transitions and entrances (spinners keep rotating). */
 @media (prefers-reduced-motion: reduce) {
-  .ui-fade-in, .ui-pop-in, .animate-pop-up { animation: none; }
+  .ui-fade-in, .ui-pop-in, .ui-stagger > *, .animate-pop-up { animation: none; }
+  button:not(:disabled):active, .card-interactive:hover { transform: none; }
   *, *::before, *::after { transition-duration: 0.01ms !important; }
 }
