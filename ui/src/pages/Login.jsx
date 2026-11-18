@@ -10,6 +10,7 @@ import PinLogin from '../components/PinLogin';
 import Swal from 'sweetalert2';
 import FloatingLabelInput from '../components/forms/FloatingLabelInput.jsx';
 import FormErrorSummary from '../components/forms/FormErrorSummary.jsx';
+import { apiUrl } from '../utils/api';
 
 const Login = () => {
     const navigate = useNavigate();
@@ -227,8 +228,7 @@ const Login = () => {
         }
         setForgotLoading(true);
         try {
-            const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-            const response = await fetch(`${baseUrl}/api/auth/forgot-password`, {
+            const response = await fetch(apiUrl('/api/auth/forgot-password'), {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email: forgotEmail, isCO })
