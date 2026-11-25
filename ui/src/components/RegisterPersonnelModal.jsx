@@ -90,10 +90,6 @@ const RegisterPersonnelModal = ({ isOpen, onClose, onSuccess, token }) => {
       return;
     }
 
-    if (!formData.email.toLowerCase().endsWith('@deped.gov.ph')) {
-      setEmailStatus('invalid_domain');
-      return;
-    }
 
     const checkDuplicate = async () => {
       setEmailStatus('checking');
@@ -123,9 +119,7 @@ const RegisterPersonnelModal = ({ isOpen, onClose, onSuccess, token }) => {
     e.preventDefault();
     const normalizedEmail = formData.email.toLowerCase().trim();
     const found = [];
-    if (!normalizedEmail.endsWith('@deped.gov.ph')) {
-      found.push({ id: 'personnel-email', message: 'Only @deped.gov.ph emails are allowed for DepEd Email.' });
-    } else if (emailStatus === 'duplicate') {
+    if (emailStatus === 'duplicate') {
       found.push({ id: 'personnel-email', message: 'This email already exists in the masterlist.' });
     }
     if (!formData.first_name) found.push({ id: 'personnel-first-name', message: 'First name is required.' });
@@ -254,9 +248,6 @@ const RegisterPersonnelModal = ({ isOpen, onClose, onSuccess, token }) => {
                 </div>
               )}
             </div>
-            {emailStatus === 'invalid_domain' && (
-              <p className="text-red-500 text-[18px] font-bold mt-2">Email must end with @deped.gov.ph.</p>
-            )}
             {emailStatus === 'duplicate' && (
               <p className="text-red-500 text-[18px] font-bold mt-2">This email already exists in the masterlist.</p>
             )}

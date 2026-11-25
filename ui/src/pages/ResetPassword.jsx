@@ -6,6 +6,7 @@ import PageTransition from '../components/PageTransition';
 import logo from '../assets/modern_logo.png';
 import FormErrorSummary from '../components/forms/FormErrorSummary.jsx';
 import FloatingLabelInput from '../components/forms/FloatingLabelInput.jsx';
+import { apiUrl } from '../utils/api';
 
 const ResetPassword = () => {
     const [searchParams] = useSearchParams();
@@ -36,8 +37,7 @@ const ResetPassword = () => {
 
         setLoading(true);
         try {
-            const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-            const response = await fetch(`${baseUrl}/api/auth/reset-password`, {
+            const response = await fetch(apiUrl('/api/auth/reset-password'), {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ token, newPassword: password })

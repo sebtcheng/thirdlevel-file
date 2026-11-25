@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Bank, CaretDown, Gear, Moon, SignOut } from '@phosphor-icons/react';
+import { Bank, CaretDown, Gear, List, Moon, SignOut } from '@phosphor-icons/react';
 import { useAuth } from '../../context/AuthContext';
 
 const initialsOf = (user) => {
@@ -10,7 +10,7 @@ const initialsOf = (user) => {
 };
 
 // Global header: blue/gold/red accent strip, product branding on the left, session user menu on the right.
-const AppHeader = () => {
+const AppHeader = ({ isNavigationOpen = false, onToggleNavigation }) => {
     const { user, logout } = useAuth();
     const navigate = useNavigate();
     const [open, setOpen] = useState(false);
@@ -35,7 +35,15 @@ const AppHeader = () => {
             </div>
             <div className="flex items-center justify-between gap-4 px-4 py-3 md:px-6">
                 <div className="flex min-w-0 items-center gap-3">
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-brand-800 text-white">
+                    {onToggleNavigation && (
+                        <button type="button" onClick={onToggleNavigation}
+                            aria-label={isNavigationOpen ? 'Close navigation menu' : 'Open navigation menu'}
+                            aria-expanded={isNavigationOpen} aria-controls="admin-sidebar"
+                            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md text-brand-800 hover:bg-brand-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-700 lg:hidden">
+                            <List size={22} />
+                        </button>
+                    )}
+                    <div className={`${onToggleNavigation ? 'hidden lg:flex' : 'flex'} h-10 w-10 shrink-0 items-center justify-center rounded-full bg-brand-800 text-white`}>
                         <Bank size={20} />
                     </div>
                     <div className="min-w-0">
@@ -74,11 +82,11 @@ const AppHeader = () => {
                                 <span className="block truncate text-[15px] font-medium leading-tight text-heading">{fullName}</span>
                                 <span className="block truncate text-[13px] leading-tight text-secondary">{user?.role || 'Central Office'}</span>
                             </span>
-                            <CaretDown size={14} className="text-secondary" />
+                            <CaretDown size={14} className={`text-secondary transition-transform duration-150 ${open ? 'rotate-180' : ''}`} />
                         </button>
                         {open ? (
                             <div className="absolute right-0 top-full w-48 pt-2">
-                            <div role="menu" className="rounded-md border border-muted bg-white py-1 shadow-md">
+                            <div role="menu" className="ui-pop-in rounded-md border border-muted bg-white py-1 shadow-md">
                                 <button type="button" role="menuitem" onClick={() => { setOpen(false); navigate('/settings'); }} className="flex w-full items-center gap-2 px-3 py-2 text-left text-[15px] text-heading hover:bg-brand-50">
                                     <Gear size={16} /> Settings
                                 </button>

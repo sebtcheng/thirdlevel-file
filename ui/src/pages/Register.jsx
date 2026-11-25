@@ -54,15 +54,12 @@ const Register = () => {
             return;
         }
 
-        if (!email.toLowerCase().endsWith('@deped.gov.ph')) {
-            setMasterlistCheckStatus('invalid_domain');
-            return;
-        }
+        const controller = new AbortController();
 
         const checkMasterlist = async () => {
             setMasterlistCheckStatus('checking');
             try {
-                const res = await fetch(apiUrl(`/api/auth/check-masterlist-email?email=${encodeURIComponent(email)}&isCO=${isCO}`));
+                const res = await fetch(apiUrl(`/api/auth/check-masterlist-email?email=${encodeURIComponent(email)}&isCO=${isCO}`), { signal: controller.signal });
                 if (res.ok) {
                     const data = await res.json();
                     if (data.alreadyRegistered) {
@@ -73,16 +70,20 @@ const Register = () => {
                         setMasterlistCheckStatus('invalid');
                     }
                 } else {
-                    setMasterlistCheckStatus('idle');
+                    setMasterlistCheckStatus('error');
                 }
             } catch (err) {
+                if (err.name === 'AbortError') return;
                 console.error("Masterlist check failed", err);
-                setMasterlistCheckStatus('idle'); // fail closed (handled in submit/otp as well)
+                setMasterlistCheckStatus('error');
             }
         };
 
         const timer = setTimeout(checkMasterlist, 500);
-        return () => clearTimeout(timer);
+        return () => {
+            clearTimeout(timer);
+            controller.abort();
+        };
     }, [formData.email, isCO, currentStep]);
 
     useEffect(() => {
@@ -99,9 +100,7 @@ const Register = () => {
 
     const handleFinalStep = async () => {
         const found = [];
-        if (!formData.email.toLowerCase().endsWith('@deped.gov.ph')) {
-            found.push({ id: 'register-email', message: 'Only @deped.gov.ph emails are allowed for registration.' });
-        } else if (masterlistCheckStatus === 'already_registered') {
+        if (masterlistCheckStatus === 'already_registered') {
             found.push({ id: 'register-email', message: 'This email is already registered for this portal. Please login instead.' });
         }
         if (isCO && formData.auth_code !== 'nVxCpLrTqWmK') {
@@ -140,7 +139,7 @@ const Register = () => {
                     isCO
                 })
             });
-            const data = await res.json();
+            const data = await res.json().catch(() => ({}));
             if (data.success) {
                 login(data.user, data.token);
                 setSuccess(true);
@@ -166,10 +165,10 @@ const Register = () => {
 
                 setTimeout(() => navigate(redirectPath, { replace: true }), 2000);
             } else {
-                setError(data.error || "Registration failed");
+                setError(data.error || `Registration failed (server responded ${res.status}). Please try again.`);
             }
         } catch (err) {
-            setError("Server error");
+            setError("Could not reach the server. Please check your connection and try again.");
         } finally {
             setLoading(false);
         }
@@ -253,14 +252,6 @@ const Register = () => {
                         {/* STEP 2: CREDENTIALS */}
                         {currentStep === 2 && (
                             <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-500">
-                                {isCO && (
-                                    <div className="flex items-center gap-3 p-4 bg-blue-50 rounded-2xl border border-blue-100">
-                                        <FiShield size={16} className="text-brand-800 shrink-0" />
-                                        <p className="text-[10px] font-black text-brand-800 uppercase tracking-widest">
-                                            Central Office accounts must use an official @deped.gov.ph email.
-                                        </p>
-                                    </div>
-                                )}
 
                                 <div className="space-y-2">
                                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Email Address</label>
@@ -287,9 +278,9 @@ const Register = () => {
                                             </p>
                                         </div>
                                     )}
-                                    {masterlistCheckStatus === 'invalid_domain' && (
+                                    {!isCO && masterlistCheckStatus === 'error' && (
                                         <p className="text-[10px] font-bold text-red-500 mt-1 ml-1">
-                                            Only @deped.gov.ph emails are allowed for registration.
+                                            We couldn't check this email right now. You can still continue, or try again in a moment.
                                         </p>
                                     )}
                                     {masterlistCheckStatus === 'already_registered' && (
@@ -322,13 +313,13 @@ const Register = () => {
 
                         {/* STEP 3: SECURITY */}
                         {currentStep === 3 && (
-                            <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-500">
+                            <form onSubmit={handleSubmit} className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-500">
                                 <div className="space-y-4">
                                     <div className="space-y-2">
-                                        <FloatingLabelInput label="New Password" icon={<FiLock />} className="w-full" type="password" value={formData.password} onChange={(e) => setFormData({ ...formData, password: e.target.value })} placeholder="••••••••" />
+                                        <FloatingLabelInput label="New Password" icon={<FiLock />} className="w-full" type="password" autoComplete="new-password" value={formData.password} onChange={(e) => setFormData({ ...formData, password: e.target.value })} placeholder="••••••••" />
                                     </div>
                                     <div className="space-y-2">
-                                        <FloatingLabelInput id="register-confirm-password" error={fieldError('register-confirm-password')} label="Confirm Password" icon={<FiLock />} className="w-full" type="password" value={formData.confirmPassword} onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })} placeholder="••••••••" />
+                                        <FloatingLabelInput id="register-confirm-password" error={fieldError('register-confirm-password')} label="Confirm Password" icon={<FiLock />} className="w-full" type="password" autoComplete="new-password" value={formData.confirmPassword} onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })} placeholder="••••••••" />
                                     </div>
                                     <div className="space-y-2">
                                         <FloatingLabelInput label="Passcode (For account recovery)" icon={<FiLock />} className="w-full" type="text" maxLength={6} value={formData.passcode} onChange={(e) => {
@@ -340,13 +331,13 @@ const Register = () => {
                                 </div>
                                 {error && <div className="p-4 bg-red-50 border border-red-100 rounded-2xl text-red-600 text-xs font-bold">{error}</div>}
                                 <div className="flex gap-4">
-                                    <button onClick={() => setCurrentStep(2)} className="flex-1 bg-slate-100 text-slate-500 font-black py-5 rounded-2xl active:scale-95 transition-all text-xs uppercase italic tracking-widest">Back</button>
-                                    <button onClick={handleSubmit} disabled={loading} className="flex-[2] bg-brand-800 text-white font-black py-5 rounded-2xl shadow-xl active:scale-95 transition-all flex items-center justify-center gap-3 text-xs uppercase italic tracking-widest">
+                                    <button type="button" onClick={() => setCurrentStep(2)} className="flex-1 bg-slate-100 text-slate-500 font-black py-5 rounded-2xl active:scale-95 transition-all text-xs uppercase italic tracking-widest">Back</button>
+                                    <button type="submit" disabled={loading} className="flex-[2] bg-brand-800 text-white font-black py-5 rounded-2xl shadow-xl active:scale-95 transition-all flex items-center justify-center gap-3 text-xs uppercase italic tracking-widest">
                                         Create Identity
                                         <FiCheckCircle className="w-5 h-5" />
                                     </button>
                                 </div>
-                            </div>
+                            </form>
                         )}
 
                         {/* FOOTER */}

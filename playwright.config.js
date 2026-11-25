@@ -11,7 +11,7 @@ export default defineConfig({
     ['json', { outputFile: 'docs/code-assessment/evidence/e2e-report.json' }],
   ],
   use: {
-    baseURL: 'http://localhost:5173',
+    baseURL: 'http://localhost:5273',
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
   },
@@ -23,7 +23,7 @@ export default defineConfig({
   ],
   webServer: {
     command: 'npm run dev',
-    port: 5173,
+    port: 5273,
     reuseExistingServer: true,
     timeout: 120 * 1000,
   },

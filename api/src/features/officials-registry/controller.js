@@ -156,6 +156,36 @@ export const buildOfficialsFilterConditions = (query, user) => {
   return { params, conditions };
 };
 
+// Vacant or unnamed positions become NULL so NULLS LAST keeps them at the end of name sorts.
+const FIRST_NAME_SORT = `CASE WHEN f.first_name ILIKE '%VACANT%' THEN NULL ELSE NULLIF(LOWER(TRIM(f.first_name)), '') END`;
+const LAST_NAME_SORT = `NULLIF(LOWER(TRIM(f.last_name)), '')`;
+
+const OFFICIALS_SORT_COLUMNS = {
+  status: ['f.status'],
+  office: ['f.office'],
+  position_title: ['f.position_title'],
+  first_name: [FIRST_NAME_SORT, LAST_NAME_SORT],
+  name: [FIRST_NAME_SORT, LAST_NAME_SORT],
+  region: ['f.strand'],
+  division: ['f.office'],
+  designation: ['f.designation'],
+  profile_completion: ['f.profile_completion']
+};
+
+// Every sort ends with the unique TLOid: without a total order, LIMIT/OFFSET pages repeat and skip rows.
+export const buildOfficialsOrderBy = (sortColumn, sortDirection) => {
+  const columns = Object.hasOwn(OFFICIALS_SORT_COLUMNS, sortColumn ?? '') ? OFFICIALS_SORT_COLUMNS[sortColumn] : null;
+  if (!columns) return ' ORDER BY f."TLOid" ASC';
+
+  const direction = sortDirection === 'desc' ? 'DESC' : 'ASC';
+  const terms = columns.map(column => `${column} ${direction} NULLS LAST`);
+  [FIRST_NAME_SORT, LAST_NAME_SORT]
+    .filter(column => !columns.includes(column))
+    .forEach(column => terms.push(`${column} ASC NULLS LAST`));
+  terms.push('f."TLOid" ASC');
+  return ` ORDER BY ${terms.join(', ')}`;
+};
+
 export const getOfficials = async (req, res) => {
   const allowedRoles = ['Personnel Admin', 'Admin', 'Super User', 'Central Office', 'Regional Office', 'School Division Office', 'RO HRMO', 'SDO HRMO'];
   if (!allowedRoles.includes(req.user.role)) {
@@ -263,23 +293,7 @@ export const getOfficials = async (req, res) => {
     WHERE f.rn = 1 
   `;
 
-  // Server-side sorting
-  const sortMap = {
-    'status': 'f.status',
-    'office': 'f.office',
-    'position_title': 'f.position_title',
-    'first_name': 'f.first_name',
-    'name': 'f.last_name',
-    'region': 'f.strand',
-    'division': 'f.office',
-    'designation': 'f.designation',
-    'profile_completion': 'f.profile_completion'
-  };
-  if (sortColumn && sortMap[sortColumn]) {
-    query += ` ORDER BY ${sortMap[sortColumn]} ${sortDirection === 'desc' ? 'DESC' : 'ASC'} NULLS LAST`;
-  } else {
-    query += ` ORDER BY f."TLOid" ASC`;
-  }
+  query += buildOfficialsOrderBy(sortColumn, sortDirection);
 
   // Server-side pagination
   if (page && limit) {
@@ -539,9 +553,6 @@ export const registerPersonnel = async (req, res) => {
   const client = await pool.connect();
   try {
     const normalizedEmail = email.toLowerCase().trim();
-    if (!normalizedEmail.endsWith('@deped.gov.ph')) {
-      return res.json({ success: false, error: 'Only @deped.gov.ph emails are allowed for DepEd Email.' });
-    }
 
     const mName = (middle_name || '').trim().toUpperCase();
     const fName = (first_name || '').trim().toUpperCase();
