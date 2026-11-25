@@ -178,7 +178,7 @@ const NexusGate = () => {
                         <h1 className="nexus-main-title">
                             Welcome to<br />
                             <span className="nexus-title-highlight">
-                                Insight<span className="nexus-red-text">ED</span> Nexus
+                                TIMON<span className="nexus-red-text"> PORTAL</span> 
                             </span>
                         </h1>
 
@@ -253,7 +253,7 @@ const NexusGate = () => {
 
             {/* Cards Container */}
             <div className="nexus-cards-stack ui-stagger">
-                {/* ── CARD 1: THIRD LEVEL PORTAL ── */}
+                {/* ── CARD 1: TIMON PORTAL ── */}
                 <motion.div
                     variants={direction === 'right' ? itemRight : itemLeft}
                     whileHover={{ y: -4, transition: { duration: 0.2 } }}
@@ -297,7 +297,7 @@ const NexusGate = () => {
 
                     <div className="nexus-card-body">
                         <span className="nexus-role-tag text-warning-700">FOR THIRD LEVEL PERSONNEL</span>
-                        <h2 className="nexus-card-title">Third Level Portal</h2>
+                        <h2 className="nexus-card-title">TIMON Portal</h2>
                         <p className="nexus-card-desc">
                             Access and update your professional and personnel information, upload supporting documents, and review your official Third Level profile records. The portal supports leadership profiling, talent management, succession planning, and other human resource management initiatives of the Department.
                         </p>
