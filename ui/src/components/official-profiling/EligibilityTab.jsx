@@ -9,7 +9,7 @@ const EligibilityTab = ({ isEditing, profile, setP, setProfile, tab }) => {
     <>
                                                 {tab === 'eligibility' && (
                                                     <div className="space-y-6">
-                                                        <div className="bg-white border-2 border-brand-800 rounded-lg p-6 lg:p-8 space-y-5 shadow-none">
+                                                        <div className="bg-white border-2 border-brand-800 rounded-lg p-5 lg:p-6 space-y-5 shadow-none">
                                                             <SectionLabel color="var(--color-brand-700)">Career Executive Service (CES)</SectionLabel>
                                                             <FloatingLabelInput as="select" label="CES Eligibility / Rank Status" disabled={!isEditing} value={profile.ces_stage || ''} onChange={e => setP('ces_stage', e.target.value)}>
                                                                     <option value="">Select Status</option>
@@ -34,7 +34,7 @@ const EligibilityTab = ({ isEditing, profile, setP, setProfile, tab }) => {
                                                             </Field>
                                                         </div>
 
-                                                        <div className="bg-white border-2 border-brand-800 rounded-lg p-6 lg:p-8 space-y-5 shadow-none">
+                                                        <div className="bg-white border-2 border-brand-800 rounded-lg p-5 lg:p-6 space-y-5 shadow-none">
                                                             <SectionLabel>Educational Management Test (EMT)</SectionLabel>
                                                             <Field label="Are you an EMT Passer?">
                                                                 <div className="flex gap-1.5 p-1 bg-slate-100/70 rounded-xl max-w-xs border-2 border-slate-200/40">
@@ -42,7 +42,7 @@ const EligibilityTab = ({ isEditing, profile, setP, setProfile, tab }) => {
                                                                         <button disabled={!isEditing}
                                                                             key={String(opt.val)}
                                                                             onClick={() => setP('emt_passer', opt.val)}
-                                                                            className={`flex-1 py-2 rounded-lg text-[15px] font-bold uppercase tracking-wider transition-all
+                                                                            className={`flex-1 py-2 rounded-lg text-[13px] font-bold uppercase tracking-wider transition-all
                                                                         ${profile.emt_passer === opt.val
                                                                                     ? (opt.val ? 'bg-brand-800 text-white shadow-sm shadow-blue-900/10' : 'bg-gold text-white shadow-sm shadow-red-900/10')
                                                                                     : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50'}`}
@@ -52,7 +52,7 @@ const EligibilityTab = ({ isEditing, profile, setP, setProfile, tab }) => {
                                                                     ))}
                                                                     <button
                                                                         onClick={() => setProfile(p => ({ ...p, emt_passer: null, emt_date: '' }))}
-                                                                        className="px-3 py-2 rounded-lg text-[13.5px] font-black uppercase tracking-wider text-slate-400 hover:text-slate-600 hover:bg-transparent transition-all"
+                                                                        className="px-3 py-2 rounded-lg text-[13px] font-black uppercase tracking-wider text-slate-400 hover:text-slate-600 hover:bg-transparent transition-all"
                                                                     >
                                                                         Clear
                                                                     </button>
@@ -68,12 +68,12 @@ const EligibilityTab = ({ isEditing, profile, setP, setProfile, tab }) => {
                                                             )}
                                                         </div>
 
-                                                        <div className="bg-white border-2 border-brand-800 rounded-lg p-6 lg:p-8 space-y-5 shadow-none">
+                                                        <div className="bg-white border-2 border-brand-800 rounded-lg p-5 lg:p-6 space-y-5 shadow-none">
                                                             <div className="flex items-center justify-between">
                                                                 <SectionLabel>Other Civil Service Eligibility</SectionLabel>
                                                                 {isEditing && <button
                                                                     onClick={() => setProfile(p => ({ ...p, eligibilities: [...(p.eligibilities || []), { eligibility: '', date: '', rating: '', place_of_assignment: '' }] }))}
-                                                                    className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 text-brand-700 text-[15px] font-black uppercase tracking-wider rounded-lg hover:bg-brand-700 hover:text-white transition-all shadow-sm"
+                                                                    className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 text-brand-700 text-[13px] font-black uppercase tracking-wider rounded-lg hover:bg-brand-700 hover:text-white transition-all shadow-sm"
                                                                 >
                                                                     <FiPlus size={12} /> Add Eligibility
                                                                 </button>}
@@ -81,7 +81,7 @@ const EligibilityTab = ({ isEditing, profile, setP, setProfile, tab }) => {
 
                                                             {(!profile.eligibilities || profile.eligibilities.length === 0) ? (
                                                                 <div className="p-8 text-center bg-slate-50 rounded-xl border-2 border-dashed border-slate-200">
-                                                                    <p className="text-[18px] font-semibold text-slate-400">No other eligibilities added.</p>
+                                                                    <p className="text-[15px] font-semibold text-slate-400">No other eligibilities added.</p>
                                                                 </div>
                                                             ) : (
                                                                 <div className="space-y-4">
