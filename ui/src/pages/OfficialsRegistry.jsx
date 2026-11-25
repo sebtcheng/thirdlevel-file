@@ -253,7 +253,7 @@ const OfficialsRegistry = () => {
     const [offices, setOffices] = useState([]);
     const [tabPositions, setTabPositions] = useState([]); // Positions specifically for the active tab
     const [designations, setDesignations] = useState([]);
-    const [sortConfig, setSortConfig] = useState({ key: 'status', direction: 'asc' });
+    const [sortConfig, setSortConfig] = useState({ key: 'name', direction: 'asc' });
     const [tableFilters, setTableFilters] = useState({});
     const [currentPage, setCurrentPage] = useState(1);
     const [oicOnly, setOicOnly] = useState(false);
