@@ -17,9 +17,9 @@ export const TABS = [
 // All side tabs whose completion drives the progress bar.
 const CONTENT_TABS = ['personal', 'eligibility', 'experience', 'education', 'performance', 'trainings', 'achievements', 'documents', 'legal', 'summary'];
 
-export const inp = 'w-full bg-white border-2 border-slate-200 focus:border-brand-700 focus:ring-1 focus:ring-brand-700 rounded-lg py-2.5 px-4 text-[18px] font-semibold text-slate-800 outline-none transition-all placeholder:text-slate-400/80 shadow-none';
+export const inp = 'w-full h-11 md:h-10 !py-0 !border !shadow-none focus:border-brand-700 focus:ring-1 focus:ring-brand-700 px-3 !text-[15px] font-semibold text-slate-800 outline-none transition-all placeholder:text-slate-400/80';
 
-export const sel = 'w-full bg-white border-2 border-slate-200 focus:border-brand-700 focus:ring-1 focus:ring-brand-700 rounded-lg py-2.5 px-4 text-[18px] font-semibold text-slate-800 outline-none transition-all shadow-none';
+export const sel = 'w-full bg-white border-2 border-slate-200 focus:border-brand-700 focus:ring-1 focus:ring-brand-700 rounded-lg py-2.5 px-4 text-[15px] font-semibold text-slate-800 outline-none transition-all shadow-none';
 
 export const PREVIOUS_POSITION_OPTIONS = [
     'Secretary',

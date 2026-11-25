@@ -13,13 +13,13 @@ const MobileToggleBar = ({ dataSource, isTabCompleted, setIsMobileMenuOpen, setT
                                         {React.createElement(TABS.find(t => t.id === tab)?.icon || FiUser, { size: 16 })}
                                     </div>
                                     <div>
-                                        <p className="text-[13.5px] font-bold text-slate-400 uppercase tracking-widest leading-none">Active Section</p>
-                                        <p className="text-[18px] font-black text-brand-800 uppercase tracking-wider mt-0.5">{TABS.find(t => t.id === tab)?.label}</p>
+                                        <p className="text-[13px] font-bold text-slate-400 uppercase tracking-widest leading-none">Active Section</p>
+                                        <p className="text-[15px] font-black text-brand-800 uppercase tracking-wider mt-0.5">{TABS.find(t => t.id === tab)?.label}</p>
                                     </div>
                                 </div>
                                 <button
                                     onClick={() => setIsMobileMenuOpen(true)}
-                                    className="flex items-center gap-1.5 px-3 py-1.5 bg-brand-800/10 hover:bg-brand-800/20 text-brand-800 text-[18px] font-black rounded-lg transition-all border-2 border-brand-700/10"
+                                    className="flex items-center gap-1.5 px-3 py-1.5 bg-brand-800/10 hover:bg-brand-800/20 text-brand-800 text-[15px] font-black rounded-lg transition-all border-2 border-brand-700/10"
                                 >
                                     <FiList size={14} /> Full Menu
                                 </button>

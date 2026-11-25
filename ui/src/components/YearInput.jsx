@@ -71,8 +71,8 @@ const YearInput = ({
             {/* Trigger */}
             <div
                 onClick={() => !disabled && setIsOpen(!isOpen)}
-                className={`w-full bg-white border-2 ${errorText ? 'border-red-400' : isOpen ? 'border-brand-800 ring-2 ring-brand-800/10' : 'border-slate-200 hover:border-slate-300'} 
-                    rounded-xl py-2.5 pl-10 pr-8 text-[21px] transition-all shadow-sm cursor-pointer select-none
+                className={`w-full bg-white border ${errorText ? 'border-red-400' : isOpen ? 'border-brand-800 ring-2 ring-brand-800/10' : 'border-slate-200 hover:border-slate-300'} 
+                    rounded-xl h-11 md:h-10 flex items-center pl-10 pr-8 text-[15px] transition-all shadow-sm cursor-pointer select-none
                     ${disabled ? 'bg-slate-50 text-slate-500 cursor-not-allowed opacity-70' : 'text-slate-800'}`}
             >
                 <FiCalendar className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={15} />
@@ -109,7 +109,7 @@ const YearInput = ({
                             >
                                 <FiChevronLeft size={16} />
                             </button>
-                            <span className="text-[18px] font-black text-white uppercase tracking-widest">
+                            <span className="text-[15px] font-black text-white uppercase tracking-widest">
                                 {yearsGrid[0]} — {yearsGrid[yearsGrid.length - 1]}
                             </span>
                             <button
@@ -133,7 +133,7 @@ const YearInput = ({
                                         key={yr}
                                         onClick={(e) => { e.stopPropagation(); if (!isDisabled) handleSelect(yr); }}
                                         disabled={isDisabled}
-                                        className={`relative py-2.5 rounded-xl text-[18px] font-bold transition-all duration-200
+                                        className={`relative py-2.5 rounded-xl text-[15px] font-bold transition-all duration-200
                                             ${isSelected
                                                 ? 'bg-brand-800 text-white shadow-md shadow-blue-900/20 scale-[1.02]'
                                                 : isDisabled
@@ -154,13 +154,13 @@ const YearInput = ({
                         <div className="flex items-center justify-between px-3 pb-3 pt-1 border-t-2 border-slate-100 mt-1">
                             <button
                                 onClick={(e) => { e.stopPropagation(); handleSelect(currentYear); }}
-                                className="text-[15px] font-bold text-brand-800 uppercase tracking-wider hover:underline transition-all px-2 py-1 rounded-lg hover:bg-brand-800/5"
+                                className="text-[13px] font-bold text-brand-800 uppercase tracking-wider hover:underline transition-all px-2 py-1 rounded-lg hover:bg-brand-800/5"
                             >
                                 This Year
                             </button>
                             <button
                                 onClick={(e) => { e.stopPropagation(); handleClear(e); }}
-                                className="text-[15px] font-bold text-slate-400 uppercase tracking-wider hover:text-red-500 hover:underline transition-all px-2 py-1 rounded-lg hover:bg-red-50"
+                                className="text-[13px] font-bold text-slate-400 uppercase tracking-wider hover:text-red-500 hover:underline transition-all px-2 py-1 rounded-lg hover:bg-red-50"
                             >
                                 Clear
                             </button>
@@ -170,7 +170,7 @@ const YearInput = ({
             </AnimatePresence>
 
             {errorText && (
-                <p className="text-red-500 text-[15px] mt-1 ml-1 font-medium">{errorText}</p>
+                <p className="text-red-500 text-[13px] mt-1 ml-1 font-medium">{errorText}</p>
             )}
         </div>
     );

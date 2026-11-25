@@ -1621,7 +1621,7 @@ const OfficialProfiling = () => {
                         <MobileToggleBar dataSource={dataSource} isTabCompleted={isTabCompleted} setIsMobileMenuOpen={setIsMobileMenuOpen} setTab={setTab} tab={tab} />
 
                         {/* Scrollable Form Area */}
-                        <div className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-10 bg-transparent pb-32 lg:pb-24">
+                        <div className="flex-1 overflow-y-auto p-4 sm:p-6 bg-transparent pb-32 lg:pb-6">
                             <div className="max-w-[1400px] w-full mx-auto">
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-start">
                                     <div className="md:col-span-3">
