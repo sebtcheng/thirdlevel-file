@@ -13,9 +13,9 @@ const SummaryTab = ({ applicationStatus, certified, certifying, completeness, da
                                                         <div className="space-y-6">
 
                                                             {/* PROFILE SUMMARY */}
-                                                            <div className="bg-white rounded-2xl border-2 border-slate-200 shadow-sm p-8 relative">
-                                                                <div className="absolute top-8 right-8 z-[51]">
-                                                                    <button onClick={() => setExportModalOpen(!exportModalOpen)} className="flex items-center gap-2 bg-brand-700 border-2 border-blue-400/30 px-5 py-2.5 rounded-lg text-white hover:bg-blue-700 font-bold text-[16.5px] transition-all shadow-sm relative z-[51]">
+                                                            <div className="bg-white rounded-2xl border-2 border-slate-200 shadow-sm p-6 relative">
+                                                                <div className="absolute top-6 right-6 z-[51]">
+                                                                    <button onClick={() => setExportModalOpen(!exportModalOpen)} className="flex items-center gap-2 bg-brand-700 border-2 border-blue-400/30 px-5 py-2.5 rounded-lg text-white hover:bg-blue-700 font-bold text-[15px] transition-all shadow-sm relative z-[51]">
                                                                         <FiDownload size={18} /> Export Profile
                                                                     </button>
                                                                     <AnimatePresence>
@@ -339,39 +339,39 @@ const SummaryTab = ({ applicationStatus, certified, certifying, completeness, da
 
                                                                 <div className="flex items-center gap-3 mb-8">
                                                                     <FiUser className="text-brand-800" size={24} />
-                                                                    <h2 className="text-[21px] font-black text-brand-800 uppercase tracking-widest">Profile Summary</h2>
+                                                                    <h2 className="text-[16px] font-black text-brand-800 uppercase tracking-widest">Profile Summary</h2>
                                                                 </div>
 
                                                                 {/* Personal Information */}
                                                                 <div className="mb-8">
-                                                                    <h3 className="text-[15px] font-bold text-slate-400 uppercase tracking-widest mb-4">Personal Information</h3>
+                                                                    <h3 className="text-[13px] font-bold text-slate-400 uppercase tracking-widest mb-4">Personal Information</h3>
                                                                     <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-6">
-                                                                        <div><p className="text-[15px] text-slate-400 mb-1">First Name</p><p className="text-[18px] font-black text-slate-800 uppercase">{profile.first_name || '—'}</p></div>
-                                                                        <div><p className="text-[15px] text-slate-400 mb-1">Last Name</p><p className="text-[18px] font-black text-slate-800 uppercase">{profile.last_name || '—'}</p></div>
-                                                                        <div><p className="text-[15px] text-slate-400 mb-1">Middle Name</p><p className="text-[18px] font-black text-slate-800 uppercase">{profile.middle_name || '—'}</p></div>
-                                                                        <div><p className="text-[15px] text-slate-400 mb-1">Suffix</p><p className="text-[18px] font-black text-slate-800 uppercase">{sanitizeSuffix(profile.suffix) || '—'}</p></div>
+                                                                        <div><p className="text-[13px] text-slate-400 mb-1">First Name</p><p className="text-[15px] font-black text-slate-800 uppercase">{profile.first_name || '—'}</p></div>
+                                                                        <div><p className="text-[13px] text-slate-400 mb-1">Last Name</p><p className="text-[15px] font-black text-slate-800 uppercase">{profile.last_name || '—'}</p></div>
+                                                                        <div><p className="text-[13px] text-slate-400 mb-1">Middle Name</p><p className="text-[15px] font-black text-slate-800 uppercase">{profile.middle_name || '—'}</p></div>
+                                                                        <div><p className="text-[13px] text-slate-400 mb-1">Suffix</p><p className="text-[15px] font-black text-slate-800 uppercase">{sanitizeSuffix(profile.suffix) || '—'}</p></div>
                                                                         <div></div>{/* Empty column for alignment if needed */}
 
                                                                         <div className="flex items-start gap-2">
                                                                             <FiUser size={18} className="text-blue-500 mt-0.5" />
-                                                                            <div><p className="text-[15px] text-slate-400 mb-1">Gender</p><p className="text-[18px] font-black text-slate-800 uppercase">{profile.gender || '—'}</p></div>
+                                                                            <div><p className="text-[13px] text-slate-400 mb-1">Gender</p><p className="text-[15px] font-black text-slate-800 uppercase">{profile.gender || '—'}</p></div>
                                                                         </div>
                                                                         <div className="flex items-start gap-2">
                                                                             <FiCalendar size={18} className="text-blue-500 mt-0.5" />
-                                                                            <div><p className="text-[15px] text-slate-400 mb-1">Date of Birth</p><p className="text-[18px] font-black text-slate-800 uppercase">{profile.date_of_birth || '—'}</p></div>
+                                                                            <div><p className="text-[13px] text-slate-400 mb-1">Date of Birth</p><p className="text-[15px] font-black text-slate-800 uppercase">{profile.date_of_birth || '—'}</p></div>
                                                                         </div>
                                                                         <div className="flex items-start gap-2">
                                                                             <FiUser size={18} className="text-blue-500 mt-0.5" />
-                                                                            <div><p className="text-[15px] text-slate-400 mb-1">Age</p><p className="text-[18px] font-black text-slate-800 uppercase">{profile.age || '—'}</p></div>
+                                                                            <div><p className="text-[13px] text-slate-400 mb-1">Age</p><p className="text-[15px] font-black text-slate-800 uppercase">{profile.age || '—'}</p></div>
                                                                         </div>
                                                                         <div className="flex items-start gap-2">
                                                                             <FiHeart size={18} className="text-blue-500 mt-0.5" />
-                                                                            <div><p className="text-[15px] text-slate-400 mb-1">Civil Status</p><p className="text-[18px] font-black text-slate-800 uppercase">{profile.civil_status || '—'}</p></div>
+                                                                            <div><p className="text-[13px] text-slate-400 mb-1">Civil Status</p><p className="text-[15px] font-black text-slate-800 uppercase">{profile.civil_status || '—'}</p></div>
                                                                         </div>
                                                                         <div className="flex items-start gap-2">
                                                                             <FiStar size={18} className="text-blue-500 mt-0.5" />
-                                                                            <div><p className="text-[15px] text-slate-400 mb-1">Target Application</p>
-                                                                                <p className="text-[18px] font-black text-slate-800 uppercase">
+                                                                            <div><p className="text-[13px] text-slate-400 mb-1">Target Application</p>
+                                                                                <p className="text-[15px] font-black text-slate-800 uppercase">
                                                                                     {(() => {
                                                                                         const vac = targetVacancyId ? vacancies.find(x => x.TLOid === targetVacancyId) : null;
                                                                                         return vac ? vac.position_title : (profile.applied_position || profile.position_title || 'General Roster');
@@ -386,26 +386,26 @@ const SummaryTab = ({ applicationStatus, certified, certifying, completeness, da
 
                                                                 {/* Designation & Appointment */}
                                                                 <div className="mb-8">
-                                                                    <h3 className="text-[15px] font-bold text-slate-400 uppercase tracking-widest mb-4">Designation & Appointment</h3>
+                                                                    <h3 className="text-[13px] font-bold text-slate-400 uppercase tracking-widest mb-4">Designation & Appointment</h3>
                                                                     <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-6">
                                                                         <div className="col-span-2">
-                                                                            <p className="text-[15px] text-slate-400 mb-1">Position Title</p>
+                                                                            <p className="text-[13px] text-slate-400 mb-1">Position Title</p>
                                                                             <div className="flex items-center gap-2">
-                                                                                <p className="text-[18px] font-black text-slate-800 uppercase">{profile.position_title || '—'}</p>
-                                                                                {profile.is_oic && <span className="px-1.5 py-0.5 rounded bg-gold text-brand-800 text-[13.5px] font-black uppercase">OIC</span>}
+                                                                                <p className="text-[15px] font-black text-slate-800 uppercase">{profile.position_title || '—'}</p>
+                                                                                {profile.is_oic && <span className="px-1.5 py-0.5 rounded bg-gold text-brand-800 text-[13px] font-black uppercase">OIC</span>}
                                                                             </div>
                                                                         </div>
                                                                         <div className="flex items-start gap-2">
                                                                             <FiCalendar size={18} className="text-blue-500 mt-0.5" />
-                                                                            <div><p className="text-[15px] text-slate-400 mb-1">Date of Present Position</p><p className="text-[18px] font-black text-slate-800 uppercase">{profile.appointment_date || '—'}</p></div>
+                                                                            <div><p className="text-[13px] text-slate-400 mb-1">Date of Present Position</p><p className="text-[15px] font-black text-slate-800 uppercase">{profile.appointment_date || '—'}</p></div>
                                                                         </div>
                                                                         <div className="flex items-start gap-2">
                                                                             <FiHome size={18} className="text-blue-500 mt-0.5" />
-                                                                            <div><p className="text-[15px] text-slate-400 mb-1">Permanent Address</p><p className="text-[18px] font-black text-slate-800 uppercase">{profile.permanent_address || '—'}</p></div>
+                                                                            <div><p className="text-[13px] text-slate-400 mb-1">Permanent Address</p><p className="text-[15px] font-black text-slate-800 uppercase">{profile.permanent_address || '—'}</p></div>
                                                                         </div>
                                                                         <div className="flex items-start gap-2">
                                                                             <FiMapPin size={18} className="text-blue-500 mt-0.5" />
-                                                                            <div><p className="text-[15px] text-slate-400 mb-1">Temporary Address</p><p className="text-[18px] font-black text-slate-800 uppercase">{profile.temporary_address || '—'}</p></div>
+                                                                            <div><p className="text-[13px] text-slate-400 mb-1">Temporary Address</p><p className="text-[15px] font-black text-slate-800 uppercase">{profile.temporary_address || '—'}</p></div>
                                                                         </div>
                                                                     </div>
                                                                 </div>
@@ -414,20 +414,20 @@ const SummaryTab = ({ applicationStatus, certified, certifying, completeness, da
 
                                                                 {/* Eligibility */}
                                                                 <div>
-                                                                    <h3 className="text-[15px] font-bold text-slate-400 uppercase tracking-widest mb-4">Eligibility</h3>
+                                                                    <h3 className="text-[13px] font-bold text-slate-400 uppercase tracking-widest mb-4">Eligibility</h3>
                                                                     <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-6 mb-8">
-                                                                        <div className="col-span-2"><p className="text-[15px] text-slate-400 mb-1">Career Executive Service (CES)</p><p className="text-[18px] font-black text-slate-800 uppercase">{profile.ces_stage || '—'}</p></div>
+                                                                        <div className="col-span-2"><p className="text-[13px] text-slate-400 mb-1">Career Executive Service (CES)</p><p className="text-[15px] font-black text-slate-800 uppercase">{profile.ces_stage || '—'}</p></div>
                                                                         <div className="flex items-start gap-2">
                                                                             <FiCalendar size={18} className="text-blue-500 mt-0.5" />
-                                                                            <div><p className="text-[15px] text-slate-400 mb-1">CES Conferment Date</p><p className="text-[18px] font-black text-slate-800 uppercase">{profile.ces_conferment_date || '—'}</p></div>
+                                                                            <div><p className="text-[13px] text-slate-400 mb-1">CES Conferment Date</p><p className="text-[15px] font-black text-slate-800 uppercase">{profile.ces_conferment_date || '—'}</p></div>
                                                                         </div>
                                                                         <div className="flex items-start gap-2">
                                                                             <FiBookOpen size={18} className="text-blue-500 mt-0.5" />
-                                                                            <div><p className="text-[15px] text-slate-400 mb-1">Educational Management Test (EMT)</p><p className="text-[18px] font-black text-slate-800 uppercase">{profile.emt_passer === true ? 'Yes' : profile.emt_passer === false ? 'No' : '—'}</p></div>
+                                                                            <div><p className="text-[13px] text-slate-400 mb-1">Educational Management Test (EMT)</p><p className="text-[15px] font-black text-slate-800 uppercase">{profile.emt_passer === true ? 'Yes' : profile.emt_passer === false ? 'No' : '—'}</p></div>
                                                                         </div>
                                                                         <div className="flex items-start gap-2">
                                                                             <FiCalendar size={18} className="text-blue-500 mt-0.5" />
-                                                                            <div><p className="text-[15px] text-slate-400 mb-1">EMT Date</p><p className="text-[18px] font-black text-slate-800 uppercase">{profile.emt_date || '—'}</p></div>
+                                                                            <div><p className="text-[13px] text-slate-400 mb-1">EMT Date</p><p className="text-[15px] font-black text-slate-800 uppercase">{profile.emt_date || '—'}</p></div>
                                                                         </div>
                                                                     </div>
 
@@ -444,7 +444,7 @@ const SummaryTab = ({ applicationStatus, certified, certifying, completeness, da
 
                                                                                 return (
                                                                                     <div key={idx} className="flex items-center justify-between">
-                                                                                        <div className="flex items-center gap-2 text-[16.5px]">
+                                                                                        <div className="flex items-center gap-2 text-[15px]">
                                                                                             <span className="font-black text-blue-600 uppercase w-24">{name}:</span>
                                                                                             <span className="text-slate-600">{meta || '—'}</span>
                                                                                         </div>
@@ -469,12 +469,12 @@ const SummaryTab = ({ applicationStatus, certified, certifying, completeness, da
                                                                         <FiAward size={22} />
                                                                     </div>
                                                                     <div>
-                                                                        <h2 className="text-[21px] font-black text-brand-800 uppercase tracking-widest leading-tight">Education</h2>
-                                                                        <p className="text-[18px] font-medium text-slate-400 mt-0.5">Your academic background and qualifications</p>
+                                                                        <h2 className="text-[16px] font-black text-brand-800 uppercase tracking-widest leading-tight">Education</h2>
+                                                                        <p className="text-[15px] font-medium text-slate-400 mt-0.5">Your academic background and qualifications</p>
                                                                     </div>
                                                                 </div>
 
-                                                                <div className="bg-white rounded-2xl border-2 border-slate-200 shadow-sm p-6 lg:p-8">
+                                                                <div className="bg-white rounded-2xl border-2 border-slate-200 shadow-sm p-6 lg:p-6">
                                                                     {(!profile.education_degrees || profile.education_degrees.length === 0) ? (
                                                                         (profile.highest_education || profile.education_program) ? (
                                                                             <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-12 gap-y-8 relative">
@@ -483,8 +483,8 @@ const SummaryTab = ({ applicationStatus, certified, certifying, completeness, da
                                                                                         <FiAward size={18} />
                                                                                     </div>
                                                                                     <div className="flex flex-col gap-1 min-w-0 mt-0.5">
-                                                                                        <span className="text-[13.5px] font-black text-slate-400 uppercase tracking-widest truncate">Highest Education</span>
-                                                                                        <span className="text-[18px] font-black text-slate-800 uppercase break-words">{profile.highest_education || '—'}</span>
+                                                                                        <span className="text-[13px] font-black text-slate-400 uppercase tracking-widest truncate">Highest Education</span>
+                                                                                        <span className="text-[15px] font-black text-slate-800 uppercase break-words">{profile.highest_education || '—'}</span>
                                                                                     </div>
                                                                                 </div>
                                                                                 <div className="flex gap-4 items-start">
@@ -492,8 +492,8 @@ const SummaryTab = ({ applicationStatus, certified, certifying, completeness, da
                                                                                         <FiFileText size={18} />
                                                                                     </div>
                                                                                     <div className="flex flex-col gap-1 min-w-0 mt-0.5">
-                                                                                        <span className="text-[13.5px] font-black text-slate-400 uppercase tracking-widest truncate">Specific Degree</span>
-                                                                                        <span className="text-[18px] font-black text-slate-800 uppercase break-words">{profile.specific_degree || '—'}</span>
+                                                                                        <span className="text-[13px] font-black text-slate-400 uppercase tracking-widest truncate">Specific Degree</span>
+                                                                                        <span className="text-[15px] font-black text-slate-800 uppercase break-words">{profile.specific_degree || '—'}</span>
                                                                                     </div>
                                                                                 </div>
 
@@ -504,8 +504,8 @@ const SummaryTab = ({ applicationStatus, certified, certifying, completeness, da
                                                                                         <FiBookOpen size={18} />
                                                                                     </div>
                                                                                     <div className="flex flex-col gap-1 min-w-0 mt-0.5">
-                                                                                        <span className="text-[13.5px] font-black text-slate-400 uppercase tracking-widest truncate">Program / Course</span>
-                                                                                        <span className="text-[18px] font-black text-slate-800 uppercase break-words">{profile.education_program || '—'}</span>
+                                                                                        <span className="text-[13px] font-black text-slate-400 uppercase tracking-widest truncate">Program / Course</span>
+                                                                                        <span className="text-[15px] font-black text-slate-800 uppercase break-words">{profile.education_program || '—'}</span>
                                                                                     </div>
                                                                                 </div>
                                                                                 <div className="flex gap-4 items-start">
@@ -513,13 +513,13 @@ const SummaryTab = ({ applicationStatus, certified, certifying, completeness, da
                                                                                         <FiCalendar size={18} />
                                                                                     </div>
                                                                                     <div className="flex flex-col gap-1 min-w-0 mt-0.5">
-                                                                                        <span className="text-[13.5px] font-black text-slate-400 uppercase tracking-widest truncate">Year Graduated</span>
-                                                                                        <span className="text-[18px] font-black text-slate-800 uppercase break-words">{profile.education_year_graduated || '—'}</span>
+                                                                                        <span className="text-[13px] font-black text-slate-400 uppercase tracking-widest truncate">Year Graduated</span>
+                                                                                        <span className="text-[15px] font-black text-slate-800 uppercase break-words">{profile.education_year_graduated || '—'}</span>
                                                                                     </div>
                                                                                 </div>
                                                                             </div>
                                                                         ) : (
-                                                                            <p className="text-[21px] font-bold text-slate-400 text-center py-4">No degrees added</p>
+                                                                            <p className="text-[16px] font-bold text-slate-400 text-center py-4">No degrees added</p>
                                                                         )
                                                                     ) : (
                                                                         <div className="space-y-12">
@@ -530,8 +530,8 @@ const SummaryTab = ({ applicationStatus, certified, certifying, completeness, da
                                                                                             <FiAward size={18} />
                                                                                         </div>
                                                                                         <div className="flex flex-col gap-1 min-w-0 mt-0.5">
-                                                                                            <span className="text-[13.5px] font-black text-slate-400 uppercase tracking-widest truncate">Highest Education</span>
-                                                                                            <span className="text-[18px] font-black text-slate-800 uppercase break-words">{deg.highest_education || '—'}</span>
+                                                                                            <span className="text-[13px] font-black text-slate-400 uppercase tracking-widest truncate">Highest Education</span>
+                                                                                            <span className="text-[15px] font-black text-slate-800 uppercase break-words">{deg.highest_education || '—'}</span>
                                                                                         </div>
                                                                                     </div>
                                                                                     <div className="flex gap-4 items-start">
@@ -539,8 +539,8 @@ const SummaryTab = ({ applicationStatus, certified, certifying, completeness, da
                                                                                             <FiFileText size={18} />
                                                                                         </div>
                                                                                         <div className="flex flex-col gap-1 min-w-0 mt-0.5">
-                                                                                            <span className="text-[13.5px] font-black text-slate-400 uppercase tracking-widest truncate">Specific Degree</span>
-                                                                                            <span className="text-[18px] font-black text-slate-800 uppercase break-words">{deg.specific_degree || '—'}</span>
+                                                                                            <span className="text-[13px] font-black text-slate-400 uppercase tracking-widest truncate">Specific Degree</span>
+                                                                                            <span className="text-[15px] font-black text-slate-800 uppercase break-words">{deg.specific_degree || '—'}</span>
                                                                                         </div>
                                                                                     </div>
 
@@ -551,8 +551,8 @@ const SummaryTab = ({ applicationStatus, certified, certifying, completeness, da
                                                                                             <FiBookOpen size={18} />
                                                                                         </div>
                                                                                         <div className="flex flex-col gap-1 min-w-0 mt-0.5">
-                                                                                            <span className="text-[13.5px] font-black text-slate-400 uppercase tracking-widest truncate">Program / Course</span>
-                                                                                            <span className="text-[18px] font-black text-slate-800 uppercase break-words">{deg.education_program || '—'}</span>
+                                                                                            <span className="text-[13px] font-black text-slate-400 uppercase tracking-widest truncate">Program / Course</span>
+                                                                                            <span className="text-[15px] font-black text-slate-800 uppercase break-words">{deg.education_program || '—'}</span>
                                                                                         </div>
                                                                                     </div>
                                                                                     <div className="flex gap-4 items-start">
@@ -560,8 +560,8 @@ const SummaryTab = ({ applicationStatus, certified, certifying, completeness, da
                                                                                             <FiCalendar size={18} />
                                                                                         </div>
                                                                                         <div className="flex flex-col gap-1 min-w-0 mt-0.5">
-                                                                                            <span className="text-[13.5px] font-black text-slate-400 uppercase tracking-widest truncate">Year Graduated</span>
-                                                                                            <span className="text-[18px] font-black text-slate-800 uppercase break-words">{deg.education_year_graduated || '—'}</span>
+                                                                                            <span className="text-[13px] font-black text-slate-400 uppercase tracking-widest truncate">Year Graduated</span>
+                                                                                            <span className="text-[15px] font-black text-slate-800 uppercase break-words">{deg.education_year_graduated || '—'}</span>
                                                                                         </div>
                                                                                     </div>
                                                                                 </div>
@@ -570,25 +570,25 @@ const SummaryTab = ({ applicationStatus, certified, certifying, completeness, da
                                                                     )}
 
                                                                     {profile.other_courses && profile.other_courses.length > 0 && (
-                                                                        <div className="mt-8 bg-brand-50 rounded-2xl p-6 lg:p-8 border-2 border-slate-200">
+                                                                        <div className="mt-8 bg-brand-50 rounded-2xl p-6 lg:p-6 border-2 border-slate-200">
                                                                             <div className="flex items-center gap-3 mb-6">
                                                                                 <div className="w-8 h-8 bg-blue-100/70 text-brand-700 rounded-full flex items-center justify-center shrink-0">
                                                                                     <FiLayers size={16} />
                                                                                 </div>
-                                                                                <h3 className="text-[16.5px] font-black text-brand-700 uppercase tracking-widest">Other Courses</h3>
+                                                                                <h3 className="text-[15px] font-black text-brand-700 uppercase tracking-widest">Other Courses</h3>
                                                                             </div>
 
                                                                             <div className="space-y-4">
                                                                                 {profile.other_courses.map((course, idx) => (
                                                                                     <div key={idx} className={`flex items-start gap-5 ${idx !== profile.other_courses.length - 1 ? 'pb-4 border-b-2 border-dashed border-slate-200' : ''}`}>
-                                                                                        <div className="bg-blue-50/80 text-brand-700 px-3 py-2 rounded-xl text-[16.5px] font-black shrink-0 min-w-[70px] text-center uppercase tracking-wider border-2 border-blue-100/50 shadow-[0_1px_2px_rgb(var(--rgb-heading)/0.02)]">
+                                                                                        <div className="bg-blue-50/80 text-brand-700 px-3 py-2 rounded-xl text-[15px] font-black shrink-0 min-w-[70px] text-center uppercase tracking-wider border-2 border-blue-100/50 shadow-[0_1px_2px_rgb(var(--rgb-heading)/0.02)]">
                                                                                             {course.course ? (course.course.length > 8 ? course.course.substring(0, 8) + '...' : course.course) + ':' : '—:'}
                                                                                         </div>
                                                                                         <div className="flex flex-col gap-0.5 mt-1">
-                                                                                            <span className="text-[18px] font-black text-brand-800">
+                                                                                            <span className="text-[15px] font-black text-brand-800">
                                                                                                 {course.date_from ? new Date(course.date_from).toLocaleDateString() : '—'} to {course.date_to ? new Date(course.date_to).toLocaleDateString() : '—'}
                                                                                             </span>
-                                                                                            {course.details && <span className="text-[16.5px] font-bold text-slate-500">{course.details}</span>}
+                                                                                            {course.details && <span className="text-[15px] font-bold text-slate-500">{course.details}</span>}
                                                                                         </div>
                                                                                     </div>
                                                                                 ))}
@@ -598,46 +598,46 @@ const SummaryTab = ({ applicationStatus, certified, certifying, completeness, da
                                                                 </div>
                                                             </div>
                                                             {/* PERFORMANCE HISTORY */}
-                                                            <div className="bg-white rounded-2xl border-2 border-slate-200 shadow-sm p-8">
+                                                            <div className="bg-white rounded-2xl border-2 border-slate-200 shadow-sm p-6">
                                                                 <div className="flex items-center gap-3 mb-6">
                                                                     <FiBarChart2 className="text-brand-800" size={24} />
-                                                                    <h2 className="text-[21px] font-black text-brand-800 uppercase tracking-widest">Performance History</h2>
+                                                                    <h2 className="text-[16px] font-black text-brand-800 uppercase tracking-widest">Performance History</h2>
                                                                 </div>
 
                                                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                                                                     {/* Ratings */}
                                                                     <div className="border-b-2 md:border-b-0 md:border-r-2 border-slate-200 pb-4 md:pb-0 md:pr-4">
-                                                                        <p className="text-[15px] text-slate-400 mb-1">Latest Rating (1st)</p>
+                                                                        <p className="text-[13px] text-slate-400 mb-1">Latest Rating (1st)</p>
                                                                         <div className="flex items-center justify-between">
-                                                                            <p className="text-[21px] font-black text-slate-800">{profile.performance_rating_1 ? `${profile.performance_rating_1} (${profile.performance_rating_1_period})` : '—'}</p>
+                                                                            <p className="text-[16px] font-black text-slate-800">{profile.performance_rating_1 ? `${profile.performance_rating_1} (${profile.performance_rating_1_period})` : '—'}</p>
                                                                             <FiTrendingUp className="text-emerald-500" size={18} />
                                                                         </div>
                                                                     </div>
                                                                     <div className="border-b-2 md:border-b-0 md:border-r-2 border-slate-200 pb-4 md:pb-0 md:pr-4">
-                                                                        <p className="text-[15px] text-slate-400 mb-1">Previous Rating (2nd)</p>
+                                                                        <p className="text-[13px] text-slate-400 mb-1">Previous Rating (2nd)</p>
                                                                         <div className="flex items-center justify-between">
-                                                                            <p className="text-[21px] font-black text-slate-800">{profile.performance_rating_2 ? `${profile.performance_rating_2} (${profile.performance_rating_2_period})` : '—'}</p>
+                                                                            <p className="text-[16px] font-black text-slate-800">{profile.performance_rating_2 ? `${profile.performance_rating_2} (${profile.performance_rating_2_period})` : '—'}</p>
                                                                             <FiTrendingUp className="text-emerald-500" size={18} />
                                                                         </div>
                                                                     </div>
                                                                     <div className="pb-4 md:pb-0">
-                                                                        <p className="text-[15px] text-slate-400 mb-1">Oldest Rating (3rd)</p>
+                                                                        <p className="text-[13px] text-slate-400 mb-1">Oldest Rating (3rd)</p>
                                                                         <div className="flex items-center justify-between">
-                                                                            <p className="text-[21px] font-black text-slate-800">{profile.performance_rating_3 ? `${profile.performance_rating_3} (${profile.performance_rating_3_period})` : '—'}</p>
+                                                                            <p className="text-[16px] font-black text-slate-800">{profile.performance_rating_3 ? `${profile.performance_rating_3} (${profile.performance_rating_3_period})` : '—'}</p>
                                                                             <FiTrendingUp className="text-emerald-500" size={18} />
                                                                         </div>
                                                                     </div>
                                                                     <div className="border-b-2 md:border-b-0 md:border-r-2 border-slate-200 pb-4 md:pb-0 md:pr-4 md:-mt-4">
-                                                                        <p className="text-[15px] text-slate-400 mb-1">CSPMS 2nd Sem</p>
+                                                                        <p className="text-[13px] text-slate-400 mb-1">CSPMS 2nd Sem</p>
                                                                         <div className="flex items-center justify-between">
-                                                                            <p className="text-[21px] font-black text-slate-800">{profile.cespes_2_rating ? `${profile.cespes_2_rating} (${profile.cespes_rating_2_period})` : '—'}</p>
+                                                                            <p className="text-[16px] font-black text-slate-800">{profile.cespes_2_rating ? `${profile.cespes_2_rating} (${profile.cespes_rating_2_period})` : '—'}</p>
                                                                             <FiTrendingUp className="text-emerald-500" size={18} />
                                                                         </div>
                                                                     </div>
                                                                     <div className="pb-4 md:pb-0 md:-mt-4">
-                                                                        <p className="text-[15px] text-slate-400 mb-1">Total Managerial Experience</p>
+                                                                        <p className="text-[13px] text-slate-400 mb-1">Total Managerial Experience</p>
                                                                         <div className="flex items-center justify-between">
-                                                                            <p className="text-[21px] font-black text-slate-800">{profile.managerial_experience_total || '—'}</p>
+                                                                            <p className="text-[16px] font-black text-slate-800">{profile.managerial_experience_total || '—'}</p>
                                                                             <FiBriefcase className="text-blue-500" size={18} />
                                                                         </div>
                                                                     </div>
@@ -647,7 +647,7 @@ const SummaryTab = ({ applicationStatus, certified, certifying, completeness, da
                                                                 <div className="mt-8">
                                                                     <div className="flex items-center gap-2 mb-3">
                                                                         <FiAward className="text-amber-500" size={18} />
-                                                                        <h3 className="text-[15px] font-bold text-slate-400 uppercase tracking-widest">Notable Achievements</h3>
+                                                                        <h3 className="text-[13px] font-bold text-slate-400 uppercase tracking-widest">Notable Achievements</h3>
                                                                     </div>
                                                                     {Array.isArray(profile.notable_achievements) && profile.notable_achievements.length > 0 ? (
                                                                         <div className="pl-6 space-y-1">
@@ -656,14 +656,14 @@ const SummaryTab = ({ applicationStatus, certified, certifying, completeness, da
                                                                                 const year = typeof item === 'object' && item !== null ? item.year : '';
                                                                                 if (!title) return null;
                                                                                 return (
-                                                                                    <p key={i} className="text-[18px] font-black text-slate-800 uppercase">
+                                                                                    <p key={i} className="text-[15px] font-black text-slate-800 uppercase">
                                                                                         • {title} {year ? `(${year})` : ''}
                                                                                     </p>
                                                                                 );
                                                                             })}
                                                                         </div>
                                                                     ) : (
-                                                                        <p className="text-[18px] font-black text-slate-800 uppercase pl-6">—</p>
+                                                                        <p className="text-[15px] font-black text-slate-800 uppercase pl-6">—</p>
                                                                     )}
                                                                 </div>
 
@@ -672,15 +672,15 @@ const SummaryTab = ({ applicationStatus, certified, certifying, completeness, da
                                                                     <div className="mt-8">
                                                                         <div className="flex items-center gap-2 mb-3">
                                                                             <FiRotateCcw className="text-blue-500" size={18} />
-                                                                            <h3 className="text-[15px] font-bold text-slate-400 uppercase tracking-widest">Previous Position ({prevPositions.length})</h3>
+                                                                            <h3 className="text-[13px] font-bold text-slate-400 uppercase tracking-widest">Previous Position ({prevPositions.length})</h3>
                                                                         </div>
                                                                         <div className="pl-6 space-y-2">
                                                                             {prevPositions.map((p, i) => (
                                                                                 <div key={i} className="bg-slate-50 border-2 border-slate-200 rounded-lg p-4 flex gap-4">
-                                                                                    <span className="text-[18px] font-black text-slate-800">{i + 1}.</span>
+                                                                                    <span className="text-[15px] font-black text-slate-800">{i + 1}.</span>
                                                                                     <div>
-                                                                                        <p className="text-[18px] font-black text-slate-800 uppercase">{p.position_name || '—'}</p>
-                                                                                        <p className="text-[15px] text-slate-500 uppercase mt-0.5">{p.office} | {p.start_date ? `${p.start_date} - ${p.end_date || 'Present'}` : ''}</p>
+                                                                                        <p className="text-[15px] font-black text-slate-800 uppercase">{p.position_name || '—'}</p>
+                                                                                        <p className="text-[13px] text-slate-500 uppercase mt-0.5">{p.office} | {p.start_date ? `${p.start_date} - ${p.end_date || 'Present'}` : ''}</p>
                                                                                     </div>
                                                                                 </div>
                                                                             ))}
@@ -690,10 +690,10 @@ const SummaryTab = ({ applicationStatus, certified, certifying, completeness, da
                                                             </div>
 
                                                             {/* DOCUMENTS */}
-                                                            <div className="bg-white rounded-2xl border-2 border-slate-200 shadow-sm p-8">
+                                                            <div className="bg-white rounded-2xl border-2 border-slate-200 shadow-sm p-6">
                                                                 <div className="flex items-center gap-3 mb-6">
                                                                     <FiFileText className="text-brand-800" size={24} />
-                                                                    <h2 className="text-[21px] font-black text-brand-800 uppercase tracking-widest">Documents</h2>
+                                                                    <h2 className="text-[16px] font-black text-brand-800 uppercase tracking-widest">Documents</h2>
                                                                 </div>
 
                                                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -705,20 +705,20 @@ const SummaryTab = ({ applicationStatus, certified, certifying, completeness, da
                                                                         <div key={d.key} className={`flex flex-col items-center gap-3 p-6 rounded-2xl border-2 ${profile[d.dbKey] ? 'bg-emerald-50/30 border-emerald-200' : 'bg-transparent border-slate-200'}`}>
                                                                             {d.key === 'photo' ? <FiCamera size={28} className={profile[d.dbKey] ? 'text-emerald-500' : 'text-slate-300'} /> : <FiFileText size={28} className={profile[d.dbKey] ? 'text-emerald-500' : 'text-slate-300'} />}
                                                                             <div className="text-center">
-                                                                                <p className={`text-[18px] font-black uppercase tracking-wider ${profile[d.dbKey] ? 'text-emerald-700' : 'text-slate-500'}`}>{d.label}</p>
-                                                                                <p className={`text-[13.5px] font-bold uppercase tracking-widest mt-1 ${profile[d.dbKey] ? 'text-emerald-500' : 'text-slate-400'}`}>{profile[d.dbKey] ? 'Uploaded' : 'Missing'}</p>
+                                                                                <p className={`text-[15px] font-black uppercase tracking-wider ${profile[d.dbKey] ? 'text-emerald-700' : 'text-slate-500'}`}>{d.label}</p>
+                                                                                <p className={`text-[13px] font-bold uppercase tracking-widest mt-1 ${profile[d.dbKey] ? 'text-emerald-500' : 'text-slate-400'}`}>{profile[d.dbKey] ? 'Uploaded' : 'Missing'}</p>
                                                                             </div>
 
                                                                             <div className="flex gap-2 w-full mt-4">
                                                                                 <div className="relative group/upload flex-1">
                                                                                     <input disabled={!isEditing} type="file" accept={d.accept} onChange={(e) => { const file = e.target.files[0]; if (file) handleFileUpload(file, d.key); }} className="absolute inset-0 opacity-0 cursor-pointer z-10 w-full" />
-                                                                                    <div className="flex items-center justify-center gap-1.5 border-2 border-slate-200 rounded-lg px-2 py-2 text-[15px] font-bold transition-all bg-white text-blue-700 hover:border-blue-300 w-full">
+                                                                                    <div className="flex items-center justify-center gap-1.5 border-2 border-slate-200 rounded-lg px-2 py-2 text-[13px] font-bold transition-all bg-white text-blue-700 hover:border-blue-300 w-full">
                                                                                         <FiUpload size={14} className={uploadingDocs[d.key] ? 'animate-bounce' : ''} />
                                                                                         <span>{uploadingDocs[d.key] ? '...' : 'Upload'}</span>
                                                                                     </div>
                                                                                 </div>
                                                                                 {profile[d.dbKey] && (
-                                                                                    <button onClick={() => handleViewDocument(profile[d.dbKey])} className="flex-1 flex items-center justify-center gap-1.5 border-2 border-slate-200 rounded-lg px-2 py-2 text-[15px] font-bold transition-all bg-white hover:border-blue-300 text-blue-700">
+                                                                                    <button onClick={() => handleViewDocument(profile[d.dbKey])} className="flex-1 flex items-center justify-center gap-1.5 border-2 border-slate-200 rounded-lg px-2 py-2 text-[13px] font-bold transition-all bg-white hover:border-blue-300 text-blue-700">
                                                                                         <FiEye size={14} />
                                                                                         <span>View</span>
                                                                                     </button>
@@ -730,7 +730,7 @@ const SummaryTab = ({ applicationStatus, certified, certifying, completeness, da
                                                             </div>
 
                                                             {/* LEGAL DISCLOSURES */}
-                                                            <div className="bg-white rounded-2xl border-2 border-slate-200 shadow-sm p-8">
+                                                            <div className="bg-white rounded-2xl border-2 border-slate-200 shadow-sm p-6">
                                                                 <div className="flex items-center justify-between mb-4 cursor-pointer" onClick={() => {
                                                                     // Let's implement an inline toggle state for Legal Disclosures
                                                                     const el = document.getElementById('legal-collapse');
@@ -741,7 +741,7 @@ const SummaryTab = ({ applicationStatus, certified, certifying, completeness, da
                                                                 }}>
                                                                     <div className="flex items-center gap-3">
                                                                         <FiShield className="text-blue-600" size={24} />
-                                                                        <h2 className="text-[21px] font-black text-slate-800 uppercase tracking-widest">Legal Disclosures</h2>
+                                                                        <h2 className="text-[16px] font-black text-slate-800 uppercase tracking-widest">Legal Disclosures</h2>
                                                                     </div>
                                                                     <FiChevronDown id="legal-chevron" className="text-slate-400 transition-transform" size={24} />
                                                                 </div>
@@ -768,14 +768,14 @@ const SummaryTab = ({ applicationStatus, certified, certifying, completeness, da
                                                                             <FiShield size={22} className="text-white" />
                                                                         </div>
                                                                         <div>
-                                                                            <p className="text-white font-black text-[21px] uppercase tracking-widest">Data Privacy Notice & Certification</p>
-                                                                            <p className="text-blue-200 text-[13.5px] font-bold uppercase tracking-widest mt-0.5">Republic Act No. 10173 — Data Privacy Act of 2012</p>
+                                                                            <p className="text-white font-black text-[16px] uppercase tracking-widest">Data Privacy Notice & Certification</p>
+                                                                            <p className="text-blue-200 text-[13px] font-bold uppercase tracking-widest mt-0.5">Republic Act No. 10173 — Data Privacy Act of 2012</p>
                                                                         </div>
                                                                     </div>
 
-                                                                    <div className="p-8 space-y-6">
+                                                                    <div className="p-6 space-y-6">
                                                                         {/* DepEd DPA Notice */}
-                                                                        <div className="bg-transparent rounded-lg p-6 text-[16.5px] font-bold text-slate-600 leading-relaxed border-2 border-slate-200">
+                                                                        <div className="bg-transparent rounded-lg p-6 text-[15px] font-bold text-slate-600 leading-relaxed border-2 border-slate-200">
                                                                             <p>Pursuant to <span className="text-brand-800 font-black">Republic Act No. 10173</span> or <span className="text-brand-800 font-black">Data Privacy Act of 2012</span>, the personal data collected shall be kept confidential and shall not be disclosed, divulged nor used beyond its intended purpose. It may not be reproduced in whole, or in part, nor may any of the information contained therein be disclosed without the prior notice and/or consent of DepEd.</p>
                                                                         </div>
 
@@ -788,7 +788,7 @@ const SummaryTab = ({ applicationStatus, certified, certifying, completeness, da
                                                                                 <div className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center shrink-0 mt-0.5 transition-all ${dpaConsent ? 'bg-brand-800 border-brand-700' : 'border-slate-300 bg-white'}`}>
                                                                                     {dpaConsent && <FiCheckCircle size={14} className="text-white" />}
                                                                                 </div>
-                                                                                <p className="text-[16.5px] font-bold text-slate-700 leading-relaxed">
+                                                                                <p className="text-[15px] font-bold text-slate-700 leading-relaxed">
                                                                                     I have read and fully understood the Data Privacy Notice above. I hereby give my <span className="text-brand-800 font-black">informed consent</span> to the collection, processing, and use of my personal information by the Department of Education for the purposes stated herein, in compliance with the Data Privacy Act of 2012.
                                                                                 </p>
                                                                             </button>
@@ -800,7 +800,7 @@ const SummaryTab = ({ applicationStatus, certified, certifying, completeness, da
                                                                                 <div className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center shrink-0 mt-0.5 transition-all ${truthConsent ? 'bg-emerald-500 border-emerald-500' : 'border-slate-300 bg-white'}`}>
                                                                                     {truthConsent && <FiCheckCircle size={14} className="text-white" />}
                                                                                 </div>
-                                                                                <p className="text-[16.5px] font-bold text-slate-700 leading-relaxed">
+                                                                                <p className="text-[15px] font-bold text-slate-700 leading-relaxed">
                                                                                     I hereby <span className="text-emerald-700 font-black">certify under oath</span> that all information I have provided in this profile is true, correct, and complete to the best of my knowledge. I understand that any false statement or misrepresentation shall subject me to the penalties prescribed under applicable laws and civil service rules.
                                                                                 </p>
                                                                             </button>
@@ -814,7 +814,7 @@ const SummaryTab = ({ applicationStatus, certified, certifying, completeness, da
                                                                                         <button
                                                                                             onClick={() => handleCertify(false)}
                                                                                             disabled={!dpaConsent || !truthConsent || certifying}
-                                                                                            className="flex-1 py-5 bg-brand-800 text-white font-black text-[15px] uppercase tracking-widest rounded-full shadow-2xl shadow-blue-900/30 hover:bg-brand-800 transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-3"
+                                                                                            className="flex-1 py-5 bg-brand-800 text-white font-black text-[13px] uppercase tracking-widest rounded-full shadow-2xl shadow-blue-900/30 hover:bg-brand-800 transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-3"
                                                                                         >
                                                                                             {certifying ? <FiLoader className="animate-spin" size={18} /> : <FiCheckCircle size={18} />}
                                                                                             {certifying ? 'Certifying...' : 'Certify — Profile is Up-to-Date'}
@@ -824,7 +824,7 @@ const SummaryTab = ({ applicationStatus, certified, certifying, completeness, da
                                                                                             <button
                                                                                                 onClick={() => handleCertify(false)}
                                                                                                 disabled={!dpaConsent || !truthConsent || certifying || applicationStatus === 'applied'}
-                                                                                                className="flex-1 py-5 bg-slate-800 text-white font-black text-[15px] uppercase tracking-widest rounded-full hover:bg-slate-900 transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-3"
+                                                                                                className="flex-1 py-5 bg-slate-800 text-white font-black text-[13px] uppercase tracking-widest rounded-full hover:bg-slate-900 transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-3"
                                                                                             >
                                                                                                 {certifying ? <FiLoader className="animate-spin" size={18} /> : <FiSave size={18} />}
                                                                                                 Save Consent Only
@@ -833,24 +833,24 @@ const SummaryTab = ({ applicationStatus, certified, certifying, completeness, da
                                                                                                 <button
                                                                                                     onClick={handleSubmitApplication}
                                                                                                     disabled={!dpaConsent || !truthConsent || saving}
-                                                                                                    className="flex-1 py-5 bg-brand-800 text-white font-black text-[15px] uppercase tracking-widest rounded-full shadow-2xl shadow-blue-900/30 hover:bg-brand-800 transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-3 border-2 border-white/20"
+                                                                                                    className="flex-1 py-5 bg-brand-800 text-white font-black text-[13px] uppercase tracking-widest rounded-full shadow-2xl shadow-blue-900/30 hover:bg-brand-800 transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-3 border-2 border-white/20"
                                                                                                 >
                                                                                                     {saving ? <FiLoader className="animate-spin" size={18} /> : <FiArrowRight size={18} />}
                                                                                                     {saving ? 'Processing...' : 'Submit Final Application'}
                                                                                                 </button>
                                                                                             )}
                                                                                             {applicationStatus === 'applied' && (
-                                                                                                <div className="flex-1 flex items-center justify-center gap-3 py-5 bg-amber-50 border-2 border-amber-200 rounded-full text-amber-600 text-[15px] font-black uppercase tracking-widest">
+                                                                                                <div className="flex-1 flex items-center justify-center gap-3 py-5 bg-amber-50 border-2 border-amber-200 rounded-full text-amber-600 text-[13px] font-black uppercase tracking-widest">
                                                                                                     <FiClock size={16} /> Applied (Pending Review)
                                                                                                 </div>
                                                                                             )}
                                                                                             {applicationStatus === 'disapproved' && (
-                                                                                                <div className="flex-1 flex items-center justify-center gap-3 py-5 bg-rose-50 border-2 border-rose-200 rounded-full text-rose-600 text-[15px] font-black uppercase tracking-widest">
+                                                                                                <div className="flex-1 flex items-center justify-center gap-3 py-5 bg-rose-50 border-2 border-rose-200 rounded-full text-rose-600 text-[13px] font-black uppercase tracking-widest">
                                                                                                     <FiXCircle size={16} /> Disapproved
                                                                                                 </div>
                                                                                             )}
                                                                                             {applicationStatus === 'approved' && (
-                                                                                                <div className="flex-1 flex items-center justify-center gap-3 py-5 bg-emerald-50 border-2 border-emerald-200 rounded-full text-emerald-600 text-[15px] font-black uppercase tracking-widest">
+                                                                                                <div className="flex-1 flex items-center justify-center gap-3 py-5 bg-emerald-50 border-2 border-emerald-200 rounded-full text-emerald-600 text-[13px] font-black uppercase tracking-widest">
                                                                                                     <FiCheckCircle size={16} /> Approved
                                                                                                 </div>
                                                                                             )}
@@ -858,15 +858,15 @@ const SummaryTab = ({ applicationStatus, certified, certifying, completeness, da
                                                                                     )}
                                                                                 </div>
                                                                                 {(!dpaConsent || !truthConsent) && (
-                                                                                    <p className="text-[13.5px] font-bold text-slate-400 text-center mt-2 w-full">Please check both declarations above to proceed.</p>
+                                                                                    <p className="text-[13px] font-bold text-slate-400 text-center mt-2 w-full">Please check both declarations above to proceed.</p>
                                                                                 )}
                                                                             </div>
                                                                         ) : (
                                                                             <div className="flex items-center justify-center gap-4 py-6 bg-emerald-50 rounded-lg border-2 border-emerald-200">
                                                                                 <FiCheckCircle size={28} className="text-emerald-500" />
                                                                                 <div>
-                                                                                    <p className="font-black text-emerald-700 text-[21px] uppercase tracking-wider">Certified Successfully</p>
-                                                                                    <p className="text-[15px] font-bold text-emerald-500 mt-0.5">Your consent and certification have been recorded.</p>
+                                                                                    <p className="font-black text-emerald-700 text-[16px] uppercase tracking-wider">Certified Successfully</p>
+                                                                                    <p className="text-[13px] font-bold text-emerald-500 mt-0.5">Your consent and certification have been recorded.</p>
                                                                                 </div>
                                                                             </div>
                                                                         )}

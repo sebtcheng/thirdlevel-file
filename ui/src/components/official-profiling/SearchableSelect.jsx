@@ -46,13 +46,13 @@ export const SearchableSelect = ({ value, onChange, options, placeholder, classN
                                     setSearch(opt);
                                     setIsOpen(false);
                                 }}
-                                className="w-full text-left px-3 py-2 text-[18px] font-semibold text-slate-700 hover:bg-transparent transition-colors"
+                                className="w-full text-left px-3 py-2 text-[15px] font-semibold text-slate-700 hover:bg-transparent transition-colors"
                             >
                                 {opt}
                             </button>
                         ))
                     ) : (
-                        <div className="px-3 py-2 text-[18px] text-slate-400 italic">No matches found. Typing custom position...</div>
+                        <div className="px-3 py-2 text-[15px] text-slate-400 italic">No matches found. Typing custom position...</div>
                     )}
                 </div>
             )}

@@ -5,23 +5,23 @@ import { TABS } from './constants';
 const Sidebar = ({ completeness, dataSource, isTabCompleted, setTab, tab }) => {
   return (
     <>
-                    <aside className="hidden lg:flex flex-col bg-transparent border-r border-slate-200/80 w-[260px] h-full shrink-0 pt-6 overflow-hidden">
+                    <aside className="hidden lg:flex flex-col bg-transparent border-r border-slate-200/80 w-[260px] h-full shrink-0 pt-3 overflow-hidden">
                         {/* Talent Portal Branding */}
-                        <div className="px-5 pt-2 pb-4 border-b-2 border-slate-100">
+                        <div className="px-5 pb-3 border-b-2 border-slate-100">
                             <div className="flex items-center gap-3">
                                 <div className="w-10 h-10 bg-brand-800/10 rounded-xl flex items-center justify-center text-brand-800">
                                     <FiUser size={20} />
                                 </div>
                                 <div>
-                                    <p className="text-[21px] font-black text-brand-800 leading-tight">Talent Portal</p>
-                                    <p className="text-[15px] font-medium text-slate-400">Applicant Workspace</p>
+                                    <p className="text-[16px] font-black text-brand-800 leading-tight">Talent Portal</p>
+                                    <p className="text-[13px] font-medium text-slate-400">Applicant Workspace</p>
                                 </div>
                             </div>
                         </div>
                         {/* Navigation */}
-                        <div className="p-4 flex-1 overflow-y-auto thin-scrollbar">
-                            <p className="px-3 py-2 text-[13.5px] font-bold text-slate-400 uppercase tracking-[0.2em]">Profile Sections</p>
-                            <div className="space-y-1">
+                        <div className="p-3 flex-1 overflow-y-auto thin-scrollbar">
+                            <p className="px-3 py-1 text-[13px] font-bold text-slate-400 uppercase tracking-[0.2em]">Profile Sections</p>
+                            <div className="space-y-0.5">
                                 {TABS.filter(t => dataSource !== 'masterlist' || t.id !== 'application').map(t => {
                                     const isLocked = t.id === 'application' && completeness < 100;
                                     const active = tab === t.id;
@@ -32,7 +32,7 @@ const Sidebar = ({ completeness, dataSource, isTabCompleted, setTab, tab }) => {
                                             <button
                                                 disabled={isLocked}
                                                 onClick={() => !isLocked && setTab(t.id)}
-                                                className={`w-full flex items-center justify-between gap-3 px-3 py-2.5 rounded-lg text-left text-[16.5px] font-bold transition-all
+                                                className={`w-full flex items-center justify-between gap-2 px-3 py-1.5 rounded-lg text-left text-[15px] font-bold transition-all
                                                     ${active ? 'bg-brand-800 text-white shadow-md shadow-blue-900/20' : 'text-slate-505 text-slate-500 hover:bg-transparent hover:text-slate-800'}
                                                     ${isLocked ? 'opacity-40 cursor-not-allowed grayscale' : ''}`}
                                             >

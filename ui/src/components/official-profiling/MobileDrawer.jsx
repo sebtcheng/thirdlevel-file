@@ -31,8 +31,8 @@ const MobileDrawer = ({ completeness, dataSource, isMobileMenuOpen, isTabComplet
                                             <FiUser size={20} />
                                         </div>
                                         <div>
-                                            <p className="text-[21px] font-black text-brand-800 leading-tight">Talent Portal</p>
-                                            <p className="text-[15px] font-medium text-slate-400">Applicant Workspace</p>
+                                            <p className="text-[16px] font-black text-brand-800 leading-tight">Talent Portal</p>
+                                            <p className="text-[13px] font-medium text-slate-400">Applicant Workspace</p>
                                         </div>
                                     </div>
                                     <button
@@ -44,7 +44,7 @@ const MobileDrawer = ({ completeness, dataSource, isMobileMenuOpen, isTabComplet
                                 </div>
                                 {/* Navigation */}
                                 <div className="p-4 flex-1 overflow-y-auto">
-                                    <p className="px-3 py-2 text-[13.5px] font-black text-slate-400 uppercase tracking-[0.2em]">Profile Sections</p>
+                                    <p className="px-3 py-2 text-[13px] font-black text-slate-400 uppercase tracking-[0.2em]">Profile Sections</p>
                                     <div className="space-y-1">
                                         {TABS.filter(t => dataSource !== 'masterlist' || t.id !== 'application').map(t => {
                                             const isLocked = t.id === 'application' && completeness < 100;
@@ -60,7 +60,7 @@ const MobileDrawer = ({ completeness, dataSource, isMobileMenuOpen, isTabComplet
                                                             setIsMobileMenuOpen(false);
                                                         }
                                                     }}
-                                                    className={`w-full flex items-center justify-between gap-3 px-3 py-3 rounded-xl text-left text-[18px] font-semibold transition-all
+                                                    className={`w-full flex items-center justify-between gap-3 px-3 py-3 rounded-xl text-left text-[15px] font-semibold transition-all
                                                         ${active ? 'bg-brand-800 text-white shadow-md shadow-blue-900/20' : 'text-slate-600 hover:bg-transparent hover:text-slate-800'}
                                                         ${isLocked ? 'opacity-40 cursor-not-allowed grayscale' : ''}`}
                                                 >

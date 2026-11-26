@@ -2,10 +2,9 @@
 // drizzle-kit to migrate (schema changes are SQL files in database/migrations/).
 // Reads the same env vars as src/config/db.js.
 import dotenv from 'dotenv';
-import path from 'path';
-import { fileURLToPath } from 'url';
+import { resolveEnvPath } from './src/config/envPath.js';
 
-dotenv.config({ path: path.join(path.dirname(fileURLToPath(import.meta.url)), '../.env') });
+dotenv.config({ path: resolveEnvPath() });
 
 export default {
   dialect: 'postgresql',

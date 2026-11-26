@@ -1,10 +1,9 @@
 import pg from 'pg';
 import dotenv from 'dotenv';
-import path from 'path';
-import { fileURLToPath } from 'url';
+import { resolveEnvPath } from './envPath.js';
 import { instrumentPool } from '../devtools/pg-pool-instrument.ts';
 
-dotenv.config({ path: path.join(path.dirname(fileURLToPath(import.meta.url)), '../../../.env') });
+dotenv.config({ path: resolveEnvPath() });
 
 const pool = new pg.Pool(process.env.DATABASE_URL ? {
   connectionString: process.env.DATABASE_URL,

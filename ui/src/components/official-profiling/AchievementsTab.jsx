@@ -12,7 +12,7 @@ const AchievementsTab = ({ isEditing, notableAchievementsOptions, profile, setP,
     <>
                                                 {tab === 'achievements' && (
                                                     <div className="space-y-6">
-                                                        <div className="bg-white border-2 border-brand-800 rounded-lg p-8 shadow-none space-y-6">
+                                                        <div className="bg-white border-2 border-brand-800 rounded-lg p-5 lg:p-6 shadow-none space-y-6">
                                                             <div className="flex items-center justify-between">
                                                                 <SectionLabel color="var(--color-gold)">Notable Achievements (If Any)</SectionLabel>
                                                             </div>
@@ -48,14 +48,14 @@ const AchievementsTab = ({ isEditing, notableAchievementsOptions, profile, setP,
                                                                                     className="p-5 bg-slate-50/60 rounded-2xl border-2 border-slate-200/80 relative space-y-4"
                                                                                 >
                                                                                     <div className="flex items-center justify-between">
-                                                                                        <span className="text-[15px] font-black text-slate-400 uppercase tracking-widest">
+                                                                                        <span className="text-[13px] font-black text-slate-400 uppercase tracking-widest">
                                                                                             Achievement Entry {layerCount > 1 ? `#${idx + 1}` : ''}
                                                                                         </span>
                                                                                         {isEditing && layerCount > 1 && (
                                                                                             <button
                                                                                                 type="button"
                                                                                                 onClick={() => setPendingRemoveIdx(idx)}
-                                                                                                className="text-amber-600 hover:text-amber-800 text-[15px] font-bold uppercase tracking-wider flex items-center gap-1 bg-amber-50 px-3 py-1 rounded-lg border-2 border-amber-200 transition-colors cursor-pointer"
+                                                                                                className="text-amber-600 hover:text-amber-800 text-[13px] font-bold uppercase tracking-wider flex items-center gap-1 bg-amber-50 px-3 py-1 rounded-lg border-2 border-amber-200 transition-colors cursor-pointer"
                                                                                                 title="Remove Achievement Entry"
                                                                                             >
                                                                                                 <FiTrash2 size={14} /> Remove
@@ -89,7 +89,7 @@ const AchievementsTab = ({ isEditing, notableAchievementsOptions, profile, setP,
                                                                             <button
                                                                                 type="button"
                                                                                 onClick={() => setP('notable_achievements', [...achList, { title: '', year: '' }])}
-                                                                                className="w-full py-4 border-2 border-dashed border-amber-300 bg-amber-50/30 rounded-2xl text-amber-800 font-black text-[15px] uppercase tracking-widest hover:border-amber-500 hover:bg-amber-50 transition-all flex items-center justify-center gap-2 mt-2 cursor-pointer"
+                                                                                className="w-full py-4 border-2 border-dashed border-amber-300 bg-amber-50/30 rounded-2xl text-amber-800 font-black text-[13px] uppercase tracking-widest hover:border-amber-500 hover:bg-amber-50 transition-all flex items-center justify-center gap-2 mt-2 cursor-pointer"
                                                                             >
                                                                                 <FiPlus size={14} /> Add Another Achievement Layer
                                                                             </button>
@@ -108,12 +108,12 @@ const AchievementsTab = ({ isEditing, notableAchievementsOptions, profile, setP,
                                                         </div>
 
                                                         {/* Individual Accomplishments & Additional Awards */}
-                                                        <div className="bg-white border-2 border-brand-800 rounded-lg p-6 lg:p-8 space-y-5 shadow-none">
+                                                        <div className="bg-white border-2 border-brand-800 rounded-lg p-5 lg:p-6 space-y-5 shadow-none">
                                                             <SectionLabel color="var(--color-brand-700)">Additional Awards &amp; Notable Accomplishments</SectionLabel>
 
                                                             <div className="bg-brand-50/40 rounded-lg p-5 border-2 border-blue-100 flex items-center gap-3">
                                                                 <FiInfo size={16} className="text-blue-400 shrink-0" />
-                                                                <p className="text-[15px] font-bold text-brand-700">List any additional awards, recognitions, or notable individual accomplishments (supports multiple awards with different years).</p>
+                                                                <p className="text-[13px] font-bold text-brand-700">List any additional awards, recognitions, or notable individual accomplishments (supports multiple awards with different years).</p>
                                                             </div>
 
                                                             <div className="space-y-3">
@@ -162,7 +162,7 @@ const AchievementsTab = ({ isEditing, notableAchievementsOptions, profile, setP,
                                                                 {isEditing && <button disabled={!isEditing}
                                                                     type="button"
                                                                     onClick={() => setP('individual_accomplishments', [...(profile.individual_accomplishments || []), { description: '', award_year: '' }])}
-                                                                    className="w-full py-4 border-2 border-dashed border-slate-200 rounded-2xl text-slate-500 font-black text-[15px] uppercase tracking-widest hover:border-brand-700 hover:text-brand-800 transition-all flex items-center justify-center gap-2 mt-2"
+                                                                    className="w-full py-4 border-2 border-dashed border-slate-200 rounded-2xl text-slate-500 font-black text-[13px] uppercase tracking-widest hover:border-brand-700 hover:text-brand-800 transition-all flex items-center justify-center gap-2 mt-2"
                                                                 >
                                                                     <FiPlus size={14} /> Add Award / Notable Accomplishment
                                                                 </button>}
